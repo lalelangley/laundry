@@ -4,40 +4,78 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Pelanggan;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Admin;
-use App\Models\Kasir;
 
 class AuthController extends Controller
 {
-    public function loginAdmin(Request $request)
+    // =========================
+    // REGISTER
+    // =========================
+    public function register(Request $request)
     {
-        $admin = Admin::where('email', $request->email)->first();
+        $validator = Validator::make($request->all(), [
+            'nama_pelanggan' => 'required|string|max:100',
+            'no_hp'          => 'required|string|max:20|unique:pelanggan,no_hp',
+            'alamat'         => 'required|string',
+            'password'       => 'required|string|min:6',
+        ]);
 
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return response()->json(['success' => false, 'message' => 'Email atau password salah'], 401);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors(),
+            ], 422);
         }
+
+        $pelanggan = Pelanggan::create([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'password'       => Hash::make($request->password),
+            'jk'             => null,
+            'gambar'         => null,
+        ]);
 
         return response()->json([
             'success' => true,
-            'admin' => $admin,
-            'token' => $admin->createToken('admin')->plainTextToken
-        ]);
+            'message' => 'Registrasi berhasil',
+            'data'    => $pelanggan,
+        ], 201);
     }
 
-    public function loginKasir(Request $request)
-    {
-        $kasir = Kasir::find($request->kasir_id);
 
-        if (!$kasir || !Hash::check($request->pin, $kasir->password)) {
-            return response()->json(['success' => false, 'message' => 'PIN salah'], 401);
+    // =========================
+    // LOGIN
+    // =========================
+    public function login(Request $request)
+    {
+        $request->validate([
+            'no_hp'    => 'required',
+            'password' => 'required',
+        ]);
+
+        $pelanggan = Pelanggan::where('no_hp', $request->no_hp)->first();
+
+        if (!$pelanggan) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Nomor HP tidak ditemukan'
+            ], 404);
+        }
+
+        if (!Hash::check($request->password, $pelanggan->password)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Password salah'
+            ], 401);
         }
 
         return response()->json([
-            'success' => true,
-            'kasir' => $kasir,
-            'token' => $kasir->createToken('kasir')->plainTextToken
-        ]);
+            'status'  => true,
+            'message' => 'Login berhasil',
+            'data'    => $pelanggan
+        ], 200);
     }
 }
