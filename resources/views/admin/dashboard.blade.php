@@ -36,19 +36,18 @@
 <div class="mx-4 mt-4 flex items-center justify-end gap-3">
 
     <!-- Icon User -->
-    <div class="bg-gray-300 w-12 h-12 flex items-center justify-center rounded-full text-2xl">
+    <div class="bg-gray-300 w-12 h-12 flex items-center justify-center rounded-full text-2xl text-black shadow">
         <i class="bi bi-person-fill"></i>
     </div>
 
-    <!-- logout -->
+    <!-- Logout (bulat) -->
     <form action="{{ route('logout') }}" method="POST">
-    @csrf
-    <button type="submit" 
-        class="bg-red-500 w-12 h-12 flex items-center justify-center rounded-full text-white text-2xl shadow">
-        <i class="bi bi-box-arrow-right"></i>
-    </button>
-</form>
-
+        @csrf
+        <button type="submit" 
+            class="bg-red-500 w-12 h-12 flex items-center justify-center rounded-full text-white text-2xl shadow hover:bg-red-600 transition">
+            <i class="bi bi-box-arrow-right"></i>
+        </button>
+    </form>
 
     <!-- Role -->
     <div class="bg-[#ffcc00] px-5 py-3 rounded-xl text-black text-sm font-bold shadow">
@@ -56,7 +55,6 @@
     </div>
 
 </div>
-
 
 <!-- PROFILE TOKO -->
 <div class="mx-4 mt-4 bg-white rounded-xl p-4 shadow flex gap-4 items-center">
@@ -68,13 +66,13 @@
         <div class="text-gray-600 text-sm">Alamat toko default</div>
     </div>
 
-    <div class="text-yellow-500 text-2xl cursor-pointer">
+    <div class="text-yellow-500 text-2xl cursor-pointer hover:text-yellow-600">
         <i class="bi bi-pencil-square"></i>
     </div>
 </div>
 
 <!-- Statistik -->
-<div class="grid grid-cols-3 gap-3 mx-4 mt-4">
+<div class="grid grid-cols-3 gap-4 mx-4 mt-4">
 
     <div class="bg-[#ffcc00] text-center rounded-xl p-4 shadow font-semibold">
         <div class="text-red-600 text-3xl mb-1">
@@ -105,47 +103,47 @@
 <!-- MENU GRID -->
 <div class="grid grid-cols-3 gap-4 mx-4 mt-6">
 
-    <a href="{{ route('layanan.index') }}" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="{{ route('layanan.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-bag-check-fill"></i></div>
         <div class="font-semibold">Layanan</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-search"></i></div>
         <div class="font-semibold">Riwayat</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-clipboard-data-fill"></i></div>
         <div class="font-semibold">Laporan</div>
     </a>
 
-    <a href="{{ route('parfum.index') }}" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="{{ route('parfum.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-wind"></i></div>
         <div class="font-semibold">Parfum</div>
     </a>
 
-    <a href="{{ route('satuan.index') }}" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="{{ route('satuan.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-grid-3x3-gap-fill"></i></div>
         <div class="font-semibold">Satuan</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-person-fill"></i></div>
         <div class="font-semibold">Pelanggan</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-cash-stack"></i></div>
         <div class="font-semibold">Pengeluaran</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-gear-fill"></i></div>
         <div class="font-semibold">Pengaturan</div>
     </a>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center">
+    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
         <div class="text-4xl mb-2"><i class="bi bi-shield-lock-fill"></i></div>
         <div class="font-semibold">Security</div>
     </a>
@@ -154,7 +152,7 @@
 
 <!-- TRANSAKSI BUTTON -->
 <div class="mx-4 mt-8 mb-10">
-    <button class="w-full bg-[#ffcc00] py-4 rounded-xl text-xl font-bold shadow">
+    <button class="w-full bg-[#ffcc00] py-4 rounded-xl text-xl font-bold shadow hover:shadow-lg transition">
         Transaksi
     </button>
 </div>

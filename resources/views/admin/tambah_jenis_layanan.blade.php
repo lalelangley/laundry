@@ -24,8 +24,9 @@
         {{-- GAMBAR --}}
         <label class="font-bold text-lg">Gambar</label>
         <div class="flex items-center gap-4 mt-2 mb-6">
+            
             <div class="w-24 h-24 bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
-                <img id="preview-gambar" src="#" alt="Preview Gambar" class="hidden w-full h-full object-cover">
+                <img id="preview-gambar" class="hidden w-full h-full object-cover">
                 <svg id="placeholder-gambar" width="45" height="45" fill="#bbb" viewBox="0 0 24 24">
                     <path d="M12 5a3 3 0 1 1-3 3 3 3 0 0 1 3-3Zm0-2a5 5 0 1 0 5 5A5 5 0 0 0 12 3Zm7 16v-1a7 7 0 0 0-14 0v1h14Zm2 2H3v-3a9 9 0 0 1 18 0Z"/>
                 </svg>
@@ -56,13 +57,14 @@
         <label class="font-bold text-lg">Lama Pengerjaan</label>
         <div class="flex gap-3 mt-1 mb-6">
             <input type="number" name="lama" class="flex-1 bg-gray-200 p-4 rounded-xl outline-none" required>
+
             <select name="lama_satuan" class="bg-gray-200 p-4 rounded-xl outline-none">
                 <option value="Jam">Jam</option>
                 <option value="Hari">Hari</option>
             </select>
         </div>
 
-        {{-- Keterangan --}}
+        {{-- KETERANGAN --}}
         <label class="font-bold text-lg">Keterangan</label>
         <textarea name="keterangan" class="w-full bg-gray-200 p-4 rounded-xl h-28 mt-1 mb-8 outline-none"></textarea>
 
@@ -72,6 +74,7 @@
                 Simpan
             </button>
         </div>
+
     </form>
 
 </div>
@@ -81,19 +84,18 @@
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const inputGambar = document.getElementById('gambar');
+    const input = document.getElementById('gambar');
     const preview = document.getElementById('preview-gambar');
     const placeholder = document.getElementById('placeholder-gambar');
 
-    // Preview gambar
-    inputGambar.addEventListener('change', function() {
-        const [file] = this.files;
-        if(file){
+    input.addEventListener('change', function() {
+        const file = this.files[0];
+
+        if (file) {
             preview.src = URL.createObjectURL(file);
             preview.classList.remove('hidden');
             placeholder.classList.add('hidden');
         } else {
-            preview.src = '#';
             preview.classList.add('hidden');
             placeholder.classList.remove('hidden');
         }

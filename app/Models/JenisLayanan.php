@@ -8,14 +8,20 @@ class JenisLayanan extends Model
 {
     protected $table = 'jenis_layanan';
     protected $primaryKey = 'id_jenis_layanan';
+
     protected $fillable = [
+        'id_layanan',
         'nama_jenis',
-        'gambar',
         'satuan',
         'harga',
         'lama',
         'lama_satuan',
+        'gambar',
         'keterangan',
     ];
-    public $timestamps = true;
+
+    public function layanan()
+    {
+        return $this->belongsTo(Layanan::class, 'id_layanan');
+    }
 }
