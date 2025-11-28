@@ -24,4 +24,9 @@ class JenisLayanan extends Model
     {
         return $this->belongsTo(Layanan::class, 'id_layanan');
     }
+    // JenisLayanan.php
+public function satuan() {
+    return $this->belongsTo(Satuan::class, 'id_satuan');
+}
+
 }

@@ -1,106 +1,114 @@
 @extends('layouts.master')
 
 @section('content')
+@php
+    $layanan_id = 0; // layanan baru
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
+@endphp
+
+{{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('layanan.index') }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Tambah Layanan</span>
 </div>
 
-<div class="px-5 pb-32 pt-6">
+<div class="px-5 mt-6">
 
+    {{-- Flash Message --}}
     @if(session('success'))
-        <div class="mb-4 p-4 bg-green-200 text-green-800 rounded-xl shadow">
+        <div class="bg-green-500 text-white p-3 rounded-xl mb-5">
             {{ session('success') }}
         </div>
     @endif
 
+    {{-- Error Validation --}}
     @if ($errors->any())
-        <div class="bg-red-200 text-red-800 p-4 rounded-xl mb-4 shadow">
-            <ul>
-                @foreach ($errors->all() as $e)
-                    <li>{{ $e }}</li>
+        <div class="bg-red-500 text-white p-3 rounded-xl mb-5">
+            <ul class="ml-4 list-disc text-sm">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
 
-    {{-- FORM PUNYA ID --}}
-    <form id="form-layanan"
-          action="{{ route('layanan.store') }}" 
-          method="POST" 
-          enctype="multipart/form-data">
+    {{-- Jenis Layanan Sementara --}}
+@if(count($jenisBaru) > 0)
+    <h3 class="mt-6 mb-3 font-bold text-lg">Jenis Layanan Sementara</h3>
+    <div class="space-y-4">
+        @foreach ($jenisBaru as $jb)
+            @php
+                $satuanNama = '-';
+                if(!empty($jb['id_satuan'])){
+                    $satuan = \App\Models\Satuan::find($jb['id_satuan']);
+                    if($satuan) $satuanNama = $satuan->nama_satuan;
+                }
+            @endphp
+            <div class="flex gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
+                <div class="flex-1">
+                    <p class="font-semibold text-base capitalize">
+                        {{ $jb['nama_jenis'] ?? $jb['nama'] ?? '-' }}
+                    </p>
+                    <p class="text-gray-700 text-sm">
+                        Rp{{ number_format($jb['harga'] ?? 0, 0, ',', '.') }} / {{ $satuanNama }}
+                    </p>
+                    <p class="text-gray-500 text-xs flex items-center gap-1">
+                        <i class="bi bi-clock"></i>
+                        {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '-' }}
+                    </p>
+                    @if(!empty($jb['keterangan']))
+                        <p class="text-gray-600 text-xs mt-1">{{ $jb['keterangan'] }}</p>
+                    @endif
+                </div>
+            </div>
+        @endforeach
+    </div>
+@endif
 
+
+    {{-- Button Tambah Jenis --}}
+    <a href="{{ route('session.create', $layanan_id) }}" 
+       class="block mt-5 mb-6 bg-yellow-400 text-white text-center py-3 rounded-2xl font-semibold shadow">
+        <i class="bi bi-plus-circle"></i> Tambah Jenis Layanan
+    </a>
+
+    {{-- Form Create Layanan --}}
+    <form action="{{ route('layanan.store') }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
         @csrf
 
-        <label class="font-bold text-lg">Nama Layanan</label>
-        <input type="text" name="nama_layanan" class="w-full bg-gray-200 p-4 rounded-xl mt-1 mb-6">
-
-        <label class="font-bold text-lg">Proses</label>
-        <div class="flex gap-3 mt-3 mb-8">
-            @foreach(['Cuci','Kering','Setrika'] as $p)
-                <label class="flex items-center gap-2 border-2 border-yellow-400 rounded-full px-6 py-2">
-                    <input type="checkbox" name="proses[]" value="{{ $p }}" class="w-5 h-5 accent-yellow-500">
-                    <span class="text-lg font-medium">{{ $p }}</span>
-                </label>
-            @endforeach
+        {{-- Nama Layanan --}}
+        <div class="mb-5">
+            <label class="font-semibold">Nama Layanan</label>
+            <input type="text" name="nama_layanan"
+                   value="{{ old('nama_layanan') }}"
+                   class="w-full p-3 border rounded-xl mt-1"
+                   required>
         </div>
 
-        <a href="{{ route('jenis_layanan.create') }}" 
-           class="bg-yellow-400 px-5 py-2 rounded-full text-white font-semibold shadow inline-block mb-4">
-            + Tambah Jenis Layanan
-        </a>
-
-        {{-- LIST JENIS --}}
-        <div id="list-jenis" class="mb-6 space-y-3">
-            @php $items = session()->get('jenis_baru', []); @endphp
-
-            @if(count($items) > 0)
-
-                @foreach($items as $i => $it)
-                    <div class="bg-white p-4 rounded-xl shadow flex items-start gap-3">
-
-                        <div class="w-20 h-20 bg-gray-100 rounded overflow-hidden">
-                            @if(!empty($it['gambar']))
-                                <img src="{{ asset($it['gambar']) }}" class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                    No Image
-                                </div>
-                            @endif
-                        </div>
-
-                        <div class="flex-1">
-                            <div class="font-semibold">{{ $it['nama'] }}</div>
-                            <div class="text-sm text-gray-600">
-                                Rp {{ number_format($it['harga'],0,',','.') }} • {{ $it['satuan'] }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <form action="{{ route('jenis_layanan.remove', $i) }}" method="POST">
-                                @csrf
-                                <button class="text-red-500">Hapus</button>
-                            </form>
-                        </div>
-
-                    </div>
+        {{-- Proses --}}
+        @php
+            $prosesList = ['Cuci', 'Kering', 'Setrika'];
+        @endphp
+        <div class="mb-5">
+            <label class="font-semibold">Proses</label>
+            <div class="grid grid-cols-3 gap-3 mt-2">
+                @foreach ($prosesList as $p)
+                    <label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="proses[]" value="{{ $p }}" 
+                               {{ (is_array(old('proses')) && in_array($p, old('proses'))) ? 'checked' : '' }}>
+                        <span>{{ $p }}</span>
+                    </label>
                 @endforeach
-
-            @else
-                <div class="text-gray-500">Belum ada jenis layanan.</div>
-            @endif
+            </div>
         </div>
 
+        {{-- Submit --}}
+        <div class="flex justify-end mt-6">
+            <button type="submit" 
+                    class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl font-semibold text-white">
+                Simpan Layanan
+            </button>
+        </div>
     </form>
-
-    {{-- FIXED BUTTON (DI LUAR FORM) --}}
-    <div class="fixed bottom-0 left-0 w-full px-5 pb-5 bg-white">
-        <a href="#"
-           onclick="document.getElementById('form-layanan').submit();"
-           class="w-full bg-green-600 py-4 rounded-2xl text-white text-xl font-bold shadow block text-center">
-           Simpan Layanan & Jenis
-        </a>
-    </div>
-
 </div>
 @endsection
