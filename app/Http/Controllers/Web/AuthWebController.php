@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Admin;
 use App\Models\Kasir;
+use App\Models\Pelanggan;
+use App\Models\Transaksi;
 use Illuminate\Support\Facades\Hash;
 
 class AuthWebController extends Controller
@@ -19,10 +21,9 @@ class AuthWebController extends Controller
         return view('auth.login', compact('admins', 'kasirs'));
     }
 
-    // Proses login (Admin & Kasir dalam 1 alur)
+    // Proses login
     public function processLogin(Request $request)
     {
-        // Format user_id = "admin-1" atau "kasir-12"
         [$role, $id] = explode('-', $request->user_id);
 
         if ($role === 'admin') {
@@ -33,7 +34,6 @@ class AuthWebController extends Controller
             }
 
             session(['admin_id' => $admin->id_admin]);
-
             return redirect()->route('admin.dashboard');
         }
 
@@ -45,14 +45,13 @@ class AuthWebController extends Controller
             }
 
             session(['kasir_id' => $kasir->id_kasir]);
-
             return redirect()->route('kasir.dashboard');
         }
 
         return back()->with('error', 'Role tidak dikenali');
     }
 
-    // Dashboard admin
+    // Dashboard admin (Sudah FIX)
     public function adminDashboard()
     {
         $admin = Admin::find(session('admin_id'));
@@ -61,7 +60,19 @@ class AuthWebController extends Controller
             return redirect()->route('login.show')->with('error', 'Silakan login dulu');
         }
 
-        return view('admin.dashboard', compact('admin'));
+        // Statistik
+        $totalPelanggan  = Pelanggan::count();
+        $totalKasir      = Kasir::count();
+        $totalTransaksi  = Transaksi::count();
+        $totalOmzet      = Transaksi::sum('total_bayar');
+
+        return view('admin.dashboard', compact(
+            'admin',
+            'totalPelanggan',
+            'totalKasir',
+            'totalTransaksi',
+            'totalOmzet'
+        ));
     }
 
     // Dashboard kasir
