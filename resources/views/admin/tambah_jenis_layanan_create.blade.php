@@ -1,6 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
+
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('layanan.create') }}" class="text-black text-3xl font-bold">←</a>
@@ -20,55 +21,88 @@
         </div>
     @endif
 
-    {{-- FORM TAMBAH JENIS --}}
-    <form action="{{ route('session.store', $from) }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
-    @csrf
-    <input type="hidden" name="from" value="{{ $from }}">
+    {{-- FORM TAMBAH --}}
+    <form action="{{ route('session.store', $from) }}" method="POST" enctype="multipart/form-data"
+        class="bg-white p-5 rounded-2xl shadow space-y-6">
 
+        @csrf
+        <input type="hidden" name="from" value="{{ $from }}">
 
-        <div class="mb-5">
-            <label class="font-semibold">Nama Jenis</label>
-            <input type="text" name="nama_jenis" value="{{ old('nama_jenis') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- Gambar --}}
+        <div>
+            <label class="font-semibold block mb-1">Gambar</label>
+            <div class="flex items-center gap-4">
+                <div class="w-24 h-24 bg-gray-200 flex rounded-xl items-center justify-center text-gray-500 text-4xl">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <label class="bg-yellow-400 px-6 py-3 rounded-xl text-white font-semibold cursor-pointer">
+                    Pilih Gambar
+                    <input type="file" name="gambar" class="hidden">
+                </label>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Satuan</label>
-            <select name="id_satuan" class="w-full p-3 border rounded-xl mt-1" required>
-                <option value="">-- Pilih Satuan --</option>
-                @foreach($satuan as $s)
-                    <option value="{{ $s->id_satuan }}" {{ old('id_satuan') == $s->id_satuan ? 'selected' : '' }}>
-                        {{ $s->nama_satuan }}
-                    </option>
-                @endforeach
-            </select>
+        {{-- Nama Jenis --}}
+        <div>
+            <label class="font-semibold block mb-1">Nama Jenis</label>
+            <input type="text" name="nama_jenis" value="{{ old('nama_jenis') }}"
+                class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Harga</label>
-            <input type="number" name="harga" value="{{ old('harga') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- Satuan --}}
+        <div>
+            <label class="font-semibold block mb-1">Satuan</label>
+            <div class="flex items-center gap-3">
+                <select name="id_satuan" class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
+                    <option value="">-- Pilih Satuan --</option>
+                    @foreach($satuan as $s)
+                        <option value="{{ $s->id_satuan }}" {{ old('id_satuan') == $s->id_satuan ? 'selected' : '' }}>
+                            {{ $s->nama_satuan }}
+                        </option>
+                    @endforeach
+                </select>
+
+                <a href="{{ route('satuan.index') }}"
+                    class="bg-green-600 px-6 py-3 rounded-2xl text-white font-semibold">
+                    Tambah
+                </a>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Lama</label>
-            <input type="number" name="lama" value="{{ old('lama') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- Harga --}}
+        <div>
+            <label class="font-semibold block mb-1">Harga</label>
+            <input type="number" name="harga" value="{{ old('harga') }}"
+                class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Lama Satuan</label>
-            <input type="text" name="lama_satuan" value="{{ old('lama_satuan') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- Lama + Lama Satuan --}}
+        <div>
+            <label class="font-semibold block mb-1">Lama Pengerjaan</label>
+            <div class="flex gap-3">
+                <input type="number" name="lama" value="{{ old('lama') }}"
+                    class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
+
+                <select name="lama_satuan" class="bg-gray-100 p-4 rounded-2xl text-lg" required>
+                    <option value="Hari" {{ old('lama_satuan') == 'Hari' ? 'selected' : '' }}>Hari</option>
+                    <option value="Jam" {{ old('lama_satuan') == 'Jam' ? 'selected' : '' }}>Jam</option>
+                </select>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Keterangan</label>
-            <textarea name="keterangan" class="w-full p-3 border rounded-xl mt-1">{{ old('keterangan') }}</textarea>
+        {{-- Keterangan --}}
+        <div>
+            <label class="font-semibold block mb-1">Keterangan</label>
+            <textarea name="keterangan"
+                class="w-full bg-gray-100 p-4 rounded-2xl text-lg">{{ old('keterangan') }}</textarea>
         </div>
 
-        <button type="submit" class="bg-yellow-400 text-white px-6 py-3 rounded-2xl font-semibold shadow">
-    <i class="bi bi-plus-circle"></i> Tambah Jenis
-</button>
-
+        {{-- Submit --}}
+        <button type="submit"
+            class="w-full bg-green-700 text-white py-4 rounded-2xl text-xl font-semibold">
+            Simpan
+        </button>
 
     </form>
-
 </div>
 @endsection

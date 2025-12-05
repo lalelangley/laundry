@@ -1,6 +1,7 @@
 @extends('layouts.master')
 
 @section('content')
+
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('layanan.edit', $from ?? 0) }}" class="text-black text-3xl font-bold">←</a>
@@ -20,60 +21,84 @@
         </div>
     @endif
 
-    {{-- FORM TAMBAH JENIS BARU --}}
-    <form action="{{ route('layanan.jenis.add.edit', $from) }}" method="POST" enctype="multipart/form-data" class="bg-white p-5 rounded-2xl shadow">
-    @csrf
+    {{-- FORM TAMBAH --}}
+    <form action="{{ route('layanan.jenis.add.edit', $from) }}" method="POST" enctype="multipart/form-data"
+        class="bg-white p-5 rounded-2xl shadow space-y-6">
+        @csrf
 
-
-
-        <div class="mb-5">
-            <label class="font-semibold">Nama Jenis</label>
-            <input type="text" name="nama_jenis" value="{{ old('nama_jenis') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- GAMBAR --}}
+        <div>
+            <label class="font-semibold block mb-1">Gambar</label>
+            <div class="flex items-center gap-4">
+                <div class="w-24 h-24 bg-gray-200 flex rounded-xl items-center justify-center text-gray-500 text-4xl">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <label class="bg-yellow-400 px-6 py-3 rounded-xl text-white font-semibold cursor-pointer">
+                    Pilih Gambar
+                    <input type="file" name="gambar" class="hidden">
+                </label>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Satuan</label>
-            <select name="id_satuan" class="w-full p-3 border rounded-xl mt-1" required>
-            <option value="">-- Pilih Satuan --</option>
-            @foreach($satuan as $s)
-                <option value="{{ $s->id_satuan }}" {{ old('id_satuan', $jenis->id_satuan ?? '') == $s->id_satuan ? 'selected' : '' }}>
-                    {{ $s->nama_satuan }}
-                </option>
-            @endforeach
-        </select>
+        {{-- NAMA JENIS --}}
+        <div>
+            <label class="font-semibold block mb-1">Nama Jenis</label>
+            <input type="text" name="nama_jenis" value="{{ old('nama_jenis') }}"
+                class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Harga</label>
-            <input type="number" name="harga" value="{{ old('harga') }}" class="w-full p-3 border rounded-xl mt-1" required>
+        {{-- SATUAN --}}
+        <div>
+            <label class="font-semibold block mb-1">Satuan</label>
+            <div class="flex items-center gap-3">
+                <select name="id_satuan" class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
+                    <option value="">-- Pilih Satuan --</option>
+                    @foreach($satuan as $s)
+                        <option value="{{ $s->id_satuan }}" {{ old('id_satuan', $jenis->id_satuan ?? '') == $s->id_satuan ? 'selected' : '' }}>
+                            {{ $s->nama_satuan }}
+                        </option>
+                    @endforeach
+                </select>
+                <a href="{{ route('satuan.index') }}"
+                    class="bg-green-600 px-6 py-3 rounded-2xl text-white font-semibold">
+                    Tambah
+                </a>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Lama</label>
-            <input type="number" name="lama" value="{{ old('lama') }}" class="w-full p-3 border rounded-xl mt-1">
+        {{-- HARGA --}}
+        <div>
+            <label class="font-semibold block mb-1">Harga</label>
+            <input type="number" name="harga" value="{{ old('harga') }}"
+                class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Lama Satuan</label>
-            <input type="text" name="lama_satuan" value="{{ old('lama_satuan') }}" class="w-full p-3 border rounded-xl mt-1">
+        {{-- LAMA + LAMA SATUAN --}}
+        <div>
+            <label class="font-semibold block mb-1">Lama Pengerjaan</label>
+            <div class="flex gap-3">
+                <input type="number" name="lama" value="{{ old('lama') }}"
+                    class="w-full bg-gray-100 p-4 rounded-2xl text-lg">
+
+                <select name="lama_satuan" class="bg-gray-100 p-4 rounded-2xl text-lg">
+                    <option value="Hari" {{ old('lama_satuan') == 'Hari' ? 'selected' : '' }}>Hari</option>
+                    <option value="Jam" {{ old('lama_satuan') == 'Jam' ? 'selected' : '' }}>Jam</option>
+                </select>
+            </div>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Keterangan</label>
-            <textarea name="keterangan" class="w-full p-3 border rounded-xl mt-1">{{ old('keterangan') }}</textarea>
+        {{-- KETERANGAN --}}
+        <div>
+            <label class="font-semibold block mb-1">Keterangan</label>
+            <textarea name="keterangan" class="w-full bg-gray-100 p-4 rounded-2xl text-lg">{{ old('keterangan') }}</textarea>
         </div>
 
-        <div class="mb-5">
-            <label class="font-semibold">Gambar</label>
-            <input type="file" name="gambar" class="w-full p-3 border rounded-xl mt-1">
-        </div>
+        {{-- BUTTON --}}
+        <button type="submit"
+            class="w-full bg-green-700 text-white py-4 rounded-2xl text-xl font-semibold">
+            Simpan
+        </button>
 
-        <div class="flex justify-end mt-6">
-            <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 px-6 py-2 rounded-xl font-semibold text-white">
-                Tambah Jenis Baru
-            </button>
-        </div>
     </form>
-
 </div>
 @endsection

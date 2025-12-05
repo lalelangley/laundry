@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Web\AuthWebController;
 use App\Http\Controllers\Web\LayananController;
 use App\Http\Controllers\Web\SatuanParfumController;
+use App\Http\Controllers\Web\TransaksiController;
 
 // =========================
 // LOGIN & LOGOUT
@@ -25,59 +26,118 @@ Route::post('/logout', function () {
 // =========================
 Route::prefix('admin')->group(function () {
 
-    // DASHBOARD
-    Route::get('/dashboard', [AuthWebController::class, 'adminDashboard'])->name('admin.dashboard');
+    // DASHBOARD ADMIN
+    Route::get('/dashboard', [AuthWebController::class, 'adminDashboard'])
+        ->name('admin.dashboard');
 
     // =========================
-// LAYANAN
+    // PELANGGAN
+    // =========================
+    Route::get('/pelanggan', [AuthWebController::class, 'pelangganIndex'])
+        ->name('pelanggan.index');
+
+    Route::get('/pelanggan/create', [AuthWebController::class, 'create'])
+        ->name('pelanggan.create');
+
+    Route::post('/pelanggan/store', [AuthWebController::class, 'store'])
+        ->name('pelanggan.store');
+
 // =========================
-Route::get('/layanan', [LayananController::class, 'index'])->name('layanan.index');
+// TRANSAKSI
+// =========================
 
-// Create layanan
-Route::get('/layanan/create', [LayananController::class, 'create'])->name('layanan.create');
-// routes/web.php
-Route::get('admin/layanan/{from}/jenis/add', [LayananController::class, 'sessionCreateJenis'])
-    ->name('session.create');
+// Pilih pelanggan
+Route::get('/transaksi/pelanggan', [TransaksiController::class, 'pilihPelanggan'])
+    ->name('transaksi.pelanggan');
 
-Route::post('/layanan/store', [LayananController::class, 'store'])->name('layanan.store');
-
-// Edit / Update layanan
-Route::get('/layanan/{id}/edit', [LayananController::class, 'edit'])->name('layanan.edit');
-Route::put('/layanan/{id}', [LayananController::class, 'update'])->name('layanan.update');
-
-// Delete layanan
-Route::delete('/layanan/{id}', [LayananController::class, 'destroy'])->name('layanan.destroy');
-
-// Duplicate layanan
-Route::get('/layanan/{id}/duplicate', [LayananController::class, 'duplicate'])->name('layanan.duplicate');
-
-// Tambah jenis baru ke session di edit layanan
-Route::post('/layanan/{id}/jenis/add', [LayananController::class, 'addJenisEdit'])
-     ->whereNumber('id')
-     ->name('layanan.jenis.add.edit');
-
-Route::post('/admin/layanan/{from}/jenis/add-edit', [LayananController::class, 'addJenisEdit'])
-     ->name('layanan.jenis.add.edit');
-
-     // Form tambah jenis untuk layanan yang sedang diedit
-Route::get('/admin/layanan/{from}/jenis/add', [LayananController::class, 'addJenisSessionForm'])
-     ->name('layanan.jenis.add.form');
-
-Route::post('/admin/layanan/{from}/jenis/add', [LayananController::class, 'addJenisEdit'])
-    ->name('layanan.jenis.add.edit');
-
-Route::get('/admin/layanan/{from}/jenis/create-session', [LayananController::class, 'sessionCreateJenis'])->name('session.create');
+Route::get('/transaksi/set-pelanggan/{id}', [TransaksiController::class, 'setPelanggan'])
+    ->name('transaksi.setPelanggan');
 
 
-     // Halaman tambah jenis sementara untuk layanan tertentu
-Route::get('/admin/layanan/{from}/jenis/create-session', [LayananController::class, 'sessionCreateJenis'])
-    ->name('session.create');
-    
-// Route untuk store jenis layanan sementara (session)
-Route::post('admin/layanan/{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenis'])
-    ->name('session.store');
+// Halaman create
+Route::get('/transaksi/create', [TransaksiController::class, 'create'])
+    ->name('transaksi.create');
 
 
+// Tambah layanan ke keranjang
+Route::get('/admin/transaksi/add-layanan/{id}', [TransaksiController::class, 'addLayanan'])
+    ->name('transaksi.addLayanan');
+
+
+// Checkout
+Route::post('/transaksi/checkout', [TransaksiController::class, 'checkout'])
+    ->name('transaksi.checkout');
+Route::post('/admin/transaksi/checkout', [TransaksiController::class, 'checkout'])
+     ->name('transaksi.checkout');
+
+
+// Remove layanan
+Route::post('/admin/transaksi/remove/{id}', [TransaksiController::class, 'remove'])
+    ->name('transaksi.remove');
+
+
+// Update keterangan (AJAX)
+Route::post('/transaksi/update-keterangan', [TransaksiController::class, 'updateKeterangan'])
+    ->name('transaksi.updateKeterangan');
+
+
+// Reset transaksi
+Route::get('/transaksi/reset', function () {
+    session()->forget('detail_transaksi');
+    session()->forget('pelanggan');
+    session()->forget('keterangan_transaksi'); // ⬅ TAMBAHKAN INI
+    return redirect()->route('admin.dashboard');
+})->name('transaksi.reset');
+
+
+
+// Bayar transaksi
+Route::post('/transaksi/bayar', [TransaksiController::class, 'bayar'])
+    ->name('transaksi.bayar');
+
+
+// Print struk
+Route::get('/transaksi/print/{id}', [TransaksiController::class, 'print'])
+    ->name('transaksi.print');
+
+
+
+    // =========================
+    // LAYANAN
+    // =========================
+
+// TAMBAHKAN PARAMETER OPSIONAL "from"
+    Route::get('/admin/layanan', [LayananController::class, 'index'])->name('layanan.index');
+
+    Route::get('/transaksi/add-layanan/{id}', [TransaksiController::class, 'addLayanan']);
+
+    Route::get('/layanan', [LayananController::class, 'index'])
+        ->name('layanan.index');
+
+    Route::get('/layanan/create', [LayananController::class, 'create'])
+        ->name('layanan.create');
+
+    Route::post('/layanan/store', [LayananController::class, 'store'])
+        ->name('layanan.store');
+
+    Route::get('/layanan/{id}/edit', [LayananController::class, 'edit'])
+        ->name('layanan.edit');
+
+    Route::put('/layanan/{id}', [LayananController::class, 'update'])
+        ->name('layanan.update');
+
+    Route::delete('/layanan/{id}', [LayananController::class, 'destroy'])
+        ->name('layanan.destroy');
+
+    Route::get('/layanan/{id}/duplicate', [LayananController::class, 'duplicate'])
+        ->name('layanan.duplicate');
+
+    // Jenis layanan (session)
+    Route::get('/layanan/{from}/jenis/add', [LayananController::class, 'sessionCreateJenis'])
+        ->name('session.create');
+
+    Route::post('/layanan/{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenis'])
+        ->name('session.store');
 
 // =========================
 // JENIS LAYANAN
@@ -134,5 +194,4 @@ Route::post('/layanan/jenis/clear-session', [LayananController::class, 'clearJen
     Route::get('/parfum/{id}/edit', [SatuanParfumController::class, 'parfumEdit'])->name('parfum.edit');
     Route::put('/parfum/{id}', [SatuanParfumController::class, 'parfumUpdate'])->name('parfum.update');
     Route::delete('/parfum/{id}', [SatuanParfumController::class, 'parfumDestroy'])->name('parfum.destroy');
-
 });

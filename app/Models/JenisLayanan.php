@@ -12,7 +12,7 @@ class JenisLayanan extends Model
     protected $fillable = [
         'id_layanan',
         'nama_jenis',
-        'satuan',
+        'id_satuan',     // ⬅ perbaiki ini
         'harga',
         'lama',
         'lama_satuan',
@@ -24,9 +24,9 @@ class JenisLayanan extends Model
     {
         return $this->belongsTo(Layanan::class, 'id_layanan');
     }
-    // JenisLayanan.php
-public function satuan() {
-    return $this->belongsTo(Satuan::class, 'id_satuan');
-}
 
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan'); // ini sudah benar
+    }
 }

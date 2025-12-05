@@ -17,7 +17,7 @@
     @include('layouts.sidebar')
 
     {{-- Main Content --}}
-    <div class="min-h-screen">
+    <div class="min-h-screen relative z-[1]">
         @yield('content')
     </div>
 
@@ -26,6 +26,9 @@
 
     {{-- PENTING!! SCRIPT DARI HALAMAN MASUK DI SINI --}}
     @yield('scripts')
+
+    @stack('scripts')
+
 
 </body>
 </html>

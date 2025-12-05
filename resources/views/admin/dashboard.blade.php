@@ -56,21 +56,6 @@
 
 </div>
 
-<!-- PROFILE TOKO -->
-<div class="mx-4 mt-4 bg-white rounded-xl p-4 shadow flex gap-4 items-center">
-    <img src="{{ asset('images/toko_default.png') }}" class="w-[70px] h-[70px] rounded-xl object-cover" />
-
-    <div class="flex-1">
-        <div class="text-xl font-bold">Nama Toko</div>
-        <div class="border-b border-yellow-400 w-20 mb-1"></div>
-        <div class="text-gray-600 text-sm">Alamat toko default</div>
-    </div>
-
-    <div class="text-yellow-500 text-2xl cursor-pointer hover:text-yellow-600">
-        <i class="bi bi-pencil-square"></i>
-    </div>
-</div>
-
 <!-- Statistik -->
 <div class="grid grid-cols-3 gap-4 mx-4 mt-4">
 
@@ -100,61 +85,127 @@
 
 </div>
 
-<!-- MENU GRID -->
-<div class="grid grid-cols-3 gap-4 mx-4 mt-6">
+{{-- ======================================
+       DATA TABLES SECTION (NEW)
+======================================= --}}
+{{-- ======================================
+       DATA TABLES + BUTTON TRANSAKSI
+======================================= --}}
+<div class="mx-4 mt-8 bg-white rounded-2xl shadow-lg p-5">
 
-    <a href="{{ route('layanan.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-bag-check-fill"></i></div>
-        <div class="font-semibold">Layanan</div>
-    </a>
+    {{-- BUTTON TRANSAKSI --}}
+    <div class="flex justify-between items-center mb-5">
+        <h2 class="text-lg font-bold text-gray-700">Riwayat Transaksi</h2>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-search"></i></div>
-        <div class="font-semibold">Riwayat</div>
-    </a>
+        <a href="{{ route('transaksi.create') }}"
+           class="bg-[#ffcc00] hover:bg-yellow-400 transition px-5 py-3 rounded-xl text-black font-bold shadow">
+            + Transaksi
+        </a>
+    </div>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-clipboard-data-fill"></i></div>
-        <div class="font-semibold">Laporan</div>
-    </a>
+    {{-- TABLE --}}
+    <div class="overflow-x-auto">
+        <table id="orderTable" class="w-full text-sm text-left border-separate border-spacing-y-2">
+            <thead>
+                <tr class="bg-[#ffcc00] text-black text-[13px] uppercase rounded-xl">
+                    <th class="py-3 px-4 rounded-l-xl">No</th>
+                    <th class="py-3 px-4">No. Order</th>
+                    <th class="py-3 px-4">Tgl Order</th>
+                    <th class="py-3 px-4">Nama Pelanggan</th>
+                    <th class="py-3 px-4">Jenis Layanan</th>
+                    <th class="py-3 px-4">Durasi</th>
+                    <th class="py-3 px-4">Satuan</th>
+                    <th class="py-3 px-4 rounded-r-xl text-center">Action</th>
+                </tr>
+            </thead>
 
-    <a href="{{ route('parfum.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-wind"></i></div>
-        <div class="font-semibold">Parfum</div>
-    </a>
+            <tbody class="text-gray-700">
+                @foreach ($orders as $i => $o)
+                @php
+                    $d = $o->detail->first(); 
+                @endphp
 
-    <a href="{{ route('satuan.index') }}" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-grid-3x3-gap-fill"></i></div>
-        <div class="font-semibold">Satuan</div>
-    </a>
+                <tr class="bg-white shadow-sm hover:bg-yellow-50 transition rounded-xl">
+                    <td class="py-3 px-4">{{ $i+1 }}</td>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-person-fill"></i></div>
-        <div class="font-semibold">Pelanggan</div>
-    </a>
+                    <td class="py-3 px-4 font-semibold text-gray-800">
+                        {{ $o->id_transaksi }}
+                    </td>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-cash-stack"></i></div>
-        <div class="font-semibold">Pengeluaran</div>
-    </a>
+                    <td class="py-3 px-4">
+                        {{ $o->tgl_transaksi ? \Carbon\Carbon::parse($o->tgl_transaksi)->format('d/m/Y') : '-' }}
+                    </td>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-gear-fill"></i></div>
-        <div class="font-semibold">Pengaturan</div>
-    </a>
+                    <td class="py-3 px-4">
+                        {{ $o->nama_pelanggan ?? '-' }}
+                    </td>
 
-    <a href="#" class="bg-white rounded-xl p-6 shadow text-center hover:shadow-lg transition">
-        <div class="text-4xl mb-2"><i class="bi bi-shield-lock-fill"></i></div>
-        <div class="font-semibold">Security</div>
-    </a>
+                    <td class="py-3 px-4">
+                        {{ $d->nama_layanan ?? '-' }}
+                    </td>
 
-</div>
+                    <td class="py-3 px-4">
+                        {{ $d->qty ?? '-' }}
+                    </td>
 
-<!-- TRANSAKSI BUTTON -->
-<div class="mx-4 mt-8 mb-10">
-    <button class="w-full bg-[#ffcc00] py-4 rounded-xl text-xl font-bold shadow hover:shadow-lg transition">
-        Transaksi
-    </button>
+                    <td class="py-3 px-4">
+                        {{ $d->satuan ?? '-' }}
+                    </td>
+
+                    <td class="py-3 px-4 text-center">
+                        <button class="bg-[#ffcc00] px-4 py-2 rounded-xl text-black font-semibold hover:bg-yellow-400 transition">
+                            Detail
+                        </button>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
 </div>
 
 @endsection
+@push('scripts')
+
+<!-- DataTables CSS -->
+<link rel="stylesheet"
+      href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+
+        let table = $('#orderTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [5, 10, 20, 50],
+            ordering: true,
+            searching: true,
+            destroy: true,
+
+            initComplete: function () {
+
+                // SEARCH BOX
+                $('div.dataTables_filter input')
+                    .addClass("border border-gray-300 rounded-xl px-3 py-2 ml-2 focus:ring-2 focus:ring-yellow-400 outline-none");
+
+                // SELECT LENGTH
+                $('div.dataTables_length select')
+                    .addClass("border border-gray-300 rounded-xl px-3 py-2 mr-2");
+
+                // PAGINATION (delayed to avoid conflict)
+                setTimeout(() => {
+                    $('.dataTables_paginate a')
+                        .addClass("px-3 py-1 rounded-lg border bg-white hover:bg-yellow-200 transition text-sm");
+
+                    $('.dataTables_paginate .current')
+                        .addClass("bg-[#ffcc00] text-black border-none");
+                }, 100);
+            }
+        });
+
+    });
+</script>
+
+@endpush
