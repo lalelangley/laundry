@@ -7,28 +7,24 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Pelanggan extends Authenticatable
+class Driver extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'pelanggan';
-    protected $primaryKey = 'id_pelanggan';
+    protected $table = 'driver';
+    protected $primaryKey = 'id_driver';
     public $incrementing = true;
     protected $keyType = 'int';
 
     protected $fillable = [
-        'nama_pelanggan',
-        'no_hp',
-        'alamat',
-        'jk',
-        'gambar',
-        'email',
+        'nama_driver',
+        'no_telp',
+        'password',
+        'status',
         'role',
-        'password'
     ];
 
     protected $hidden = [
         'password',
-        'remember_token',
     ];
 }
