@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class JenisLayanan extends Model
 {
+    use HasFactory;
+
     protected $table = 'jenis_layanan';
     protected $primaryKey = 'id_jenis_layanan';
 
     protected $fillable = [
         'id_layanan',
         'nama_jenis',
-        'id_satuan',     // ⬅ perbaiki ini
+        'id_satuan',     
         'harga',
         'lama',
         'lama_satuan',

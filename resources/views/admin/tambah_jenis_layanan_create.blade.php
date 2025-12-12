@@ -31,13 +31,22 @@
         {{-- Gambar --}}
         <div>
             <label class="font-semibold block mb-1">Gambar</label>
+
             <div class="flex items-center gap-4">
-                <div class="w-24 h-24 bg-gray-200 flex rounded-xl items-center justify-center text-gray-500 text-4xl">
-                    <i class="bi bi-person-circle"></i>
+
+                {{-- RECTANGLE PREVIEW --}}
+                <div id="previewWrapper"
+                    class="w-24 h-24 bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
+
+                    <i id="previewIcon" class="bi bi-image text-gray-500 text-4xl"></i>
+
+                    <img id="previewJenis" src="" class="w-full h-full object-cover hidden">
                 </div>
+
+                {{-- BUTTON PILIH FILE --}}
                 <label class="bg-yellow-400 px-6 py-3 rounded-xl text-white font-semibold cursor-pointer">
                     Pilih Gambar
-                    <input type="file" name="gambar" class="hidden">
+                    <input type="file" name="gambar" id="inputGambarJenis" class="hidden" accept="image/*">
                 </label>
             </div>
         </div>
@@ -53,17 +62,26 @@
         <div>
             <label class="font-semibold block mb-1">Satuan</label>
             <div class="flex items-center gap-3">
-                <select name="id_satuan" class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
-                    <option value="">-- Pilih Satuan --</option>
-                    @foreach($satuan as $s)
-                        <option value="{{ $s->id_satuan }}" {{ old('id_satuan') == $s->id_satuan ? 'selected' : '' }}>
+
+                <select name="id_satuan" class="form-select">
+                    @foreach ($satuan as $s)
+                        <option 
+                            value="{{ $s->id_satuan }}"
+                            @if(request('new_satuan') == $s->id_satuan) selected @endif
+                        >
                             {{ $s->nama_satuan }}
                         </option>
                     @endforeach
                 </select>
 
-                <a href="{{ route('satuan.index') }}"
-                    class="bg-green-600 px-6 py-3 rounded-2xl text-white font-semibold">
+                <input type="hidden" name="from" value="{{ request('from') }}">
+                <input type="hidden" name="id_layanan" value="{{ request('id_layanan') }}">
+                <input type="hidden" name="id_jenis" value="{{ request('id_jenis') }}">
+
+                <a href="{{ route('satuan.create', [
+                        'from' => 'create-jenis',
+                        'id_layanan' => $from
+                ]) }}" class="text-blue-500 underline">
                     Tambah
                 </a>
             </div>
@@ -105,4 +123,26 @@
 
     </form>
 </div>
+
+{{-- JS PREVIEW GAMBAR --}}
+<script>
+document.getElementById('inputGambarJenis')?.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+
+    const preview = document.getElementById('previewJenis');
+    const icon = document.getElementById('previewIcon');
+
+    if (file) {
+        preview.src = URL.createObjectURL(file);
+
+        // TAMPILIN GAMBAR
+        preview.classList.remove('hidden');
+
+        // SEMBUNYIKAN ICON
+        icon.classList.add('hidden');
+    }
+});
+</script>
+
+
 @endsection

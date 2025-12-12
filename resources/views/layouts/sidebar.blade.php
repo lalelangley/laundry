@@ -54,13 +54,11 @@
         </a>
 
        <a href="{{ route('satuan.index') }}" 
-    class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
-        transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
-    <i class="bi bi-basket3-fill text-2xl"></i>
-    <span class="font-bold">SATUAN</span>
-</a>
-
-
+            class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
+                transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
+            <i class="bi bi-basket3-fill text-2xl"></i>
+            <span class="font-bold">SATUAN</span>
+        </a>
 
         <a href="{{ route('pelanggan.index') }}"
             class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
@@ -69,14 +67,14 @@
             <span class="font-bold">PELANGGAN</span>
         </a>
 
-        <a href="#" 
+         <a href="{{ route('riwayat.index') }}"
             class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
                    transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
             <i class="bi bi-clock-history text-2xl"></i> 
             <span class="font-bold">RIWAYAT</span>
         </a>
 
-        <a href="#" 
+        <a href="{{ route('pengeluaran.index') }}" 
             class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
                    transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
             <i class="bi bi-cash-coin text-2xl"></i> 

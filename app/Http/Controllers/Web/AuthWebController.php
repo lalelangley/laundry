@@ -65,9 +65,10 @@ class AuthWebController extends Controller
         $totalKasir      = Kasir::count();
         $totalTransaksi  = Transaksi::count();
         $totalOmzet      = Transaksi::sum('total_bayar');
-        $orders = Transaksi::with(['detail', 'pelanggan'])
+        $orders = Transaksi::with(['detail.jenis.satuan', 'pelanggan'])
         ->orderBy('id_transaksi', 'DESC')
         ->get();
+
         return view('admin.dashboard', compact(
             'admin',
             'totalPelanggan',
@@ -124,14 +125,14 @@ class AuthWebController extends Controller
         $path = $request->file('gambar')->store('pelanggan', 'public');
     }
 
-    Pelanggan::create([
-        'nama_pelanggan' => $request->nama_pelanggan,
-        'no_hp' => $request->no_hp,
-        'email' => $request->email,
-        'jk' => $request->gender, // PENTING: ENUM L/P
-        'alamat' => $request->alamat,
-        'gambar' => $path
-    ]);
+ Pelanggan::create([
+    'nama_pelanggan' => $request->nama_pelanggan,
+    'no_hp' => $request->no_hp,
+    'alamat' => $request->alamat,
+    'gambar' => $path,
+    'password' => bcrypt('123456'), // otomatis jadi 123456
+]);
+
 
     // ==========================
     //  REDIRECT DARI TRANSAKSI

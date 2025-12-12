@@ -16,7 +16,7 @@
 
         <!-- Versi -->
         <div class="text-sm font-semibold text-black">
-            Versi 1.6.8
+            Versi -
         </div>
     </div>
 
@@ -86,9 +86,6 @@
 </div>
 
 {{-- ======================================
-       DATA TABLES SECTION (NEW)
-======================================= --}}
-{{-- ======================================
        DATA TABLES + BUTTON TRANSAKSI
 ======================================= --}}
 <div class="mx-4 mt-8 bg-white rounded-2xl shadow-lg p-5">
@@ -113,7 +110,7 @@
                     <th class="py-3 px-4">Tgl Order</th>
                     <th class="py-3 px-4">Nama Pelanggan</th>
                     <th class="py-3 px-4">Jenis Layanan</th>
-                    <th class="py-3 px-4">Durasi</th>
+                    <th class="py-3 px-4">QYT</th>
                     <th class="py-3 px-4">Satuan</th>
                     <th class="py-3 px-4 rounded-r-xl text-center">Action</th>
                 </tr>
@@ -141,7 +138,7 @@
                     </td>
 
                     <td class="py-3 px-4">
-                        {{ $d->nama_layanan ?? '-' }}
+                        {{ $d->jenis->nama_jenis ?? '-' }}
                     </td>
 
                     <td class="py-3 px-4">
@@ -149,14 +146,16 @@
                     </td>
 
                     <td class="py-3 px-4">
-                        {{ $d->satuan ?? '-' }}
+                        {{ $d->jenis->satuan->nama_satuan ?? '-' }}
                     </td>
 
-                    <td class="py-3 px-4 text-center">
-                        <button class="bg-[#ffcc00] px-4 py-2 rounded-xl text-black font-semibold hover:bg-yellow-400 transition">
-                            Detail
-                        </button>
-                    </td>
+                    <td class="py-3 px-6 text-center">
+                        <a href="{{ route('riwayat.detail', ['id' => $o->id_transaksi, 'from' => 'dashboard']) }}"
+                    class="inline-block bg-[#ffcc00] px-4 py-2 rounded-xl text-black font-semibold hover:bg-yellow-400 transition">
+                        Detail
+                    </a>
+
+                 </td>
                 </tr>
                 @endforeach
             </tbody>

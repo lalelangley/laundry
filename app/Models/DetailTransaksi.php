@@ -6,36 +6,43 @@ use Illuminate\Database\Eloquent\Model;
 
 class DetailTransaksi extends Model
 {
-    protected $table = "detail_transaksi";
-    protected $primaryKey = "id_detail_transaksi";
+    protected $table = 'detail_transaksi';
+    protected $primaryKey = 'id_detail_transaksi';
     public $incrementing = true;
 
     protected $fillable = [
         'id_transaksi',
         'id_layanan',
-        'id_jenis',
+        'id_jenis_layanan',
         'id_parfum',
-        'gambar',
-        'nama_jenis',
-        'nama_parfum',
-        'nama_layanan',
-        'lama_hari',
-        'lama_jam',
-        'proses',
         'harga',
-        'satuan',
         'qty',
-        'diskon',
-        'tipe_diskon',
-        'total_harga',
-        'status_transaksi',
-        'tgl_transaksi',
         'keterangan',
+        'id_satuan',
+        'tipe_diskon'
     ];
+    public function detail()
+{
+    return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
+}
 
-    // Detail belongs to Transaksi
-    public function transaksi()
-    {
-        return $this->belongsTo(Transaksi::class, 'id_transaksi', 'id_transaksi');
-    }
+public function jenis()
+{
+    return $this->belongsTo(JenisLayanan::class, 'id_jenis_layanan');
+}
+
+public function pelanggan()
+{
+    return $this->belongsTo(Pelanggan::class, 'id_pelanggan');
+}
+public function layanan()
+{
+    return $this->belongsTo(Layanan::class, 'id_layanan');
+
+}
+public function transaksi()
+{
+    return $this->belongsTo(Layanan::class, 'id_transaksi');
+
+}
 }

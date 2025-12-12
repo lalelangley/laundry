@@ -3,10 +3,12 @@
 @section('content')
 
 {{-- HEADER --}}
+{{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('layanan.edit', $from ?? 0) }}" class="text-black text-3xl font-bold">←</a>
+    <a href="{{ route('layanan.edit', ['id' => request('from')]) }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Ubah Jenis Layanan</span>
 </div>
+
 
 <div class="px-5 mt-6">
     <form action="{{ route('layanan.jenis.update', $jenis->id_jenis_layanan) }}" method="POST" enctype="multipart/form-data"
@@ -14,7 +16,7 @@
         @csrf
         @method('PUT')
 
-        <input type="hidden" name="from" value="{{ $from }}">
+        <input type="hidden" name="from" value="{{ request('from') }}">
 
         {{-- Gambar --}}
         <div>
@@ -49,22 +51,25 @@
                    class="w-full bg-gray-100 p-4 rounded-2xl text-lg" required>
         </div>
 
-        {{-- Satuan & Tambah --}}
+       {{-- Satuan & Tambah --}}
         <div>
             <label class="font-semibold block mb-1">Satuan</label>
             <div class="flex items-center gap-3">
                 <select name="id_satuan" class="w-full bg-gray-100 p-4 rounded-2xl text-lg">
-                    @foreach($satuan as $s)
-                        <option value="{{ $s->id_satuan }}" {{ old('id_satuan', $jenis->id_satuan) == $s->id_satuan ? 'selected' : '' }}>
-                            {{ $s->nama_satuan }}
-                        </option>
-                    @endforeach
+                @foreach($satuan as $s)
+                    <option value="{{ $s->id_satuan }}"
+                        @if(old('id_satuan', request('new_satuan', $jenis->id_satuan)) == $s->id_satuan) selected @endif>
+                        {{ $s->nama_satuan }}
+                    </option>
+                @endforeach
                 </select>
-                <a href="{{ route('satuan.index') }}"
-                   class="bg-green-600 text-white px-5 py-3 rounded-full font-semibold">
-                    Tambah
-                </a>
-            </div>
+
+                {{-- LINK T MBAH SATUAN --}}
+                <a href="{{ route('satuan.create', [
+                    'from' => 'edit-jenis',
+                    'id_layanan' => $jenis->id_layanan,
+                    'id_jenis' => $jenis->id_jenis_layanan   {{-- PASTIKAN ini benar --}}
+                ]) }}" class="text-blue-500 underline">Tambah</a>
         </div>
 
         {{-- Harga --}}

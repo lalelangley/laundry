@@ -7,7 +7,6 @@
 @php
 $detail = session('detail_transaksi', []);
 $keterangan = session('keterangan_transaksi', '');
-
 @endphp
 
 {{-- HEADER --}}
@@ -18,7 +17,6 @@ $keterangan = session('keterangan_transaksi', '');
     <span class="text-2xl font-bold">Transaksi</span>
 </div>
 
-{{-- WRAPPER + BAWAH DITAMBAH PAD BIAR TIDAK KETUTUP FOOTER --}}
 <div class="p-4 space-y-6 pb-[180px]">
 
     {{-- CARD PELANGGAN --}}
@@ -53,19 +51,22 @@ $keterangan = session('keterangan_transaksi', '');
                 <span class="text-xl font-semibold">Detail Order</span>
             </div>
 
-            <a href="{{ route('layanan.index', ['from' => 'transaksi']) }}" 
+            <a href="{{ route('layanan.index', ['from' => 'transaksi']) }}"
                 class="bg-yellow-400 px-4 py-3 rounded-2xl text-black font-bold shadow hover:bg-yellow-500 transition">
                 Tambah Layanan
             </a>
         </div>
 
+
         {{-- LIST LAYANAN --}}
-        @if (!$detail || count($detail) === 0)
+        @if (count($detail) === 0)
+
             <div class="text-center py-10">
                 <i class="bi bi-search text-7xl text-yellow-400"></i>
                 <p class="mt-4 font-semibold text-gray-600">List Layanan kosong</p>
                 <p class="text-sm text-gray-500">Silahkan tambahkan layanan terlebih dahulu</p>
             </div>
+
         @else
             <div class="space-y-5">
                 @foreach ($detail as $d)
@@ -75,18 +76,18 @@ $keterangan = session('keterangan_transaksi', '');
 
                         {{-- GAMBAR --}}
                         <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                            <img src="{{ asset('images/default.png') }}"
-                                class="w-full h-full object-cover">
+                            <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
                         </div>
 
                         {{-- DETAIL --}}
                         <div class="flex-1">
                             <p class="font-bold text-lg leading-tight">
-                                {{ $d['nama_layanan'] }}
+                                {{ $d['nama_layanan'] }} ({{ isset($d['jenis']) ? ' '.$d['jenis'] : '' }})
                             </p>
 
+                            {{-- tanpa satuan --}}
                             <p class="text-sm text-gray-700">
-                                Rp{{ number_format($d['harga'],0,',','.') }} / {{ $d['satuan'] }}
+                                Rp{{ number_format($d['harga'],0,',','.') }}
                             </p>
 
                             <p class="text-sm text-gray-600 flex items-center gap-1 mt-1">
@@ -105,7 +106,7 @@ $keterangan = session('keterangan_transaksi', '');
                         <div class="flex flex-col items-end">
                             <div>
                                 <p class="text-sm font-semibold text-gray-700">Qty</p>
-                                <p class="text-lg font-bold">{{ $d['qty'] }} {{ $d['satuan'] }}</p>
+                                <p class="text-lg font-bold">{{ $d['qty'] }}</p>
                             </div>
 
                             <form 
@@ -126,17 +127,19 @@ $keterangan = session('keterangan_transaksi', '');
             </div>
         @endif
 
-        {{-- KETERANGAN TRANSAKSI (1 UNTUK 1 TRANSAKSI) --}}
+
+
+        {{-- KETERANGAN TRANSAKSI --}}
         <form id="checkoutForm" action="{{ route('transaksi.checkout') }}" method="POST">
             @csrf
             <div class="bg-white rounded-3xl p-5 shadow-xl mt-6">
                 <p class="font-semibold mb-2">Keterangan</p>
 
                 <textarea name="keterangan" id="keteranganTransaksi"
-                        class="w-full p-3 border rounded-xl"
-                        placeholder="Tambahkan keterangan untuk transaksi...">{{ $keterangan }}</textarea>
+                    class="w-full p-3 border rounded-xl"
+                    placeholder="Tambahkan keterangan untuk transaksi...">{{ $keterangan }}</textarea>
 
-                    <script>
+                <script>
                     document.getElementById('keteranganTransaksi').addEventListener('input', function () {
                         fetch("{{ route('transaksi.updateKeterangan') }}", {
                             method: "POST",
@@ -147,12 +150,15 @@ $keterangan = session('keterangan_transaksi', '');
                             body: JSON.stringify({ keterangan: this.value })
                         });
                     });
-                    </script>   
+                </script>
+
             </div>
         </form>
 
     </div>
+
 </div>
+
 
 {{-- FOOTER FIXED --}}
 @php
@@ -169,49 +175,44 @@ $keterangan = session('keterangan_transaksi', '');
         class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow">
         Checkout
     </button>
-
-    <!-- POPUP ALERT -->
-<div id="popupAlert"
-    class="fixed inset-0 bg-black/40 flex items-center justify-center px-6 z-[999] hidden">
-
-    <div class="bg-white rounded-3xl shadow-xl p-7 w-full max-w-xs text-center animate__animated animate__fadeInUp">
-
-        <div class="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="bi bi-exclamation-lg text-white text-5xl"></i>
-        </div>
-
-        <p id="popupAlertMessage" class="text-lg font-semibold text-gray-700 mb-4">
-            <!-- isi dari JS -->
-        </p>
-
-        <button id="popupAlertOk"
-            class="w-full bg-yellow-500 py-3 rounded-2xl font-bold text-black shadow hover:bg-yellow-600 transition">
-            OK
-        </button>
-    </div>
-</div>
 </div>
 
+@section('scripts')
 <script>
-document.querySelector("button[form='checkoutForm']").addEventListener("click", function (e) {
+    document.querySelector("[form='checkoutForm']").addEventListener("click", function(e) {
+        const pelanggan = @json($pelanggan);
+        const detail = @json($detail);
 
-    const totalLayanan = {{ count($detail) }};
+        // CEK PELANGGAN
+        if (!pelanggan) {
+            e.preventDefault();
 
-    if (totalLayanan === 0) {
-        e.preventDefault();
+            Swal.fire({
+                title: "Pelanggan belum dipilih",
+                text: "Silahkan pilih pelanggan terlebih dahulu.",
+                icon: "warning",
+                confirmButtonColor: "#facc15",
+                confirmButtonText: "Mengerti"
+            });
 
-        // munculin popup
-        document.getElementById("popupAlertMessage").textContent =
-            "Silakan tambahkan layanan terlebih dahulu sebelum checkout!";
+            return;
+        }
 
-        document.getElementById("popupAlert").classList.remove("hidden");
-    }
-});
+        // CEK LAYANAN
+        if (!detail || detail.length === 0) {
+            e.preventDefault();
 
-// tombol OK menutup popup
-document.getElementById("popupAlertOk").addEventListener("click", function () {
-    document.getElementById("popupAlert").classList.add("hidden");
-});
+            Swal.fire({
+                title: "Layanan kosong",
+                text: "Tambahkan layanan sebelum checkout.",
+                icon: "warning",
+                confirmButtonColor: "#facc15",
+                confirmButtonText: "Oke"
+            });
+
+            return;
+        }
+    });
 </script>
 
 

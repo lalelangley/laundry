@@ -4,40 +4,132 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Pelanggan;
+use App\Models\Driver;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Admin;
-use App\Models\Kasir;
 
 class AuthController extends Controller
 {
-    public function loginAdmin(Request $request)
+    // =========================
+    // REGISTER (khusus pelanggan)
+    // =========================
+    public function register(Request $request)
     {
-        $admin = Admin::where('email', $request->email)->first();
+        $validator = Validator::make($request->all(), [
+            'nama_pelanggan' => 'required|string|max:100',
+            'no_hp'          => 'required|string|max:20|unique:pelanggan,no_hp',
+            'alamat'         => 'required|string',
+            'password'       => 'required|string|min:6',
+        ]);
 
-        if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return response()->json(['success' => false, 'message' => 'Email atau password salah'], 401);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        return response()->json([
-            'success' => true,
-            'admin' => $admin,
-            'token' => $admin->createToken('admin')->plainTextToken
+        $pelanggan = Pelanggan::create([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'password'       => Hash::make($request->password),
+            'jk'             => null,
+            'gambar'         => null,
+            'role'           => 'pelanggan', // TAMBahkan role
         ]);
+
+        // Generate token Sanctum
+        $token = $pelanggan->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Registrasi berhasil',
+            'role'    => 'pelanggan',
+            'token'   => $token,
+            'data'    => $pelanggan,
+        ], 201);
     }
 
-    public function loginKasir(Request $request)
-    {
-        $kasir = Kasir::find($request->kasir_id);
 
-        if (!$kasir || !Hash::check($request->pin, $kasir->password)) {
-            return response()->json(['success' => false, 'message' => 'PIN salah'], 401);
+    // =========================
+    // LOGIN
+    // =========================
+    public function login(Request $request)
+    {
+        $request->validate([
+            'no_telp'  => 'required',
+            'password' => 'required',
+        ]);
+
+        $role = null;
+        $user = null;
+
+        // ============================
+        // CEK PELANGGAN
+        // ============================
+        $user = Pelanggan::where('no_hp', $request->no_telp)->first();
+        if ($user) {
+            $role = 'pelanggan';
         }
 
+        // ============================
+        // JIKA TIDAK ADA → CEK DRIVER
+        // ============================
+        if (!$user) {
+            $user = Driver::where('no_telp', $request->no_telp)->first();
+            if ($user) {
+                $role = 'driver';
+            }
+        }
+
+        // ============================
+        // NO TELP TIDAK DITEMUKAN
+        // ============================
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Nomor telepon tidak ditemukan'
+            ], 404);
+        }
+
+        // ============================
+        // CEK PASSWORD
+        // ============================
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Password salah'
+            ], 401);
+        }
+
+        // ============================
+        // LOGIN BERHASIL → BUAT TOKEN
+        // ============================
+        $token = $user->createToken('auth_token')->plainTextToken;
+
         return response()->json([
-            'success' => true,
-            'kasir' => $kasir,
-            'token' => $kasir->createToken('kasir')->plainTextToken
-        ]);
+            'status'  => true,
+            'message' => 'Login berhasil',
+            'role'    => $role,
+            'token'   => $token,
+            'data'    => $user,
+        ], 200);
+    }
+
+
+    // =========================
+    // LOGOUT
+    // =========================
+    public function logout(Request $request)
+    {
+        // Hapus token aktif
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Logout berhasil'
+        ], 200);
     }
 }
