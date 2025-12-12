@@ -10,18 +10,20 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
-
+{
+    Schema::create('admin', function (Blueprint $table) {
+        $table->id('id_admin');
+        $table->string('nama_admin');
+        $table->string('username')->unique();
+        $table->string('password');
+        $table->timestamps();
+    });
+}
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('admin');
     }
 };

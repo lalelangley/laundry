@@ -22,4 +22,9 @@ class JenisLayanan extends Model
     {
         return $this->belongsTo(Layanan::class, 'id_layanan', 'id_layanan');
     }
+    // Relasi balik ke Satuan
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan', 'id_satuan');
+    }
 }

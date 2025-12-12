@@ -39,10 +39,11 @@ public function index(Request $request)
     $satuan = Satuan::all(); // buat dropdown di form jenis layanan
     $parfum = \App\Models\Parfum::all(); // buat dropdown parfum
 
-    return view('admin.layanan_create', compact('jenisBaru', 'jenisLama', 'satuan', 'parfum'));
+    return view('admin.layanan_create', compact('jenisBaru', 'jenisLama', 'satuan', 'parfum'))->with('from', request('from'));
 }
 
 
+// Store Layanan + jenis dari session
 // =========================
 // STORE LAYANAN
 // =========================
@@ -53,6 +54,9 @@ public function store(Request $request)
         'nama_layanan' => 'required|string|max:255',
         // proses boleh kosong, tapi kita normalisasi nanti
     ]);
+
+    // ==== AMBIL PARAM FROM (tambahan) ====
+    $from = $request->input('from');
 
     $layanan_id = 0;
     $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
@@ -118,9 +122,22 @@ public function store(Request $request)
     // bersihkan session jenis_baru
     session()->forget("jenis_baru_{$layanan_id}");
 
-    return redirect()->route('layanan.index')->with('success', 'Layanan berhasil ditambahkan');
+// ================================
+//  FIX REDIRECT KHUSUS TRANSAKSI
+// ================================
+if ($from === 'transaksi') {
+
+    // Kirim ID layanan baru → supaya popup qty bisa muncul otomatis
+    return redirect()->route('transaksi.fromLayanan', [
+        'layanan_id' => $layanan->id_layanan
+    ]);
 }
 
+
+    // default
+    return redirect()->route('layanan.index')
+        ->with('success', 'Layanan berhasil ditambahkan');
+}
 
     // =========================
     // EDIT LAYANAN
@@ -224,13 +241,15 @@ public function createJenis($id_layanan, Request $request)
     $mode = $request->query('mode', 'create'); // 'create' atau 'edit'
     $from = $request->query('from', $id_layanan); // default dari id_layanan
     $satuan = Satuan::all(); // untuk dropdown satuan
+    $id_jenis = $request->query('id_jenis'); // <-- ambil dari query string
 
     if ($mode === 'edit') {
-        return view('admin.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan'));
+        return view('admin.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan', 'id_jenis'));
     } else {
         return view('admin.tambah_jenis_layanan_create', compact('id_layanan', 'mode', 'from', 'satuan'));
     }
 }
+
 
 
 // STORE JENIS
@@ -257,21 +276,21 @@ public function storeJenis(Request $request)
 
         session()->put('jenis_baru', $jenis_baru);
 
-        return redirect()->route('layanan.create')->with('success', 'Jenis layanan berhasil ditambahkan.');
+       return redirect()->route('layanan.create', ['from' => $request->from ?? 'transaksi'])->with('success', 'Jenis layanan berhasil ditambahkan.');
     }
 
-    // =========================
-    // EDIT JENIS LAYANAN
-    // =========================
-// EDIT JENIS
 public function editJenis($id)
 {
     $jenis = JenisLayanan::findOrFail($id);
     $satuan = Satuan::all();
-    $from = request()->query('from', 0);
 
-    return view('admin.edit_jenis_layanan', compact('jenis', 'satuan', 'from'));
+    return view('admin.edit_jenis_layanan', [
+        'jenis' => $jenis,
+        'satuan' => $satuan,
+    ]);
 }
+
+
 
 public function updateJenis(Request $request, $id)
 {
@@ -401,8 +420,8 @@ public function sessionStoreJenis(Request $request, $from)
     session()->put("jenis_baru_{$from}", $jenis_baru);
 
     // Redirect ke halaman create layanan
-    return redirect()->route('layanan.create')
-                     ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+    return redirect()->route('layanan.create', [
+    'from' => $from])->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
 }
 
 public function addJenisEdit(Request $request, $from)
@@ -499,4 +518,18 @@ $order[] = [
         'semua_id' => \App\Models\Layanan::pluck('id_layanan')
     ]);
 }
+
+// ============================
+// BALIK DARI BUAT LAYANAN → TRANSAKSI
+// ============================
+public function fromLayanan(Request $request)
+{
+    $layanan_id = $request->layanan_id;
+
+    // simpan ke session supaya popup qty otomatis muncul
+    session(['selected_layanan_for_qty' => $layanan_id]);
+
+    return redirect()->route('transaksi.create');
+}
+
 }

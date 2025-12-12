@@ -23,12 +23,12 @@ class DriverTaskController extends Controller
     ])
         ->where('id_driver', $driverId)
         ->whereIn('status', [
-    'pending',
-    'accepted',
-    'on_the_way_to_pickup',
-    'picked_up',
-    'on_the_way_to_laundry',
-    'on_the_way_to_customer',
+            'pending',
+            'accepted',
+            'on_the_way_to_pickup',
+            'picked_up',
+            'on_the_way_to_laundry',
+            'on_the_way_to_customer',
 ])
         ->get();
 

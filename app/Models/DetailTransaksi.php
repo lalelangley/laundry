@@ -15,17 +15,9 @@ class DetailTransaksi extends Model
     protected $fillable = [
         'id_transaksi',
         'id_layanan',
-        'id_jenis',
+        'id_jenis_layanan',
         'id_parfum',
-        'gambar',
-        'nama_jenis',
-        'nama_parfum',
-        'nama_layanan',
-        'lama_hari',
-        'lama_jam',
-        'proses',
         'harga',
-        'satuan',
         'qty',
         'diskon',
         'tipe_diskon',
@@ -70,3 +62,4 @@ class DetailTransaksi extends Model
         return $this->belongsTo(Parfum::class, 'id_parfum');
     }
 }
+

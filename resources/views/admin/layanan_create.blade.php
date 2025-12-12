@@ -83,7 +83,7 @@
 
         {{-- JENIS LAYANAN LAMA --}}
         @if(count($jenisLama) > 0)
-            <h3 class="mb-3 font-bold text-lg">Jenis Layanan Lama</h3>
+            <h3 class="mb-3 font-bold text-lg">Riwayat Jenis Layanan</h3>
             <div class="space-y-2 mb-6">
                 @foreach ($jenisLama as $jl)
                     <label class="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
@@ -139,3 +139,4 @@
     </form>
 </div>
 @endsection
+

@@ -18,4 +18,9 @@ class Layanan extends Model
     {
         return $this->hasMany(JenisLayanan::class, 'id_layanan', 'id_layanan');
     }
+    public function jenis()
+{
+    return $this->hasMany(JenisLayanan::class, 'id_layanan', 'id_layanan');
+}
+
 }
