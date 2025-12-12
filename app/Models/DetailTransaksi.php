@@ -49,25 +49,22 @@ class DetailTransaksi extends Model
     // RELASI
     // =========================
 
-    // Relasi ke Transaksi
     public function transaksi()
     {
         return $this->belongsTo(Transaksi::class, 'id_transaksi');
     }
 
-    // Relasi ke Layanan
     public function layanan()
     {
         return $this->belongsTo(Layanan::class, 'id_layanan');
     }
 
-    // Relasi ke Jenis
     public function jenis()
-    {
-        return $this->belongsTo(JenisLayanan::class, 'id_jenis');
-    }
+{
+    return $this->belongsTo(JenisLayanan::class, 'id_jenis', 'id_jenis_layanan');
+}
 
-    // Relasi ke Parfum
+
     public function parfum()
     {
         return $this->belongsTo(Parfum::class, 'id_parfum');

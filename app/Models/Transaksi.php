@@ -6,8 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaksi extends Model
 {
-    protected $table = 'transaksi';
-    protected $primaryKey = 'id_transaksi';
+    protected $table = "transaksi";
+    protected $primaryKey = "id_transaksi";
+    public $incrementing = true;
+    protected $keyType = "int";
 
     protected $fillable = [
         'id_pelanggan',
@@ -33,7 +35,7 @@ class Transaksi extends Model
     // ===========================
     public function detail()
     {
-        return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
+        return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
 
     // ===========================
@@ -41,6 +43,14 @@ class Transaksi extends Model
     // ===========================
     public function delivery()
     {
-        return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
+        return $this->hasOne(Delivery::class, 'id_transaksi');
+    }
+
+    // ===========================
+    // RELASI PELANGGAN
+    // ===========================
+    public function pelanggan()
+    {
+        return $this->belongsTo(Pelanggan::class, 'id_pelanggan');
     }
 }

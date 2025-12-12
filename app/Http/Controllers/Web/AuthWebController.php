@@ -65,13 +65,16 @@ class AuthWebController extends Controller
         $totalKasir      = Kasir::count();
         $totalTransaksi  = Transaksi::count();
         $totalOmzet      = Transaksi::sum('total_bayar');
-
+        $orders = Transaksi::with(['detail', 'pelanggan'])
+        ->orderBy('id_transaksi', 'DESC')
+        ->get();
         return view('admin.dashboard', compact(
             'admin',
             'totalPelanggan',
             'totalKasir',
             'totalTransaksi',
-            'totalOmzet'
+            'totalOmzet',
+            'orders' // PENTING
         ));
     }
 
@@ -86,4 +89,67 @@ class AuthWebController extends Controller
 
         return view('kasir.dashboard', compact('kasir'));
     }
+
+    // =============================
+    // LIST PELANGGAN
+    // =============================
+    public function pelangganIndex()
+    {
+        // Ambil semua pelanggan
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+
+        // Kirim ke tampilan
+        return view('pelanggan.index', compact('pelanggan'));
+    }
+
+       public function Create()
+    {
+        return view('pelanggan.create');
+    }
+
+  public function store(Request $request)
+{
+    $request->validate([
+        'nama_pelanggan' => 'required',
+        'no_hp' => 'required',
+        'email' => 'nullable|email',
+        'gender' => 'required',
+        'alamat' => 'required',
+        'gambar' => 'nullable|image|max:2048'
+    ]);
+
+    // Upload gambar
+    $path = null;
+    if ($request->hasFile('gambar')) {
+        $path = $request->file('gambar')->store('pelanggan', 'public');
+    }
+
+    Pelanggan::create([
+        'nama_pelanggan' => $request->nama_pelanggan,
+        'no_hp' => $request->no_hp,
+        'email' => $request->email,
+        'jk' => $request->gender, // PENTING: ENUM L/P
+        'alamat' => $request->alamat,
+        'gambar' => $path
+    ]);
+
+    // ==========================
+    //  REDIRECT DARI TRANSAKSI
+    // ==========================
+    if ($request->from === 'transaksi') {
+        return redirect()
+            ->route('transaksi.pelanggan') // INI YANG BENAR
+            ->with('success', 'Pelanggan berhasil ditambahkan!');
+    }
+
+    // ==========================
+    //  REDIRECT NORMAL
+    // ==========================
+    return redirect()
+        ->route('pelanggan.index')
+        ->with('success', 'Pelanggan berhasil ditambahkan!');
+}
+
+
+
 }

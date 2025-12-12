@@ -17,6 +17,7 @@ class Pelanggan extends Authenticatable
     protected $keyType = 'int';
 
     protected $fillable = [
+        'gambar',
         'nama_pelanggan',
         'no_hp',
         'alamat',

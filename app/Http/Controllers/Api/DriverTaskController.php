@@ -11,24 +11,33 @@ class DriverTaskController extends Controller
     // ======================================================
     // GET TASKS FOR THIS DRIVER
     // ======================================================
-    public function getPendingTasks($driverId)
-    {
-        $myTasks = Delivery::with('transaksi')
-            ->where('id_driver', $driverId)
-            ->whereIn('status', [
-                'pending',
-                'accepted',
-                'on_the_way_to_pickup',
-                'picked_up',
-                'on_the_way_to_laundry'
-            ])
-            ->get();
+ public function getPendingTasks($driverId)
+{
+    $myTasks = Delivery::with([
+        'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+        'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+        'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis,id_parfum,qty,harga,total_harga',
+        'transaksi.detail.layanan:id_layanan,nama_layanan',
+        'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+        'transaksi.detail.parfum:id_parfum,nama_parfum',
+    ])
+        ->where('id_driver', $driverId)
+        ->whereIn('status', [
+    'pending',
+    'accepted',
+    'on_the_way_to_pickup',
+    'picked_up',
+    'on_the_way_to_laundry',
+    'on_the_way_to_customer',
+])
+        ->get();
 
-        return response()->json([
-            'success' => true,
-            'tasks' => $myTasks,
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'tasks' => $myTasks,
+    ]);
+}
+
 
     // ======================================================
     // ACCEPT TASK

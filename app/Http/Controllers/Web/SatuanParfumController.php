@@ -13,9 +13,26 @@ class SatuanParfumController extends Controller
     // SATUAN
     // ================================
 
-    public function satuanIndex()
+    public function satuanIndex(Request $request)
     {
-        $satuan = Satuan::orderBy('nama_satuan')->get();
+        $query = Satuan::query();
+
+        // Search
+        if ($request->search) {
+            $query->where('nama_satuan', 'like', '%' . $request->search . '%');
+        }
+
+        // Sort
+        if ($request->sort == 'asc') {
+            $query->orderBy('nama_satuan', 'asc');
+        } else if ($request->sort == 'desc') {
+            $query->orderBy('nama_satuan', 'desc');
+        } else {
+            $query->orderBy('nama_satuan', 'asc');
+        }
+
+        $satuan = $query->get();
+
         return view('satuan.index', compact('satuan'));
     }
 
@@ -47,16 +64,41 @@ class SatuanParfumController extends Controller
     public function satuanDestroy($id)
     {
         Satuan::where('id_satuan', $id)->delete();
+
         return redirect()->route('satuan.index')->with('success', 'Satuan berhasil dihapus.');
     }
+
+    public function satuanEdit($id)
+{
+    $satuan = Satuan::where('id_satuan', $id)->firstOrFail();
+    return view('satuan.edit', compact('satuan'));
+}
+
 
     // ================================
     // PARFUM
     // ================================
 
-    public function parfumIndex()
+    public function parfumIndex(Request $request)
     {
-        $parfum = Parfum::orderBy('nama_parfum')->get();
+        $query = Parfum::query();
+
+        // Search
+        if ($request->search) {
+            $query->where('nama_parfum', 'like', '%' . $request->search . '%');
+        }
+
+        // Sort
+        if ($request->sort == 'asc') {
+            $query->orderBy('nama_parfum', 'asc');
+        } else if ($request->sort == 'desc') {
+            $query->orderBy('nama_parfum', 'desc');
+        } else {
+            $query->orderBy('nama_parfum', 'asc');
+        }
+
+        $parfum = $query->get();
+
         return view('parfum.index', compact('parfum'));
     }
 
@@ -72,6 +114,12 @@ class SatuanParfumController extends Controller
         Parfum::create(['nama_parfum' => $request->nama_parfum]);
 
         return redirect()->route('parfum.index')->with('success', 'Parfum berhasil ditambahkan.');
+    }
+
+        public function parfumEdit($id)
+    {
+        $parfum = Parfum::where('id_parfum', $id)->firstOrFail();
+        return view('parfum.edit', compact('parfum'));
     }
 
     public function parfumUpdate(Request $request, $id)

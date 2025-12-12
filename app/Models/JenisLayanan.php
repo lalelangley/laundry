@@ -11,6 +11,7 @@ class JenisLayanan extends Model
 
     protected $table = 'jenis_layanan';
     protected $primaryKey = 'id_jenis_layanan';
+
     protected $fillable = [
         'id_layanan', 'id_satuan', 'nama_jenis', 'harga', 
         'lama', 'lama_satuan', 'gambar', 'keterangan'

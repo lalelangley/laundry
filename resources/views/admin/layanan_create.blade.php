@@ -1,131 +1,141 @@
 @extends('layouts.master')
 
 @section('content')
+@php
+    $layanan_id = 0; // default untuk layanan baru
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
+    $jenisLama = \App\Models\JenisLayanan::selectRaw('MIN(id_jenis_layanan) as id_jenis_layanan, nama_jenis, harga, id_satuan, lama, lama_satuan, keterangan')
+    ->groupBy('nama_jenis', 'harga', 'id_satuan', 'lama', 'lama_satuan', 'keterangan')
+    ->orderBy('nama_jenis')
+    ->get();
+
+@endphp
+
+{{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('layanan.index') }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Tambah Layanan</span>
 </div>
 
-<div class="px-5 pb-32 pt-6">
+<div class="px-5 mt-6">
 
-    {{-- Flash Message --}}
+    {{-- ALERT jika belum ada jenis --}}
+    @if($errors->has('jenis_kosong'))
+        <div class="bg-red-500 text-white p-3 rounded-xl mb-5">
+            {{ $errors->first('jenis_kosong') }}
+        </div>
+    @endif
+
+    {{-- FLASH SUCCESS --}}
     @if(session('success'))
-        <div id="flash-message" class="mb-4 p-4 bg-green-200 text-green-800 rounded-xl shadow transition-opacity duration-500">
+        <div class="bg-green-500 text-white p-3 rounded-xl mb-5">
             {{ session('success') }}
         </div>
     @endif
 
-    {{-- ERROR VALIDASI --}}
-    @if ($errors->any())
-        <div class="bg-red-200 text-red-800 p-4 rounded-xl mb-4 shadow">
-            <ul class="list-disc ml-4">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+
+    {{-- JENIS DARI SESSION --}}
+    @if(count($jenisBaru) > 0)
+        <h3 class="mt-6 mb-3 font-bold text-lg">Jenis Layanan (Baru)</h3>
+
+        <div class="space-y-4">
+            @foreach ($jenisBaru as $jb)
+                @php
+                    $satuanNama = '-';
+                    if(!empty($jb['id_satuan'])){
+                        $satuan = \App\Models\Satuan::find($jb['id_satuan']);
+                        if($satuan) $satuanNama = $satuan->nama_satuan;
+                    }
+                @endphp
+
+                <div class="flex gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
+                    <div class="flex-1">
+                        <p class="font-semibold capitalize">{{ $jb['nama_jenis'] ?? '-' }}</p>
+                        <p class="text-gray-700 text-sm">
+                            Rp{{ number_format($jb['harga'] ?? 0) }} / {{ $satuanNama }}
+                        </p>
+                        <p class="text-gray-500 text-xs">
+                            {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '-' }}
+                        </p>
+
+                        @if(!empty($jb['keterangan']))
+                            <p class="text-gray-600 text-xs mt-1">{{ $jb['keterangan'] }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
         </div>
     @endif
 
-    <form id="form-layanan" action="{{ route('layanan.store') }}" method="POST">
+
+    {{-- BUTTON TAMBAH JENIS BARU --}}
+    <a href="{{ route('session.create', $layanan_id) }}" 
+       class="block mt-6 mb-6 bg-yellow-400 text-white text-center py-3 rounded-2xl font-semibold shadow">
+        <i class="bi bi-plus-circle"></i> Tambah Jenis Layanan Baru
+    </a>
+
+
+    {{-- ======================== --}}
+    {{-- FORM CREATE LAYANAN      --}}
+    {{-- ======================== --}}
+    <form action="{{ route('layanan.store') }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
         @csrf
 
+        {{-- JENIS LAYANAN LAMA --}}
+        @if(count($jenisLama) > 0)
+            <h3 class="mb-3 font-bold text-lg">Jenis Layanan Lama</h3>
+            <div class="space-y-2 mb-6">
+                @foreach ($jenisLama as $jl)
+                    <label class="flex items-center p-3 border rounded-xl cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="jenis_lama[]" value="{{ $jl->id_jenis_layanan }}"
+                            class="mr-3"
+                            {{ in_array($jl->id_jenis_layanan, old('jenis_lama', [])) ? 'checked' : '' }}>
+                        <div>
+                            <p class="font-semibold">{{ $jl->nama_jenis }}</p>
+                            <p class="text-sm text-gray-600">
+                                Rp{{ number_format($jl->harga,0,',','.') }} /
+                                {{ $jl->satuan->nama_satuan ?? '-' }}
+                            </p>
+                        </div>
+                    </label>
+                @endforeach
+            </div>
+        @endif
+
         {{-- Nama Layanan --}}
-        <label class="font-bold text-lg">Nama Layanan</label>
-        <input type="text" name="nama_layanan" id="nama-layanan"
-               class="w-full bg-gray-200 p-4 rounded-xl mt-1 mb-6" placeholder="Masukkan nama layanan">
+        <div class="mb-5">
+            <label class="font-semibold">Nama Layanan</label>
+            <input type="text" name="nama_layanan"
+                   value="{{ old('nama_layanan') }}"
+                   class="w-full p-3 border rounded-xl mt-1"
+                   required>
+        </div>
 
         {{-- Proses --}}
-        <label class="font-bold text-lg">Proses</label>
-        <div class="flex gap-3 mt-3 mb-8">
-            @foreach (['Cuci', 'Kering', 'Setrika'] as $p)
-                <label class="flex items-center gap-2 border-2 border-yellow-400 rounded-full px-6 py-2 bg-white hover:bg-yellow-100 transition">
-                    <input type="checkbox" name="proses[]" value="{{ $p }}" class="w-5 h-5 accent-yellow-500">
-                    <span class="text-lg font-medium">{{ $p }}</span>
-                </label>
-            @endforeach
-        </div>
+        @php
+            $prosesList = ['Cuci', 'Kering', 'Setrika'];
+        @endphp
 
-        {{-- Tombol Tambah Jenis Layanan --}}
-        <div class="flex items-center justify-between mb-3">
-            <label class="font-bold text-lg">Jenis Layanan Baru</label>
-            <a href="{{ route('jenis_layanan.create') }}"
-               class="bg-yellow-400 hover:bg-yellow-500 px-5 py-2 rounded-full font-semibold text-white text-sm shadow inline-block">
-               + Tambah Jenis Layanan
-            </a>
-        </div>
-
-        {{-- LIST JENIS LAYANAN SESSION --}}
-        <div id="list-jenis" class="mb-32 space-y-3">
-            @if(session('jenis_baru'))
-                @foreach(session('jenis_baru') as $i => $jenis)
-                    <div class="jenis-item flex gap-3 items-center p-4 rounded-xl bg-white shadow">
-
-                        {{-- Thumbnail --}}
-                        <div class="w-20 h-20 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center text-gray-400">
-                            <img src="{{ $jenis['gambar'] ?? '#' }}" alt="{{ $jenis['nama'] }}" class="w-full h-full object-cover">
-                        </div>
-
-                        {{-- Detail --}}
-                        <div class="flex-1 space-y-2">
-                            <input type="text" class="font-bold text-lg nama border border-gray-300 rounded p-2 w-full"
-                                   value="{{ $jenis['nama'] }}" readonly>
-
-                            <div class="flex gap-2">
-                                <input type="number" class="harga flex-1 border border-gray-300 rounded p-2"
-                                       value="{{ $jenis['harga'] }}" readonly>
-
-                                <select class="satuan border border-gray-300 rounded p-2" disabled>
-                                    <option value="Kg" {{ $jenis['satuan'] == 'Kg' ? 'selected' : '' }}>Kg</option>
-                                    <option value="Pcs" {{ $jenis['satuan'] == 'Pcs' ? 'selected' : '' }}>Pcs</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Hidden input dalam bentuk ARRAY (FIX) --}}
-                    <input type="hidden" name="jenis_baru[{{ $i }}][nama]" value="{{ $jenis['nama'] }}">
-                    <input type="hidden" name="jenis_baru[{{ $i }}][harga]" value="{{ $jenis['harga'] }}">
-                    <input type="hidden" name="jenis_baru[{{ $i }}][satuan]" value="{{ $jenis['satuan'] }}">
-                    <input type="hidden" name="jenis_baru[{{ $i }}][gambar]" value="{{ $jenis['gambar'] }}">
-
+        <div class="mb-5">
+            <label class="font-semibold">Proses</label>
+            <div class="grid grid-cols-3 gap-3 mt-2">
+                @foreach ($prosesList as $p)
+                    <label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:bg-gray-100">
+                        <input type="checkbox" name="proses[]" value="{{ $p }}">
+                        <span>{{ $p }}</span>
+                    </label>
                 @endforeach
-            @endif
+            </div>
         </div>
 
-        {{-- Tombol Submit --}}
-        <div class="fixed bottom-0 left-0 w-full px-5 pb-5 bg-transparent z-10">
-            <button type="submit"
-                    class="w-full bg-green-600 py-4 rounded-2xl text-white text-xl font-bold shadow">
-                Simpan
+        {{-- SUBMIT --}}
+        <div class="flex justify-end mt-6">
+            <button type="submit" 
+                    class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl font-semibold text-white">
+                Simpan Layanan
             </button>
         </div>
 
     </form>
 </div>
-@endsection
-
-@section('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Flash message fade out
-    const flash = document.getElementById('flash-message');
-    if(flash){
-        setTimeout(()=> {
-            flash.classList.add('opacity-0');
-            setTimeout(()=> flash.remove(), 500);
-        }, 3000);
-    }
-
-    // Validasi sebelum submit
-    const form = document.getElementById('form-layanan');
-    form.addEventListener('submit', function(e){
-        const inputNama = document.getElementById('nama-layanan');
-        if(inputNama.value.trim() === ''){
-            e.preventDefault();
-            alert('Nama layanan harus diisi!');
-            inputNama.focus();
-        }
-    });
-});
-</script>
 @endsection
