@@ -15,17 +15,9 @@ class DetailTransaksi extends Model
     protected $fillable = [
         'id_transaksi',
         'id_layanan',
-        'id_jenis',
+        'id_jenis_layanan',
         'id_parfum',
-        'gambar',
-        'nama_jenis',
-        'nama_parfum',
-        'nama_layanan',
-        'lama_hari',
-        'lama_jam',
-        'proses',
         'harga',
-        'satuan',
         'qty',
         'diskon',
         'tipe_diskon',
@@ -49,27 +41,25 @@ class DetailTransaksi extends Model
     // RELASI
     // =========================
 
-    // Relasi ke Transaksi
     public function transaksi()
     {
         return $this->belongsTo(Transaksi::class, 'id_transaksi');
     }
 
-    // Relasi ke Layanan
     public function layanan()
     {
         return $this->belongsTo(Layanan::class, 'id_layanan');
     }
 
-    // Relasi ke Jenis
     public function jenis()
-    {
-        return $this->belongsTo(JenisLayanan::class, 'id_jenis');
-    }
+{
+    return $this->belongsTo(JenisLayanan::class, 'id_jenis', 'id_jenis_layanan');
+}
 
-    // Relasi ke Parfum
+
     public function parfum()
     {
         return $this->belongsTo(Parfum::class, 'id_parfum');
     }
 }
+

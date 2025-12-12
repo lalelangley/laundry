@@ -36,18 +36,45 @@ class SatuanParfumController extends Controller
         return view('satuan.index', compact('satuan'));
     }
 
-    public function satuanCreate()
+    public function satuanCreate(Request $request)
     {
-        return view('satuan.create');
+        return view('satuan.create', [
+            'from' => $request->from,
+            'id'   => $request->id
+        ]);
     }
 
     public function satuanStore(Request $request)
     {
+
         $request->validate(['nama_satuan' => 'required|max:50']);
 
-        Satuan::create(['nama_satuan' => $request->nama_satuan]);
+        $satuan = Satuan::create([
+            'nama_satuan' => $request->nama_satuan
+        ]);
 
-        return redirect()->route('satuan.index')->with('success', 'Satuan berhasil ditambahkan.');
+        // 1. Dari TAMBAH JENIS (CREATE)
+        if ($request->from === 'create-jenis') {
+            return redirect()->route('jenis.create', [
+                'id_layanan' => $request->id_layanan,
+                'new_satuan' => $satuan->id_satuan   // supaya auto select
+            ])->with('success', 'Satuan berhasil ditambahkan.');
+        }
+
+
+       if ($request->from === 'edit-jenis') {
+            return redirect()->route('layanan.jenis.edit', [
+                'id_jenis' => $request->id_jenis,
+                'from' => $request->id_layanan,
+                'new_satuan' => $satuan->id_satuan   // <-- kirim id satuan baru
+            ])->with('success', 'Satuan berhasil ditambahkan.');
+        }
+
+
+        
+        // 3. Dari menu satuan
+        return redirect()->route('satuan.index')
+            ->with('success', 'Satuan berhasil ditambahkan.');
     }
 
     public function satuanUpdate(Request $request, $id)
@@ -68,12 +95,11 @@ class SatuanParfumController extends Controller
         return redirect()->route('satuan.index')->with('success', 'Satuan berhasil dihapus.');
     }
 
-    public function satuanEdit($id)
-{
-    $satuan = Satuan::where('id_satuan', $id)->firstOrFail();
-    return view('satuan.edit', compact('satuan'));
-}
-
+        public function satuanEdit($id)
+    {
+        $satuan = Satuan::where('id_satuan', $id)->firstOrFail();
+        return view('satuan.edit', compact('satuan'));
+    }
 
     // ================================
     // PARFUM

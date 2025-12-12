@@ -3,17 +3,20 @@
 @section('content')
 
 {{-- HEADER --}}
-<div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('layanan.index') }}" class="text-black text-3xl font-bold">←</a>
-    <span class="text-xl font-bold">Edit Layanan</span>
+<div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-3 shadow w-full">
+    <a href="{{ route('layanan.index') }}" 
+       class="text-black text-2xl font-bold leading-none hover:scale-110 transition-transform">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="text-xl font-semibold">Edit Layanan</span>
 </div>
 
-<div class="px-5 mt-6">
+<div class="px-6 mt-8 w-full max-w-full">
 
-    {{-- ERROR VALIDATION --}}
+    {{-- ERROR --}}
     @if ($errors->any())
-        <div class="bg-red-500 text-white p-3 rounded-xl mb-5">
-            <ul class="ml-4 list-disc text-sm">
+        <div class="bg-red-500 text-white p-3 rounded-xl mb-5 text-base">
+            <ul class="ml-5 list-disc space-y-1">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -21,128 +24,148 @@
         </div>
     @endif
 
-    {{-- FORM EDIT LAYANAN --}}
+
     <form action="{{ route('layanan.update', $layanan->id_layanan) }}" method="POST">
         @csrf
         @method('PUT')
 
         {{-- NAMA LAYANAN --}}
-        <div class="mb-5">
-            <label class="font-semibold">Nama Layanan</label>
-            <input type="text" name="nama_layanan"
-                   value="{{ old('nama_layanan', $layanan->nama_layanan) }}"
-                   class="w-full p-3 border rounded-xl mt-1"
-                   required>
-        </div>
+        <label class="block font-semibold text-lg mb-2">Nama Layanan</label>
+        <input type="text" 
+               name="nama_layanan"
+               value="{{ old('nama_layanan', $layanan->nama_layanan) }}"
+               class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base 
+                      focus:ring-2 focus:ring-yellow-400 mb-6"
+               required>
 
         {{-- PROSES --}}
         @php
             $prosesList = ['Cuci', 'Kering', 'Setrika'];
             $selectedProses = old('proses', explode(',', $layanan->proses));
         @endphp
-        <div class="mb-5">
-            <label class="font-semibold">Proses</label>
-            <div class="grid grid-cols-3 gap-3 mt-2">
-                @foreach ($prosesList as $p)
-                    <label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer
-                                  {{ in_array($p, $selectedProses) ? 'bg-yellow-100 border-yellow-400' : '' }}">
-                        <input type="checkbox" name="proses[]" value="{{ $p }}"
-                               {{ in_array($p, $selectedProses) ? 'checked' : '' }}>
-                        <span>{{ $p }}</span>
-                    </label>
-                @endforeach
-            </div>
+
+        <label class="block font-semibold text-lg mb-3">Proses</label>
+
+        <div class="grid grid-cols-3 gap-4 w-full">
+            @foreach ($prosesList as $p)
+                <label class="flex items-center gap-2 px-4 py-3 border rounded-xl cursor-pointer text-base
+                               {{ in_array($p, $selectedProses) ? 'bg-yellow-100 border-yellow-500' : '' }}">
+                    <input type="checkbox" 
+                           name="proses[]" 
+                           value="{{ $p }}"
+                           class="scale-110"
+                           {{ in_array($p, $selectedProses) ? 'checked' : '' }}>
+                    {{ $p }}
+                </label>
+            @endforeach
         </div>
 
-        {{-- LIST JENIS LAYANAN --}}
-        <h3 class="mt-10 mb-3 font-bold text-lg">Jenis Layanan</h3>
-        @php
-            // Ambil data jenis baru dari session
-            $jenisBaru = session()->get("jenis_baru_{$layanan->id_layanan}", []);
+
+        {{-- JENIS LAYANAN --}}
+        <h3 class="mt-10 mb-4 font-semibold text-xl">Jenis Layanan</h3>
+
+        @php 
+            $jenisBaru = session()->get("jenis_baru_{$layanan->id_layanan}", []); 
         @endphp
 
-        @if ($layanan->jenis->count() > 0 || count($jenisBaru) > 0)
-            <div class="space-y-4">
-                {{-- Jenis Lama --}}
-                {{-- Jenis Lama --}}
-@foreach ($layanan->jenis as $jenis)
-    <a href="{{ route('jenis.edit', $jenis->id_jenis_layanan) }}?from={{ $layanan->id_layanan }}"
-       class="flex gap-3 p-4 bg-white border rounded-2xl shadow hover:bg-yellow-50 transition">
-       
-        {{-- Gambar Jenis --}}
-        <div class="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-            <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
-                 class="w-full h-full object-cover">
+        <div class="space-y-4">
+
+            {{-- JENIS LAMA --}}
+            @foreach ($layanan->jenis as $jenis)
+                <a href="{{ route('layanan.jenis.edit', $jenis->id_jenis_layanan) }}?from={{ $layanan->id_layanan }}"
+                   class="flex gap-4 p-4 bg-white border rounded-2xl shadow hover:bg-gray-50 transition w-full">
+
+                    <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden">
+                        <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                             class="w-full h-full object-cover">
+                    </div>
+
+                    <div class="flex-1">
+                        <p class="font-semibold text-lg">{{ $jenis->nama_jenis }}</p>
+
+                        <p class="text-gray-700 text-base">
+                            Rp{{ number_format($jenis->harga, 0, ',', '.') }} /
+                            {{ $jenis->satuan->nama_satuan ?? '-' }}
+                        </p>
+
+                        <p class="text-gray-500 text-sm flex items-center gap-1">
+                            <i class="bi bi-clock text-base"></i>
+                            {{ $jenis->lama }} {{ $jenis->lama_satuan }}
+                        </p>
+                    </div>
+
+                    <div class="flex items-center">
+                        <i class="bi bi-pencil-square text-xl text-gray-400"></i>
+                    </div>
+                </a>
+            @endforeach
+
+
+            {{-- JENIS BARU (SESSION) --}}
+            @foreach ($jenisBaru as $jb)
+                <div class="flex gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
+
+                    <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden">
+                        <img src="{{ asset('images/' . ($jb['gambar'] ?? 'default.png')) }}"
+                             class="w-full h-full object-cover">
+                    </div>
+
+                    <div class="flex-1">
+                        <p class="font-semibold text-lg">
+                            {{ $jb['nama'] }}
+                            <span class="text-xs text-gray-500">(baru)</span>
+                        </p>
+
+                        <p class="text-gray-700 text-base">
+                            Rp{{ number_format($jb['harga'] ?? 0, 0, ',', '.') }} /
+                            {{ $jb['satuan'] ?? '-' }}
+                        </p>
+
+                        <p class="text-gray-500 text-sm flex items-center gap-1">
+                            <i class="bi bi-clock text-base"></i>
+                            {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '' }}
+                        </p>
+                    </div>
+                </div>
+            @endforeach
+
         </div>
 
-        {{-- Detail Jenis --}}
-        <div class="flex-1">
-            <p class="font-semibold text-base capitalize">{{ $jenis->nama_jenis }}</p>
-            <p class="text-gray-700 text-sm">
-                Rp{{ number_format($jenis->harga, 0, ',', '.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
-            </p>
-            <p class="text-gray-500 text-xs flex items-center gap-1">
-                <i class="bi bi-clock"></i>
-                {{ $jenis->lama }} {{ $jenis->lama_satuan }}
-            </p>
-        </div>
 
-        {{-- Icon Edit --}}
-        <div class="flex items-center">
-            <i class="bi bi-pencil-square text-gray-400"></i>
-        </div>
-    </a>
-@endforeach
+        {{-- BUTTON TAMBAH --}}
+        <a href="{{ route('session.create', ['from' => $layanan->id_layanan]) }}?mode=edit"
+           class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-white 
+                  text-center py-3 rounded-xl font-semibold text-lg">
+            <i class="bi bi-plus-circle text-lg"></i> Tambah Jenis
+        </a>
 
 
-                {{-- Jenis Baru dari Session --}}
-@foreach ($jenisBaru as $jb)
-    <div class="flex gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
-        <div class="w-16 h-16 rounded-xl overflow-hidden bg-gray-100">
-            @if(!empty($jb['gambar']))
-                <img src="{{ asset('images/' . $jb['gambar']) }}" class="w-full h-full object-cover">
-            @else
-                <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
-            @endif
-        </div>
-        <div class="flex-1">
-            <p class="font-semibold text-base capitalize">
-                {{ $jb['nama'] ?? '-' }} 
-                <span class="text-xs text-gray-500">(baru)</span>
-            </p>
-            <p class="text-gray-700 text-sm">
-                Rp{{ number_format($jb['harga'], 0, ',', '.') }} / {{ $jb['satuan'] ?? '-' }}
-            </p>
-            <p class="text-gray-500 text-xs flex items-center gap-1">
-                <i class="bi bi-clock"></i>
-                {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '-' }}
-            </p>
-        </div>
-    </div>
-@endforeach
-
-            </div>
-        @else
-            <p class="text-gray-400 text-sm">Belum ada jenis layanan.</p>
-        @endif
-
-        {{-- BUTTON TAMBAH JENIS --}}
-        <a href="{{ route('session.create', ['from' => $layanan->id_layanan]) }}?mode=edit" 
-   class="block mt-5 bg-yellow-400 text-white text-center py-3 rounded-2xl font-semibold shadow">
-   <i class="bi bi-plus-circle"></i> Tambah Jenis
-</a>
-
-
-
-        {{-- SUBMIT UPDATE LAYANAN --}}
-        <div class="flex justify-end mt-6">
+        {{-- SUBMIT --}}
+        <div class="flex justify-end mt-8">
             <button type="submit"
-                    class="bg-yellow-500 hover:bg-yellow-600 px-6 py-2 rounded-xl font-semibold text-white">
+                    class="bg-yellow-500 hover:bg-yellow-600 transition px-8 py-3 rounded-xl 
+                           font-semibold text-white text-lg shadow">
                 Update Layanan
             </button>
         </div>
 
     </form>
+
 </div>
 
+@endsection
+
+
+@section('scripts')
+<script>
+document.getElementById('inputGambarJenis')?.addEventListener('change', function (e) {
+    const preview = document.getElementById('previewJenis');
+    const file = e.target.files[0];
+
+    if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+    }
+});
+</script>
 @endsection

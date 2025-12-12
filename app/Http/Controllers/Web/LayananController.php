@@ -13,57 +13,130 @@ class LayananController extends Controller
     // =========================
     // INDEX LAYANAN
     // =========================
-    public function index()
-    {
-        $layananUtama = Layanan::with('jenis')->get();
-        return view('admin.layanan', compact('layananUtama'));
-    }
+public function index(Request $request)
+{
+    $from = $request->from; // transaksi / admin
+    $parfum = \App\Models\Parfum::all();
+    $layananUtama = Layanan::with('jenis')->get();
+
+    return view('admin.layanan', compact('layananUtama', 'from', 'parfum'));
+}
 
     // =========================
     // CREATE LAYANAN
     // =========================
     public function create()
-    {
-        return view('admin.layanan_create');
-    }
+{
+    $layanan_id = 0; // default layanan baru
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
 
-    // =========================
-    // STORE LAYANAN
-    // =========================
+    // Ambil semua jenis lama unik berdasarkan nama, harga, satuan, dll
+    $jenisLama = JenisLayanan::selectRaw('MIN(id_jenis_layanan) as id_jenis_layanan, nama_jenis, harga, id_satuan, lama, lama_satuan, keterangan')
+        ->groupBy('nama_jenis', 'harga', 'id_satuan', 'lama', 'lama_satuan', 'keterangan')
+        ->orderBy('nama_jenis')
+        ->get();
+
+    $satuan = Satuan::all(); // buat dropdown di form jenis layanan
+    $parfum = \App\Models\Parfum::all(); // buat dropdown parfum
+
+    return view('admin.layanan_create', compact('jenisBaru', 'jenisLama', 'satuan', 'parfum'))->with('from', request('from'));
+}
+
+
 // Store Layanan + jenis dari session
-    public function store(Request $request)
+// =========================
+// STORE LAYANAN
+// =========================
+// Store Layanan + jenis dari session
+public function store(Request $request)
 {
     $request->validate([
         'nama_layanan' => 'required|string|max:255',
-        'proses' => 'nullable|array',
+        // proses boleh kosong, tapi kita normalisasi nanti
     ]);
 
-    // 1. Simpan layanan utama
-    $layanan = Layanan::create([
+    // ==== AMBIL PARAM FROM (tambahan) ====
+    $from = $request->input('from');
+
+    $layanan_id = 0;
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
+    $jenisLamaDipilih = $request->input('jenis_lama', []); // array of id_jenis
+
+    // Validasi minimal 1 jenis (baik dari session atau checkbox)
+    if (count($jenisBaru) == 0 && count($jenisLamaDipilih) == 0) {
+        return back()
+            ->withErrors(['jenis_kosong' => 'Pilih minimal 1 jenis layanan.'])
+            ->withInput();
+    }
+
+    // Normalisasi proses: simpan sebagai JSON array untuk konsistensi
+    $prosesInput = $request->input('proses', []);
+    $prosesToStore = [];
+    if (is_array($prosesInput)) {
+        $prosesToStore = array_map('trim', $prosesInput);
+    } elseif (!empty($prosesInput)) {
+        // kalau entah bagaimana string, ubah ke array
+        $prosesToStore = array_map('trim', explode(',', $prosesInput));
+    }
+
+    // Simpan layanan
+    $layanan = \App\Models\Layanan::create([
         'nama_layanan' => $request->nama_layanan,
-        'proses' => $request->proses ? implode(',', $request->proses) : null,
+        // Simpan proses sebagai JSON string, supaya fleksibel (bisa decode di blade)
+        'proses' => json_encode(array_values(array_filter($prosesToStore))),
     ]);
 
-    // 2. Simpan semua jenis dari session (jika ada)
-    $jenisList = session()->get("jenis_baru_0", []); // 0 = id layanan baru
-    foreach($jenisList as $j) {
-        JenisLayanan::create([
-            'id_layanan' => $layanan->id_layanan,
-            'nama_jenis' => $j['nama_jenis'] ?? $j['nama'] ?? null,
-            'id_satuan' => $j['id_satuan'] ?? null,
-            'harga' => $j['harga'] ?? 0,
-            'lama' => $j['lama'] ?? null,
-            'lama_satuan' => $j['lama_satuan'] ?? null,
-            'keterangan' => $j['keterangan'] ?? null,
-            'gambar' => $j['gambar'] ?? null,
+    // 1) Simpan jenis baru dari session (jika ada)
+    foreach ($jenisBaru as $jb) {
+        \App\Models\JenisLayanan::create([
+            'id_layanan'  => $layanan->id_layanan,
+            'nama_jenis'  => $jb['nama_jenis'] ?? $jb['nama'] ?? null,
+            'harga'       => $jb['harga'] ?? 0,
+            'id_satuan'   => $jb['id_satuan'] ?? null,
+            'lama'        => $jb['lama'] ?? null,
+            'lama_satuan' => $jb['lama_satuan'] ?? null,
+            'keterangan'  => $jb['keterangan'] ?? null,
+            'gambar'      => $jb['gambar'] ?? null,
         ]);
     }
 
-    // 3. Hapus session sementara
-    session()->forget("jenis_baru_0");
+    // 2) Jika user memilih jenis lama -> duplikat jenis tersebut ke layanan baru
+    if (!empty($jenisLamaDipilih)) {
+        foreach ($jenisLamaDipilih as $idJenis) {
+            $jenis = \App\Models\JenisLayanan::find($idJenis);
+            if ($jenis) {
+                \App\Models\JenisLayanan::create([
+                    'id_layanan'  => $layanan->id_layanan,
+                    'nama_jenis'  => $jenis->nama_jenis,
+                    'harga'       => $jenis->harga,
+                    'id_satuan'   => $jenis->id_satuan,
+                    'lama'        => $jenis->lama,
+                    'lama_satuan' => $jenis->lama_satuan,
+                    'keterangan'  => $jenis->keterangan,
+                    'gambar'      => $jenis->gambar,
+                ]);
+            }
+        }
+    }
 
+    // bersihkan session jenis_baru
+    session()->forget("jenis_baru_{$layanan_id}");
+
+// ================================
+//  FIX REDIRECT KHUSUS TRANSAKSI
+// ================================
+if ($from === 'transaksi') {
+
+    // Kirim ID layanan baru → supaya popup qty bisa muncul otomatis
+    return redirect()->route('transaksi.fromLayanan', [
+        'layanan_id' => $layanan->id_layanan
+    ]);
+}
+
+
+    // default
     return redirect()->route('layanan.index')
-                     ->with('success', 'Layanan dan jenis berhasil disimpan!');
+        ->with('success', 'Layanan berhasil ditambahkan');
 }
 
     // =========================
@@ -127,14 +200,39 @@ public function update(Request $request, $id)
         ]);
     }
 
+    // 🔥 Update 1 data jenis layanan kalau halaman ini adalah edit jenis
+    if ($request->has('id_jenis_layanan')) {
+        $jenis = JenisLayanan::find($request->id_jenis_layanan);
+
+        if ($jenis) {
+            $jenis->update([
+                'nama_jenis'  => $request->nama_jenis,
+                'harga'       => $request->harga,
+                'id_satuan'   => $request->id_satuan,
+                'lama'        => $request->lama,
+                'lama_satuan' => $request->lama_satuan,
+                'keterangan'  => $request->keterangan,
+            ]);
+
+            // Update gambar (opsional)
+            if ($request->hasFile('gambar')) {
+                $file = $request->file('gambar');
+                $namaFile = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('public/jenis', $namaFile);
+                $jenis->update(['gambar' => $namaFile]);
+            }
+        }
+    }
+
     // Clear session
     session()->forget("jenis_baru_{$id}");
 
-    // Redirect ke daftar layanan
-    return redirect()->route('layanan.index')
-                     ->with('success', 'Layanan berhasil diupdate!');
-}
+   if ($request->from === 'transaksi') {
+        return redirect()->route('transaksi.create')->with('success', 'Layanan berhasil diupdate');
+    }
 
+    return redirect()->route('layanan.index')->with('success', 'Layanan berhasil diupdate');
+}
     // =========================
     // CREATE JENIS LAYANAN
     // =========================
@@ -143,13 +241,15 @@ public function createJenis($id_layanan, Request $request)
     $mode = $request->query('mode', 'create'); // 'create' atau 'edit'
     $from = $request->query('from', $id_layanan); // default dari id_layanan
     $satuan = Satuan::all(); // untuk dropdown satuan
+    $id_jenis = $request->query('id_jenis'); // <-- ambil dari query string
 
     if ($mode === 'edit') {
-        return view('admin.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan'));
+        return view('admin.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan', 'id_jenis'));
     } else {
         return view('admin.tambah_jenis_layanan_create', compact('id_layanan', 'mode', 'from', 'satuan'));
     }
 }
+
 
 
 // STORE JENIS
@@ -176,21 +276,21 @@ public function storeJenis(Request $request)
 
         session()->put('jenis_baru', $jenis_baru);
 
-        return redirect()->route('layanan.create')->with('success', 'Jenis layanan berhasil ditambahkan.');
+       return redirect()->route('layanan.create', ['from' => $request->from ?? 'transaksi'])->with('success', 'Jenis layanan berhasil ditambahkan.');
     }
 
-    // =========================
-    // EDIT JENIS LAYANAN
-    // =========================
-// EDIT JENIS
 public function editJenis($id)
 {
     $jenis = JenisLayanan::findOrFail($id);
     $satuan = Satuan::all();
-    $from = request()->query('from', 0);
 
-    return view('admin.edit_jenis_layanan', compact('jenis', 'satuan', 'from'));
+    return view('admin.edit_jenis_layanan', [
+        'jenis' => $jenis,
+        'satuan' => $satuan,
+    ]);
 }
+
+
 
 public function updateJenis(Request $request, $id)
 {
@@ -320,11 +420,9 @@ public function sessionStoreJenis(Request $request, $from)
     session()->put("jenis_baru_{$from}", $jenis_baru);
 
     // Redirect ke halaman create layanan
-    return redirect()->route('layanan.create')
-                     ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+    return redirect()->route('layanan.create', [
+    'from' => $from])->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
 }
-
-
 
 public function addJenisEdit(Request $request, $from)
 {
@@ -378,7 +476,60 @@ public function addJenisSessionForm($from)
     ]);
 }
 
+public function addLayanan(Request $request, $id)
+{
+    $qty = $request->qty ?? 1;
 
+    // CARI LAYANAN
+    $layanan = \App\Models\Layanan::find($id);
+
+    if (!$layanan) {
+        return response()->json(['error' => 'Layanan tidak ditemukan'], 404);
+    }
+
+    // CARI JENIS PERTAMA
+    $jenis = $layanan->jenis()->first();
+
+    if (!$jenis) {
+        return response()->json(['error' => 'Jenis layanan tidak ditemukan'], 404);
+    }
+
+    // TAMBAHKAN KE SESSION
+    $order = session()->get('order_layanan', []);
+
+    $parfum = $request->parfum;
+
+$order[] = [
+    'id_layanan'  => $layanan->id_layanan,
+    'nama_layanan'=> $layanan->nama_layanan,
+    'qty'         => $qty,
+    'harga'       => $jenis->harga * $qty,
+    'jenis'       => $jenis->nama_jenis,
+    'satuan'      => $jenis->satuan->nama_satuan ?? '-',
+    'id_parfum'   => $parfum
+];
+
+
+    session()->put('order_layanan', $order);
+
+     return response()->json([
+        'id_diterima' => $id,
+        'layanan_ada' => \App\Models\Layanan::find($id),
+        'semua_id' => \App\Models\Layanan::pluck('id_layanan')
+    ]);
 }
 
+// ============================
+// BALIK DARI BUAT LAYANAN → TRANSAKSI
+// ============================
+public function fromLayanan(Request $request)
+{
+    $layanan_id = $request->layanan_id;
 
+    // simpan ke session supaya popup qty otomatis muncul
+    session(['selected_layanan_for_qty' => $layanan_id]);
+
+    return redirect()->route('transaksi.create');
+}
+
+}
