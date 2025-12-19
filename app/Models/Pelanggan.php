@@ -21,5 +21,7 @@ class Pelanggan extends Authenticatable
         'no_hp',
         'alamat',
         'password',
+        'email',
+        'jk',
     ];
 }

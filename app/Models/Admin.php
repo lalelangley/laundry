@@ -2,25 +2,31 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // WAJIB
-use Laravel\Sanctum\HasApiTokens; // WAJIB
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class Admin extends Authenticatable
 {
-    use HasApiTokens, HasFactory; // WAJIB BANGET
-
-    protected $table = 'admin';
-    protected $primaryKey = 'id_admin';
+    use Notifiable;
+    protected $table = 'admin';      // nama tabel
+    protected $primaryKey = 'id_admin'; // primary key sesuaikan database
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'nama',
         'email',
         'password',
-        'no_telp'
+        'role_id',
     ];
 
     protected $hidden = [
-        'password'
+        'password',
+        'remember_token',
     ];
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
 }

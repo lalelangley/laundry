@@ -261,7 +261,6 @@ public function addLayanan(Request $request, $id)
         ]);
     }
 
-
         // ==========================
         // 8. PRINT
         // ==========================
@@ -285,4 +284,32 @@ public function addLayanan(Request $request, $id)
             session(['keterangan_transaksi' => $request->keterangan]);
             return response()->json(['success' => true]);
         }
+
+        public function tempStoreLayanan(Request $request)
+    {
+        $request->validate([
+            'id_jenis_layanan' => 'required|exists:jenis_layanan,id_layanan',
+            'qty' => 'required|numeric|min:0.01',
+            'parfum' => 'nullable|exists:parfum,id_parfum',
+        ]);
+
+        // Ambil array layanan sementara dari session
+        $layananSementara = session()->get('layanan_temp', []);
+
+        // Tambahkan layanan baru
+        $layananSementara[] = [
+            'id_jenis_layanan' => $request->id_jenis_layanan,
+            'qty' => $request->qty,
+            'parfum' => $request->parfum,
+        ];
+
+        session(['layanan_temp' => $layananSementara]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Layanan berhasil ditambahkan sementara!',
+            'data' => $layananSementara
+        ]);
+    }
+
 }

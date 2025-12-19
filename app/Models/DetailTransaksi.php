@@ -9,6 +9,7 @@ class DetailTransaksi extends Model
     protected $table = 'detail_transaksi';
     protected $primaryKey = 'id_detail_transaksi';
     public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'id_transaksi',
@@ -21,28 +22,35 @@ class DetailTransaksi extends Model
         'id_satuan',
         'tipe_diskon'
     ];
-    public function detail()
-{
-    return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
-}
 
-public function jenis()
-{
-    return $this->belongsTo(JenisLayanan::class, 'id_jenis_layanan');
-}
+    // ================= RELATIONS =================
 
-public function pelanggan()
-{
-    return $this->belongsTo(Pelanggan::class, 'id_pelanggan');
-}
-public function layanan()
-{
-    return $this->belongsTo(Layanan::class, 'id_layanan');
+    public function transaksi()
+    {
+        return $this->belongsTo(
+            Transaksi::class,
+            'id_transaksi',
+            'id_transaksi'
+        );
+    }
 
-}
-public function transaksi()
-{
-    return $this->belongsTo(Layanan::class, 'id_transaksi');
+    public function layanan()
+    {
+        return $this->belongsTo(Layanan::class, 'id_layanan');
+    }
 
-}
+    public function jenis()
+    {
+        return $this->belongsTo(JenisLayanan::class, 'id_jenis_layanan');
+    }
+
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan');
+    }
+
+    public function parfum()
+    {
+        return $this->belongsTo(Parfum::class, 'id_parfum');
+    }
 }

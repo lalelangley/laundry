@@ -2,10 +2,11 @@
 
 return [
 
-    'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'defaults' => [
+        'guard' => env('AUTH_GUARD', 'web'), 
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
+
 
     'guards' => [
         'web' => [
@@ -19,7 +20,7 @@ return [
         ],
          'kasir' => [
             'driver' => 'session',
-            'provider' => 'admins',
+            'provider' => 'kasir', // ✅ benar
         ],
     ],
 

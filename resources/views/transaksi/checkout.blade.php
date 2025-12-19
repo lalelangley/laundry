@@ -289,65 +289,67 @@ document.addEventListener("DOMContentLoaded", () => {
     const succNama = document.getElementById("succNama");
     const succHp = document.getElementById("succHp");
 
-    // ===== SIMPAN PEMBAYARAN =====
-    document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
-        try {
-            const total = hitungDiskon();
-            const bayar = parseFloat(inputBayar.value) || 0;
-            const diskon = parseFloat(inputDiskon.value) || 0;
-            const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
-            const keterangan = document.getElementById("keteranganTransaksi").value || null;
-            const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
-            const tgl_masuk = document.getElementById("tgl_masuk").value || null;
-            const tgl_estimasi = document.getElementById("tgl_estimasi").value || null;
-            const langsung = parseInt(hiddenBayar.value);
+    const formatDateTime = dt => dt ? dt.replace('T', ' ') + ':00' : null;
 
-            const res = await fetch("{{ route('transaksi.bayar') }}", {
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json",
-                    "X-CSRF-TOKEN":"{{ csrf_token() }}",
-                },
-                body:JSON.stringify({
-                    jumlah_bayar: bayar,
-                    dp: bayar,
-                    langsung_bayar: langsung,
-                    total_harga: total + diskon, // totalAwal
-                    diskon: diskon,
-                    tipe_diskon: tipe_diskon,
-                    keterangan: keterangan,
-                    id_metode_bayar: id_metode_bayar,
-                    tgl_masuk: tgl_masuk,
-                    tgl_estimasi: tgl_estimasi
-                })
-            });
+document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
+    try {
+        const total = hitungDiskon();
+        const bayar = parseFloat(inputBayar.value) || 0;
+        const diskon = parseFloat(inputDiskon.value) || 0;
+        const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
+        const keterangan = document.getElementById("keteranganTransaksi").value || null;
+        const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
+        const tgl_masuk = formatDateTime(document.getElementById("tgl_masuk").value);
+        const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
+        const langsung = parseInt(hiddenBayar.value);
 
-            if(!res.ok){ alert("Gagal menyimpan"); return; }
-            const data = await res.json();
-            popupBayar.classList.add("hidden");
+        const res = await fetch("{{ route('transaksi.bayar') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({
+                jumlah_bayar: bayar,
+                dp: bayar,
+                langsung_bayar: langsung,
+                total_harga: total + diskon,
+                diskon: diskon,
+                tipe_diskon: tipe_diskon,
+                keterangan: keterangan,
+                id_metode_bayar: id_metode_bayar,
+                tgl_masuk: tgl_masuk,
+                tgl_estimasi: tgl_estimasi
+            })
+        });
 
-            succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
-            succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
-            succNama.textContent = data.nama;
-            succHp.textContent = data.hp;
-            succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
+        if(!res.ok){ alert("Gagal menyimpan"); return; }
+        const data = await res.json();
+        popupBayar.classList.add("hidden");
 
-            // Hapus label status lama
-            const oldLabel = document.getElementById("labelStatusBayar");
-            if(oldLabel) oldLabel.remove();
+        succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+        succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
+        succNama.textContent = data.nama;
+        succHp.textContent = data.hp;
+        succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
 
-            if(data.status_bayar && data.status_bayar != "lunas"){
-                let label = document.createElement("p");
-                label.id = "labelStatusBayar";
-                label.classList.add(data.status_bayar.toLowerCase()=="dp" ? "text-orange-500" : "text-red-500","font-bold","mt-2");
-                label.textContent = "Status: " + data.status_bayar.toUpperCase();
-                popupSuccess.querySelector(".bg-white")?.appendChild(label);
-            }
+        // Hapus label status lama
+        const oldLabel = document.getElementById("labelStatusBayar");
+        if(oldLabel) oldLabel.remove();
 
-            popupSuccess.classList.remove("hidden");
+        if(data.status_bayar && data.status_bayar != "lunas"){
+            let label = document.createElement("p");
+            label.id = "labelStatusBayar";
+            label.classList.add(data.status_bayar.toLowerCase()=="dp" ? "text-orange-500" : "text-red-500","font-bold","mt-2");
+            label.textContent = "Status: " + data.status_bayar.toUpperCase();
+            popupSuccess.querySelector(".bg-white")?.appendChild(label);
+        }
 
-        } catch(err){ console.error(err); alert("Terjadi kesalahan."); }
-    });
+        popupSuccess.classList.remove("hidden");
+
+    } catch(err){ console.error(err); alert("Terjadi kesalahan."); }
+});
+
 
     // ===== BUTTON SUCCESS =====
     document.getElementById("btnSelesai").addEventListener("click", ()=>window.location.href="{{ route('admin.dashboard') }}");

@@ -5,25 +5,15 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <div class="min-h-screen bg-gray-50 pb-24">
-    {{-- HEADER --}}
-    <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        @php
-        $from = request('from');
-        $idTransaksi = request('id_transaksi'); // FIX UTAMA
+{{-- HEADER --}}
+<div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
+   <a href="{{ route('riwayat.edit', $riwayat->id_transaksi) }}"
+   class="text-black text-3xl font-bold">
+    <i class="bi bi-arrow-left"></i>
+</a>
+    <span class="text-2xl font-bold">Kelola Layanan</span>
+</div>
 
-        $backUrl = match ($from) {
-            'transaksi' => route('transaksi.create'),
-            'riwayat'   => route('riwayat.detail', ['id' => $idTransaksi]),
-            default     => route('admin.dashboard'),
-        };
-        @endphp
-
-
-        <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
-            <i class="bi bi-arrow-left"></i>
-        </a>
-        <span class="text-2xl font-bold">Kelola Layanan</span>
-    </div>
 
     <div class="px-8 py-6 space-y-6">
         {{-- SEARCH + SORT --}}
@@ -42,10 +32,10 @@
         {{-- LIST LAYANAN --}}
         <div id="layananList" class="space-y-5">
             @forelse ($layananUtama as $item)
-            <div class="layanan-item bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 relative group"
+            <div class="layanan-item bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 relative group cursor-pointer"
                  data-id="{{ $item->id_layanan }}"
-                 data-name="{{ $item->nama_layanan }}"
-                 data-mode="transaksi">
+                 data-name="{{ $item->nama_layanan }}">
+                {{-- HEADER --}}
                 <div class="p-6">
                     <div class="flex items-start justify-between mb-4 pb-4 border-b-2 border-gray-100">
                         <div class="flex-1">
@@ -142,9 +132,9 @@
     </div>
 </div>
 
-{{-- MODAL --}}
+{{-- MODAL LAYANAN --}}
 <div id="modalLayanan" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white w-full max-w-lg mx-auto rounded-2xl shadow-2xl overflow-hidden">
+    <div class="bg-white modal-box w-full max-w-lg mx-auto rounded-2xl shadow-2xl overflow-hidden">
         <div class="bg-yellow-400 p-6">
             <h2 id="modalTitle" class="text-2xl font-bold text-black text-center"></h2>
         </div>
@@ -180,7 +170,7 @@
     </div>
 </div>
 
-{{-- ====================== MODAL KONFIRMASI DUPLIKAT ====================== --}}
+{{-- MODAL DUPLICATE --}}
 <div id="modalDuplicate" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="bg-blue-500 p-6">
@@ -207,7 +197,7 @@
     </div>
 </div>
 
-{{-- ====================== MODAL KONFIRMASI HAPUS ====================== --}}
+{{-- MODAL DELETE --}}
 <div id="modalDelete" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="bg-red-500 p-6">
@@ -246,27 +236,26 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     const modal = document.getElementById("modalLayanan");
+    const modalBox = modal.querySelector(".modal-box");
     const modalTitle = document.getElementById("modalTitle");
     const qtyInput = document.getElementById("qtyInput");
     const parfumSelect = document.getElementById("parfumSelect");
     const btnSave = document.getElementById("btnSave");
 
-    // MODAL DUPLICATE
     const modalDuplicate = document.getElementById("modalDuplicate");
     const btnConfirmDuplicate = document.getElementById("btnConfirmDuplicate");
 
-    // MODAL DELETE
     const modalDelete = document.getElementById("modalDelete");
     const formDelete = document.getElementById("formDelete");
 
-    // ================= MODAL UTAMA =================
-    function openModal(name, id, mode = "transaksi", riwayatId = null) {
+    /* ================= MODAL UTAMA ================= */
+    function openModal(name, idLayanan, riwayatId) {
         modal.classList.remove("hidden");
-        modalTitle.innerText = name;
+        document.body.style.overflow = "hidden";
 
-        btnSave.dataset.id = id;
-        btnSave.dataset.mode = mode;
-        btnSave.dataset.riwayat = riwayatId ?? "";
+        modalTitle.innerText = name;
+        btnSave.dataset.layanan = idLayanan;
+        btnSave.dataset.riwayat = riwayatId;
 
         qtyInput.value = "";
         parfumSelect.value = "";
@@ -274,6 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closeModal() {
         modal.classList.add("hidden");
+        document.body.style.overflow = "auto";
     }
 
     window.closeModal = closeModal;
@@ -282,12 +272,68 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modal) closeModal();
     });
 
-    // ================= DUPLICATE =================
+    modalBox.addEventListener("click", e => e.stopPropagation());
+
+    /* ================= KLIK CARD ================= */
+    document.querySelectorAll(".layanan-item").forEach(card => {
+        card.addEventListener("click", e => {
+
+            if (!modal.classList.contains("hidden")) return;
+            if (e.target.closest(".dropdown-area")) return;
+
+            openModal(
+                card.dataset.name,
+                card.dataset.id,
+                "{{ $riwayat->id_transaksi }}"
+            );
+        });
+    });
+
+    /* ================= SIMPAN (FINAL FIX) ================= */
+   btnSave.addEventListener("click", async e => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const qty = qtyInput.value;
+    if (!qty || qty <= 0) {
+        alert("Qty wajib diisi");
+        return;
+    }
+
+    const idRiwayat = btnSave.dataset.riwayat;
+    const idLayanan = btnSave.dataset.layanan;
+    const parfum = parfumSelect.value || '';
+
+    const formData = new FormData();
+    formData.append('id_layanan', idLayanan);
+    formData.append('qty', qty);
+    formData.append('parfum', parfum);
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+    try {
+        const res = await fetch(`/admin/riwayat/${idRiwayat}/add-layanan`, {
+            method: "POST",
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            // redirect ke edit.blade.php
+            window.location.href = `/admin/riwayat/${idRiwayat}/edit`;
+        } else {
+            alert(data.message || "Gagal menambah layanan");
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Terjadi kesalahan server");
+    }
+});
+
+
+    /* ================= DUPLICATE ================= */
     window.confirmDuplicate = function(url) {
         modalDuplicate.classList.remove("hidden");
-        btnConfirmDuplicate.onclick = () => {
-            window.location.href = url;
-        };
+        btnConfirmDuplicate.onclick = () => window.location.href = url;
     };
 
     window.closeDuplicateModal = function() {
@@ -298,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDuplicate) closeDuplicateModal();
     });
 
-    // ================= DELETE =================
+    /* ================= DELETE ================= */
     window.confirmDelete = function(url) {
         modalDelete.classList.remove("hidden");
         formDelete.action = url;
@@ -312,83 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDelete) closeDeleteModal();
     });
 
-    // ================= KLIK LAYANAN =================
-document.querySelectorAll('.layanan-item').forEach(card => {
-    card.addEventListener('click', () => {
-        const from = "{{ request('from') }}";          // dari URL
-        const riwayatId = "{{ request('id_transaksi') }}"; // kalau dari riwayat
-        const idLayanan = card.dataset.id;
-
-        if (from === "riwayat" && riwayatId) {
-            // kalau dari riwayat, tetap modal untuk tambah layanan
-            openModal(card.dataset.name, idLayanan, "riwayat", riwayatId);
-        } else if (from === "transaksi") {
-            // dari transaksi, buka modal
-            openModal(card.dataset.name, idLayanan, "transaksi");
-        } else {
-            // dari dashboard / halaman layanan biasa -> langsung ke edit
-            window.location.href = `/admin/layanan/${idLayanan}/edit`;
-        }
-    });
-
-});
-
-    // ================= DROPDOWN =================
-    document.querySelectorAll(".dropdown-area").forEach(area => {
-        area.addEventListener("click", e => e.stopPropagation());
-    });
-
-    document.querySelectorAll(".dropdown-btn").forEach(btn => {
-        btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            const menu = this.nextElementSibling;
-            document.querySelectorAll(".dropdown-menu").forEach(m => {
-                if (m !== menu) m.classList.add("hidden");
-            });
-            menu.classList.toggle("hidden");
-        });
-    });
-
-    document.addEventListener("click", () => {
-        document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.add("hidden"));
-    });
-
-    // ================= ADD LAYANAN =================
-    btnSave.addEventListener("click", () => {
-        const qty = qtyInput.value.trim();
-        const parfum = parfumSelect.value || null;
-
-        if (!qty || qty <= 0) return;
-
-        const idLayanan = btnSave.dataset.id;
-        const mode = btnSave.dataset.mode;
-        const idRiwayat = btnSave.dataset.riwayat;
-
-        let url = mode === "riwayat"
-        ? `/admin/riwayat/${idRiwayat}/add-layanan/${idLayanan}`
-        : `/admin/transaksi/add-layanan/${idLayanan}`;
-
-
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({ qty, parfum })
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                window.location.href = mode === "transaksi"
-                    ? "{{ route('transaksi.create') }}"
-                    : `/admin/riwayat/${idRiwayat}/edit`;
-            }
-        })
-        .catch(console.error);
-    });
-
 });
 </script>
 @endsection
+

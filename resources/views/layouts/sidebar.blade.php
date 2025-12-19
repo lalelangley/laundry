@@ -81,11 +81,18 @@
             <span class="font-bold">PENGELUARAN</span>
         </a>
 
-        <a href="#" 
+        <a href="{{ route('laporan.index') }}"  
             class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
                    transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
             <i class="bi bi-clipboard-data text-2xl"></i> 
             <span class="font-bold">LAPORAN</span>
+        </a>
+
+        <a href="{{ route('manager.index') }}" 
+            class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
+                   transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
+            <i class="bi bi-person text-2xl"></i> 
+            <span class="font-bold">USER MANAGER</span>
         </a>
 
         <a href="#" 

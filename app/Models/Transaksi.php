@@ -31,15 +31,13 @@ class Transaksi extends Model
     'id_metode_bayar',
 ];
 
-
-
     // 🔥 Tambahkan relasi ini
     public function detail()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
     }
 
-        public function pelanggan()
+    public function pelanggan()
     {
         return $this->belongsTo(Pelanggan::class, 'id_pelanggan', 'id_pelanggan');
     }
@@ -47,6 +45,16 @@ class Transaksi extends Model
     public function parfum()
     {
         return $this->belongsTo(Parfum::class, 'id_parfum', 'id_satuan_parfum');
+    }
+
+    public function kasir()
+    {
+        return $this->belongsTo(User::class, 'id_kasir');
+    }
+
+    public function metodeBayar()
+    {
+        return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar');
     }
 
 }

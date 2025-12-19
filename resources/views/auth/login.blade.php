@@ -46,8 +46,8 @@
 
                     <!-- DROPDOWN USER (Admin + Kasir) -->
                     <label class="font-medium">Pilih User</label>
-                    <select name="user_id"
-                        class="w-full mt-1 mb-4 p-3 rounded-xl focus:ring-2 focus:ring-black">
+                   <select name="user_id"
+                        class="w-full mt-1 mb-4 p-3 rounded-xl focus:ring-2 focus:ring-black" required>
                         
                         <option value="">-- Pilih --</option>
 
@@ -62,7 +62,7 @@
                         <optgroup label="Kasir">
                             @foreach($kasirs as $kasir)
                                 <option value="kasir-{{ $kasir->id_kasir }}">
-                                    {{ $kasir->nama_kasir }}
+                                    {{ $kasir->nama }}
                                 </option>
                             @endforeach
                         </optgroup>

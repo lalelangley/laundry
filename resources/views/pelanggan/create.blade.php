@@ -72,12 +72,12 @@
                 <label class="font-semibold text-gray-700">Gender</label>
                 <div class="flex items-center gap-8 mt-2">
                     <label class="flex items-center gap-2">
-                    <input type="radio" name="gender" value="L" class="accent-yellow-500" checked>
+                    <input type="radio" name="jk" value="L" class="accent-yellow-500" checked>
                     <span>Pria</span>
                 </label>
 
                 <label class="flex items-center gap-2">
-                    <input type="radio" name="gender" value="P" class="accent-yellow-500">
+                    <input type="radio" name="jk" value="P" class="accent-yellow-500">
                     <span>Wanita</span>
                 </label>
                 </div>

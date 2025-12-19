@@ -9,10 +9,16 @@ use App\Models\Kasir;
 use App\Models\Pelanggan;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Role;
+use App\Models\Menu;
+use App\Models\MenuRole;
+
 
 class AuthWebController extends Controller
 {
-    // Tampilan login
+    // =============================
+    // LOGIN
+    // =============================
     public function showLogin()
     {
         $admins = Admin::all();
@@ -21,53 +27,63 @@ class AuthWebController extends Controller
         return view('auth.login', compact('admins', 'kasirs'));
     }
 
-    // Proses login
     public function processLogin(Request $request)
-    {
-        [$role, $id] = explode('-', $request->user_id);
+{
+    $request->validate([
+        'user_id' => 'required',
+        'pin' => 'required',
+    ]);
 
-        if ($role === 'admin') {
-            $admin = Admin::find($id);
-
-            if (!$admin || !Hash::check($request->pin, $admin->password)) {
-                return back()->with('error', 'PIN salah');
-            }
-
-            session(['admin_id' => $admin->id_admin]);
-            return redirect()->route('admin.dashboard');
-        }
-
-        if ($role === 'kasir') {
-            $kasir = Kasir::find($id);
-
-            if (!$kasir || !Hash::check($request->pin, $kasir->password)) {
-                return back()->with('error', 'PIN salah');
-            }
-
-            session(['kasir_id' => $kasir->id_kasir]);
-            return redirect()->route('kasir.dashboard');
-        }
-
-        return back()->with('error', 'Role tidak dikenali');
+    if (!str_contains($request->user_id, '-')) {
+        return back()->with('error', 'Pilih pengguna terlebih dahulu');
     }
 
-    // Dashboard admin (Sudah FIX)
+    [$role, $id] = explode('-', $request->user_id);
+    $pin = trim($request->pin);
+
+    if ($role === 'admin') {
+        $admin = Admin::find($id);
+        if (!$admin || !Hash::check($pin, $admin->password)) {
+            return back()->with('error', 'PIN salah');
+        }
+
+        // login pakai guard admin
+        auth()->guard('admin')->login($admin);
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($role === 'kasir') {
+        $kasir = Kasir::find($id);
+        if (!$kasir || !Hash::check($pin, $kasir->password)) {
+            return back()->with('error', 'PIN salah');
+        }
+
+        auth()->guard('kasir')->login($kasir);
+        return redirect()->route('kasir.dashboard');
+    }
+
+    return back()->with('error', 'Role tidak dikenali');
+}
+
+
+    // =============================
+    // DASHBOARD ADMIN
+    // =============================
     public function adminDashboard()
     {
         $admin = Admin::find(session('admin_id'));
-
         if (!$admin) {
             return redirect()->route('login.show')->with('error', 'Silakan login dulu');
         }
 
-        // Statistik
         $totalPelanggan  = Pelanggan::count();
         $totalKasir      = Kasir::count();
         $totalTransaksi  = Transaksi::count();
         $totalOmzet      = Transaksi::sum('total_bayar');
+
         $orders = Transaksi::with(['detail.jenis.satuan', 'pelanggan'])
-        ->orderBy('id_transaksi', 'DESC')
-        ->get();
+                    ->orderBy('id_transaksi', 'DESC')
+                    ->get();
 
         return view('admin.dashboard', compact(
             'admin',
@@ -75,15 +91,16 @@ class AuthWebController extends Controller
             'totalKasir',
             'totalTransaksi',
             'totalOmzet',
-            'orders' // PENTING
+            'orders'
         ));
     }
 
-    // Dashboard kasir
+    // =============================
+    // DASHBOARD KASIR
+    // =============================
     public function kasirDashboard()
     {
         $kasir = Kasir::find(session('kasir_id'));
-
         if (!$kasir) {
             return redirect()->route('login.show')->with('error', 'Silakan login dulu');
         }
@@ -96,61 +113,215 @@ class AuthWebController extends Controller
     // =============================
     public function pelangganIndex()
     {
-        // Ambil semua pelanggan
         $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
-
-        // Kirim ke tampilan
         return view('pelanggan.index', compact('pelanggan'));
     }
 
-       public function Create()
+    // =============================
+    // CREATE PELANGGAN
+    // =============================
+    public function Create()
     {
         return view('pelanggan.create');
     }
 
-  public function store(Request $request)
-{
-    $request->validate([
-        'nama_pelanggan' => 'required',
-        'no_hp' => 'required',
-        'email' => 'nullable|email',
-        'gender' => 'required',
-        'alamat' => 'required',
-        'gambar' => 'nullable|image|max:2048'
-    ]);
+    // =============================
+    // STORE PELANGGAN
+    // =============================
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
 
-    // Upload gambar
-    $path = null;
-    if ($request->hasFile('gambar')) {
-        $path = $request->file('gambar')->store('pelanggan', 'public');
-    }
+        $path = $request->hasFile('gambar') 
+            ? $request->file('gambar')->store('pelanggan', 'public') 
+            : null;
 
- Pelanggan::create([
-    'nama_pelanggan' => $request->nama_pelanggan,
-    'no_hp' => $request->no_hp,
-    'alamat' => $request->alamat,
-    'gambar' => $path,
-    'password' => bcrypt('123456'), // otomatis jadi 123456
-]);
+        Pelanggan::create([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'gambar'         => $path,
+            'password'       => bcrypt('123456'),
+            'jk'             => $request->jk,
+            'email'          => $request->email,
+        ]);
 
+        if ($request->from === 'transaksi') {
+            return redirect()
+                ->route('transaksi.pelanggan')
+                ->with('success', 'Pelanggan berhasil ditambahkan!');
+        }
 
-    // ==========================
-    //  REDIRECT DARI TRANSAKSI
-    // ==========================
-    if ($request->from === 'transaksi') {
         return redirect()
-            ->route('transaksi.pelanggan') // INI YANG BENAR
+            ->route('pelanggan.index')
             ->with('success', 'Pelanggan berhasil ditambahkan!');
     }
 
-    // ==========================
-    //  REDIRECT NORMAL
-    // ==========================
-    return redirect()
-        ->route('pelanggan.index')
-        ->with('success', 'Pelanggan berhasil ditambahkan!');
+    // =============================
+    // EDIT PELANGGAN
+    // =============================
+    public function pelangganEdit($id)
+    {
+        $pelanggan = Pelanggan::findOrFail($id);
+        return view('pelanggan.edit', compact('pelanggan'));
+    }
+
+    // =============================
+    // UPDATE PELANGGAN
+    // =============================
+    public function pelangganUpdate(Request $request, $id)
+    {
+        $pelanggan = Pelanggan::findOrFail($id);
+
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
+
+        if ($request->hasFile('gambar')) {
+            $pelanggan->gambar = $request->file('gambar')->store('pelanggan', 'public');
+        }
+
+        $pelanggan->update([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'email'          => $request->email,
+            'jk'             => $request->jk,
+        ]);
+
+        return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
+    }
+
+    // =============================
+    // DELETE PELANGGAN
+    // =============================
+    public function pelangganDestroy($id)
+    {
+        $pelanggan = Pelanggan::findOrFail($id);
+        $pelanggan->delete();
+
+        return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil dihapus!');
+    }
+
+    // =============================
+// MANAGER INDEX (Super Admin Only)
+// =============================
+public function managerIndex()
+{
+    $admin = Admin::find(session('admin_id'));
+
+    if (!$admin) {
+        return redirect()->route('login.show');
+    }
+
+    if ($admin->role_id != 1) {
+        abort(403, 'Anda tidak memiliki akses');
+    }
+
+    $admins    = Admin::with('role')->orderBy('nama')->get();
+    $roles     = Role::all();
+    $menus     = Menu::all();
+    $menuRoles = MenuRole::with(['role', 'menu'])
+        ->orderBy('role_id')
+        ->orderBy('menu_id')
+        ->get();
+
+    return view('manager.index', compact(
+        'admins',
+        'roles',
+        'menus',
+        'menuRoles'
+    ));
 }
 
+
+// =============================
+// TAMBAH ADMIN (SUPER ADMIN)
+// =============================
+public function storeAdmin(Request $request)
+{
+    $admin = Admin::find(session('admin_id'));
+    if ($admin->role_id != 1) abort(403);
+
+    $request->validate([
+        'nama'     => 'required|string|max:255',
+        'email'    => 'required|email|unique:admin,email',
+        'password' => 'required|string|min:6',
+        'role_id'  => 'required|exists:roles,id',
+    ]);
+
+    Admin::create([
+        'nama'     => $request->nama,
+        'email'    => $request->email,
+        'password' => bcrypt($request->password),
+        'role_id'  => $request->role_id,
+    ]);
+
+    return back()->with('success', 'Admin berhasil ditambahkan');
+}
+
+
+// =============================
+// TAMBAH PELANGGAN DARI MANAGER
+// =============================
+public function storePelanggan(Request $request)
+{
+    $request->validate([
+        'nama_pelanggan' => 'required|string|max:255',
+        'no_hp'          => 'required|string|max:20',
+        'email'          => 'nullable|email|unique:pelanggan,email',
+        'jk'             => 'required',
+        'alamat'         => 'required|string',
+    ]);
+
+    Pelanggan::create([
+        'nama_pelanggan' => $request->nama_pelanggan,
+        'no_hp'          => $request->no_hp,
+        'alamat'         => $request->alamat,
+        'email'          => $request->email,
+        'jk'             => $request->jk,
+        'password'       => bcrypt($request->password ?? '123456'),
+    ]);
+
+    return back()->with('success', 'Pelanggan berhasil ditambahkan');
+}
+
+
+// =============================
+// UPDATE PRIVILEGE ROLE
+// =============================
+public function updateRolePrivilege(Request $request)
+{
+    $admin = Admin::find(session('admin_id'));
+    if ($admin->role_id != 1) abort(403);
+
+    $request->validate([
+        'menu_role_id' => 'required|exists:menu_roles,id',
+    ]);
+
+    $menuRole = MenuRole::findOrFail($request->menu_role_id);
+
+    $menuRole->update([
+        'can_view'   => $request->has('can_view'),
+        'can_add'    => $request->has('can_add'),
+        'can_edit'   => $request->has('can_edit'),
+        'can_delete' => $request->has('can_delete'),
+    ]);
+
+    return back()->with('success', 'Hak akses berhasil diperbarui');
+}
 
 
 }
