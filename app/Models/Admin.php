@@ -13,12 +13,14 @@ class Admin extends Authenticatable
     public $incrementing = true;
     protected $keyType = 'int';
 
-    protected $fillable = [
+        protected $fillable = [
         'nama',
         'email',
         'password',
         'role_id',
+        'status'
     ];
+
 
     protected $hidden = [
         'password',

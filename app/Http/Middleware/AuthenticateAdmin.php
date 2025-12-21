@@ -7,11 +7,10 @@ use Illuminate\Http\Request;
 
 class AuthenticateAdmin
 {
-    public function handle(Request $request, Closure $next)
+    public function handle($request, Closure $next)
     {
         if (!session()->has('admin_id')) {
-            return redirect()
-                ->route('admin.login')
+            return redirect('/admin/login')
                 ->with('error', 'Silakan login dulu');
         }
 

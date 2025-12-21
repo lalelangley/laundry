@@ -27,7 +27,7 @@ class AuthWebController extends Controller
         return view('auth.login', compact('admins', 'kasirs'));
     }
 
-    public function processLogin(Request $request)
+public function processLogin(Request $request)
 {
     $request->validate([
         'user_id' => 'required',
@@ -43,38 +43,86 @@ class AuthWebController extends Controller
 
     if ($role === 'admin') {
         $admin = Admin::find($id);
-        if (!$admin || !Hash::check($pin, $admin->password)) {
-            return back()->with('error', 'PIN salah');
+        if (!$admin || !Hash::check($pin, $admin->password) || $admin->status !== 'aktif') {
+            return back()->with('error', 'PIN salah atau user tidak aktif');
         }
 
-        // login pakai guard admin
+        // Login dengan guard admin
         auth()->guard('admin')->login($admin);
-        return redirect()->route('admin.dashboard');
+        
+        // PENTING: Simpan ke session juga
+        session(['admin_id' => $admin->id_admin]);
+        session(['admin_role_id' => $admin->role_id]);
+        
+        // Regenerate session untuk keamanan
+        $request->session()->regenerate();
+
+        // Redirect sesuai role
+        if ($admin->role_id == 1) { // super admin
+            return redirect()->route('admin.dashboard');
+        } else { // admin biasa
+            return redirect()->route('admin2.dashboard');
+        }
     }
 
     if ($role === 'kasir') {
         $kasir = Kasir::find($id);
-        if (!$kasir || !Hash::check($pin, $kasir->password)) {
-            return back()->with('error', 'PIN salah');
+        if (!$kasir || !Hash::check($pin, $kasir->password) || $kasir->status !== 'aktif') {
+            return back()->with('error', 'PIN salah atau user tidak aktif');
         }
 
+        // Login dengan guard kasir
         auth()->guard('kasir')->login($kasir);
+        
+        // PENTING: Simpan ke session juga
+        session(['kasir_id' => $kasir->id_kasir]);
+        
+        // Regenerate session untuk keamanan
+        $request->session()->regenerate();
+        
         return redirect()->route('kasir.dashboard');
     }
 
     return back()->with('error', 'Role tidak dikenali');
 }
+public function admin2Dashboard()
+{
+    $admin = auth()->guard('admin')->user();
+    if (!$admin || $admin->role_id == 1) {
+        return redirect()->route('login.show')->with('error', 'Silakan login sebagai admin biasa');
+    }
 
+    $totalPelanggan  = Pelanggan::count();
+    $totalKasir      = Kasir::count();
+    $totalTransaksi  = Transaksi::count();
+    $totalOmzet      = Transaksi::sum('total_bayar');
+
+    $orders = Transaksi::with(['detail.jenis.satuan', 'pelanggan'])
+                ->orderBy('id_transaksi', 'DESC')
+                ->get();
+
+    return view('admin2.dashboard', compact(
+        'admin',
+        'totalPelanggan',
+        'totalKasir',
+        'totalTransaksi',
+        'totalOmzet',
+        'orders'
+    ));
+}
 
     // =============================
     // DASHBOARD ADMIN
     // =============================
     public function adminDashboard()
     {
-        $admin = Admin::find(session('admin_id'));
+        $admin = auth()->guard('admin')->user();
+
         if (!$admin) {
-            return redirect()->route('login.show')->with('error', 'Silakan login dulu');
+            return redirect()->route('login.show')
+                ->with('error', 'Silakan login dulu');
         }
+
 
         $totalPelanggan  = Pelanggan::count();
         $totalKasir      = Kasir::count();
@@ -100,9 +148,11 @@ class AuthWebController extends Controller
     // =============================
     public function kasirDashboard()
     {
-        $kasir = Kasir::find(session('kasir_id'));
+        $kasir = auth()->guard('kasir')->user();
+
         if (!$kasir) {
-            return redirect()->route('login.show')->with('error', 'Silakan login dulu');
+            return redirect()->route('login.show')
+                ->with('error', 'Silakan login dulu');
         }
 
         return view('kasir.dashboard', compact('kasir'));
@@ -215,17 +265,15 @@ class AuthWebController extends Controller
         return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil dihapus!');
     }
 
-    // =============================
+// =============================
 // MANAGER INDEX (Super Admin Only)
 // =============================
 public function managerIndex()
 {
-    $admin = Admin::find(session('admin_id'));
-
-    if (!$admin) {
-        return redirect()->route('login.show');
+    $admin = auth()->guard('admin')->user();
+    if (!$admin || $admin->role_id != 1) {
+        abort(403);
     }
-
     if ($admin->role_id != 1) {
         abort(403, 'Anda tidak memiliki akses');
     }
@@ -252,24 +300,29 @@ public function managerIndex()
 // =============================
 public function storeAdmin(Request $request)
 {
+    
     $admin = Admin::find(session('admin_id'));
     if ($admin->role_id != 1) abort(403);
 
-    $request->validate([
+     $request->validate([
         'nama'     => 'required|string|max:255',
         'email'    => 'required|email|unique:admin,email',
         'password' => 'required|string|min:6',
-        'role_id'  => 'required|exists:roles,id',
+        'role_id'  => 'required|in:1,2', // ✅ FIX
     ]);
 
+    
     Admin::create([
         'nama'     => $request->nama,
         'email'    => $request->email,
         'password' => bcrypt($request->password),
         'role_id'  => $request->role_id,
+        'status'   => 'aktif', // (opsional tapi direkomendasikan)
     ]);
 
-    return back()->with('success', 'Admin berhasil ditambahkan');
+     return redirect()
+        ->route('manager.index')
+        ->with('success', 'Admin berhasil ditambahkan');
 }
 
 
