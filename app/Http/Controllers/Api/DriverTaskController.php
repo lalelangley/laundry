@@ -11,16 +11,16 @@ class DriverTaskController extends Controller
     // ======================================================
     // GET TASKS FOR THIS DRIVER
     // ======================================================
- public function getPendingTasks($driverId)
-{
-    $myTasks = Delivery::with([
-        'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
-        'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-        'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis,id_parfum,qty,harga,total_harga',
-        'transaksi.detail.layanan:id_layanan,nama_layanan',
-        'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
-        'transaksi.detail.parfum:id_parfum,nama_parfum',
-    ])
+    public function getPendingTasks($driverId)
+    {
+        $tasks = Delivery::with([
+            'transaksi:id_transaksi,id_pelanggan,status_transaksi,keterangan,tgl_transaksi',
+            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga',
+            'transaksi.detail.layanan:id_layanan,nama_layanan',
+            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+            'transaksi.detail.parfum:id_parfum,nama_parfum',
+        ])
         ->where('id_driver', $driverId)
         ->whereIn('status', [
             'pending',
@@ -29,172 +29,76 @@ class DriverTaskController extends Controller
             'picked_up',
             'on_the_way_to_laundry',
             'on_the_way_to_customer',
-])
+        ])
         ->get();
 
-    return response()->json([
-        'success' => true,
-        'tasks' => $myTasks,
-    ]);
-}
-
+        return response()->json([
+            'success' => true,
+            'tasks' => $tasks,
+        ]);
+    }
 
     // ======================================================
-    // ACCEPT TASK
+    // DRIVER ACTIONS (ACCEPT, PICKUP, DELIVERY, ETC)
     // ======================================================
-    public function acceptTask(Request $request)
+    private function updateDeliveryStatus(Request $request, string $status)
     {
         $request->validate([
             'id_delivery' => 'required',
-            'id_driver'   => 'required',
+            'id_driver' => 'required',
         ]);
 
-        $delivery = Delivery::find($request->id_delivery);
+        $delivery = Delivery::where('id_delivery', $request->id_delivery)
+            ->where(function($q) use ($request, $status){
+                // jika status "accept" boleh id_driver null
+                if ($status === 'accepted') {
+                    $q->whereNull('id_driver')->orWhere('id_driver', $request->id_driver);
+                } else {
+                    $q->where('id_driver', $request->id_driver);
+                }
+            })
+            ->first();
 
-        if (!$delivery) {
-            return response()->json(['success' => false, 'message' => 'Task not found']);
+        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
+
+        $delivery->status = $status;
+        if($status === 'accepted') {
+            $delivery->id_driver = $request->id_driver;
         }
-
-        if ($delivery->id_driver !== null) {
-            return response()->json(['success' => false, 'message' => 'Task already taken']);
-        }
-
-        $delivery->id_driver = $request->id_driver;
-        $delivery->status = 'accepted';
         $delivery->save();
 
-        return response()->json(['success' => true, 'message' => 'Task accepted']);
+        return response()->json(['success'=>true,'message'=>"Status updated to {$status}"]);
     }
 
+    public function acceptTask(Request $request)          { return $this->updateDeliveryStatus($request, 'accepted'); }
+    public function onTheWayToPickup(Request $request)   { return $this->updateDeliveryStatus($request, 'on_the_way_to_pickup'); }
+    public function completePickup(Request $request)     { return $this->updateDeliveryStatus($request, 'picked_up'); }
+    public function onTheWayToLaundry(Request $request)  { return $this->updateDeliveryStatus($request, 'on_the_way_to_laundry'); }
+    public function arrivedAtLaundry(Request $request)   { return $this->updateDeliveryStatus($request, 'arrived_at_laundry'); }
+    public function onTheWayToCustomer(Request $request) { return $this->updateDeliveryStatus($request, 'on_the_way_to_customer'); }
+    public function completeDelivery(Request $request)   { return $this->updateDeliveryStatus($request, 'delivered'); }
+
     // ======================================================
-    // ON THE WAY TO PICKUP
+    // GET DRIVER HISTORY
     // ======================================================
-    public function onTheWayToPickup(Request $request)
+    public function getDriverHistory($driverId)
     {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
+        $history = Delivery::with([
+    'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+    'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+    'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga',
+    'transaksi.detail.layanan:id_layanan,nama_layanan',
+    'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+    'transaksi.detail.parfum:id_parfum,nama_parfum',
+])
+->where('id_driver', $driverId)
+->whereIn('status', ['arrived_at_laundry','delivered'])
+->orderBy('updated_at', 'desc')
+->get();
+
+        return response()->json([
+            'success' => true,
+            'history' => $history,
         ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'on_the_way_to_pickup';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Driver on the way to pickup']);
-    }
-
-    // ======================================================
-    // COMPLETE PICKUP
-    // ======================================================
-    public function completePickup(Request $request)
-    {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
-        ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'picked_up';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Pickup completed']);
-    }
-
-    // ======================================================
-    // ON THE WAY TO LAUNDRY
-    // ======================================================
-    public function onTheWayToLaundry(Request $request)
-    {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
-        ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'on_the_way_to_laundry';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Driver heading to laundry']);
-    }
-
-    // ======================================================
-    // ARRIVED AT LAUNDRY
-    // ======================================================
-    public function arrivedAtLaundry(Request $request)
-    {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
-        ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'arrived_at_laundry';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Arrived at laundry']);
-    }
-
-    // ======================================================
-    // ON THE WAY TO CUSTOMER
-    // ======================================================
-    public function onTheWayToCustomer(Request $request)
-    {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
-        ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'on_the_way_to_customer';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Heading to customer']);
-    }
-
-    // ======================================================
-    // COMPLETE DELIVERY
-    // ======================================================
-    public function completeDelivery(Request $request)
-    {
-        $request->validate([
-            'id_delivery' => 'required',
-            'id_driver' => 'required',
-        ]);
-
-        $delivery = Delivery::where('id_delivery', $request->id_delivery)
-            ->where('id_driver', $request->id_driver)
-            ->first();
-
-        if (!$delivery) return response()->json(['success'=>false,'message'=>'Task not found']);
-
-        $delivery->status = 'delivered';
-        $delivery->save();
-
-        return response()->json(['success'=>true,'message'=>'Delivery completed']);
     }
 }

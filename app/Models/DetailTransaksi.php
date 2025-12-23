@@ -53,8 +53,13 @@ class DetailTransaksi extends Model
 
     public function jenis()
 {
-    return $this->belongsTo(JenisLayanan::class, 'id_jenis', 'id_jenis_layanan');
+    return $this->belongsTo(
+        JenisLayanan::class,
+        'id_jenis_layanan',     
+        'id_jenis_layanan'      
+    );
 }
+
 
 
     public function parfum()

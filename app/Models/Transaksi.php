@@ -12,24 +12,34 @@ class Transaksi extends Model
     public $incrementing = true;
     protected $keyType = "int";
 
-    protected $fillable = [
-        'id_pelanggan',
-        'id_kasir',
-        'id_metode_bayar',
-        'nama_pelanggan',
-        'no_hp',
-        'gambar',
-        'total_harga',
-        'total_bayar',
-        'diskon',
-        'tipe_diskon',
-        'status_bayar',
-        'status_transaksi',
-        'keterangan',
-        'tgl_lunas',
-        'tgl_estimasi',
-        'tgl_transaksi',
-    ];
+protected $fillable = [
+    'id_pelanggan',
+    'id_kasir',
+    'id_metode_bayar',
+    'nama_pelanggan',
+    'no_hp',
+    'status_transaksi',
+    'status_bayar',
+    'total_harga',
+    'total_bayar',
+    'dp',
+    'diskon',
+    'tipe_diskon',
+    'tgl_transaksi',
+    'tgl_estimasi',
+    'tgl_lunas',
+    'keterangan',
+];
+
+
+protected $casts = [
+    'total_harga' => 'double',
+    'total_bayar' => 'double',
+    'dp'          => 'double',
+    'diskon'      => 'double',
+];
+
+
 
     // ===========================
     // RELASI DETAIL TRANSAKSI
