@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Layanan;
 use App\Models\JenisLayanan;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Satuan;  
 
@@ -16,11 +17,22 @@ class LayananController extends Controller
     // =========================
 public function index(Request $request)
 {
-    $from = $request->from; // transaksi / admin
     $parfum = \App\Models\Parfum::all();
-    $layananUtama = Layanan::with('jenis')->get();
 
-    return view('admin.layanan', compact('layananUtama', 'from', 'parfum'));
+    // Eager load jenis + satuan supaya langsung muncul di blade
+    $layananUtama = Layanan::with(['jenis.satuan'])->get();
+
+    if (Auth::guard('kasir')->check()) {
+        $from = 'kasir';
+        return view('kasir.layanan.layanan', compact('layananUtama', 'from', 'parfum'));
+    }
+
+    if (Auth::guard('admin')->check()) {
+        $from = 'admin';
+        return view('admin.layanan', compact('layananUtama', 'from', 'parfum'));
+    }
+
+    abort(403);
 }
 
     // =========================
@@ -140,21 +152,88 @@ if ($from === 'transaksi') {
         ->with('success', 'Layanan berhasil ditambahkan');
 }
 
+ public function storeKasir(Request $request)
+    {
+        $request->validate([
+            'nama_layanan' => 'required|string|max:255',
+            'jenis_lama' => 'array',
+            'proses' => 'array|required',
+        ]);
+
+        // Buat layanan baru
+        $layanan = Layanan::create([
+            'nama_layanan' => $request->nama_layanan,
+        ]);
+
+        // Simpan jenis lama jika ada
+        if($request->has('jenis_lama')) {
+            foreach($request->jenis_lama as $idJenis) {
+                $jenis = JenisLayanan::find($idJenis);
+                if($jenis) {
+                    // Duplikat ke layanan baru
+                    JenisLayanan::create([
+                        'id_layanan' => $layanan->id_layanan,
+                        'nama_jenis' => $jenis->nama_jenis,
+                        'harga'      => $jenis->harga,
+                        'id_satuan'  => $jenis->id_satuan,
+                        'lama'       => $jenis->lama,
+                        'lama_satuan'=> $jenis->lama_satuan,
+                        'keterangan' => $jenis->keterangan,
+                        'gambar'     => $jenis->gambar,
+                    ]);
+                }
+            }
+        }
+
+        // Simpan jenis baru dari session
+        $jenisBaru = session()->get("jenis_baru_0", []);
+        foreach($jenisBaru as $jb) {
+            $layanan->jenis()->create([
+                'nama_jenis' => $jb['nama_jenis'],
+                'harga' => $jb['harga'],
+                'id_satuan' => $jb['id_satuan'] ?? null,
+                'lama' => $jb['lama'] ?? null,
+                'lama_satuan' => $jb['lama_satuan'] ?? null,
+                'keterangan' => $jb['keterangan'] ?? null,
+            ]);
+        }
+
+        // Hapus session
+        session()->forget("jenis_baru_0");
+
+        return redirect()->route('kasir.layanan.index')
+            ->with('success', 'Layanan berhasil dibuat!');
+    }
+
     // =========================
     // EDIT LAYANAN
     // =========================
 public function edit($id)
 {
-    if($id == 0) {
+    if ($id == 0) {
         return redirect()->route('layanan.create');
     }
 
     $layanan = Layanan::with('jenis')->findOrFail($id);
     $jenisBaru = session()->get("jenis_baru_{$id}", []);
-    return view('admin.layanan_edit', compact('layanan', 'jenisBaru'));
+
+    // =====================
+    // KASIR
+    // =====================
+    if (Auth::guard('kasir')->check()) {
+        return view('kasir.layanan.layanan_edit', compact('layanan', 'jenisBaru'));
+
+    }
+
+    // =====================
+    // ADMIN
+    // =====================
+    if (Auth::guard('admin')->check()) {
+        return view('admin.layanan_edit', compact('layanan', 'jenisBaru'));
+    }
+
+    abort(403);
 }
-
-
 
     // =========================
     // UPDATE LAYANAN
@@ -232,7 +311,14 @@ public function update(Request $request, $id)
         return redirect()->route('transaksi.create')->with('success', 'Layanan berhasil diupdate');
     }
 
-    return redirect()->route('layanan.index')->with('success', 'Layanan berhasil diupdate');
+    if (Auth::guard('kasir')->check()) {
+    return redirect()->route('kasir.layanan.index')
+        ->with('success', 'Layanan berhasil diupdate');
+    }
+
+    return redirect()->route('layanan.index')
+        ->with('success', 'Layanan berhasil diupdate');
+
 }
     // =========================
     // CREATE JENIS LAYANAN
@@ -538,5 +624,197 @@ public function fromLayanan(Request $request)
 
     return redirect()->route('transaksi.create');
 }
+
+public function layananCreateKasir(Request $request)
+{
+    $layanan_id = 0;
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
+    $satuan = Satuan::all();
+    $parfum = \App\Models\Parfum::all();
+
+    return view('kasir.layanan.layanan_create', compact(
+        'jenisBaru',
+        'satuan',
+        'parfum'
+    ));
+}
+
+// =========================
+// CREATE JENIS LAYANAN KASIR
+// =========================
+public function createJenisKasir($id_layanan, Request $request)
+{
+    $mode = $request->query('mode', 'create'); // 'create' atau 'edit'
+    $from = $request->query('from', $id_layanan); // default dari id_layanan
+    $satuan = Satuan::all(); // untuk dropdown satuan
+    $id_jenis = $request->query('id_jenis'); // untuk edit
+
+    if ($mode === 'edit') {
+        return view('kasir.layanan.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan', 'id_jenis'));
+    } else {
+        return view('kasir.layanan.tambah_jenis_layanan_create', compact('id_layanan', 'mode', 'from', 'satuan'));
+    }
+}
+
+// STORE JENIS KASIR
+public function storeJenisKasir(Request $request, $id_layanan)
+{
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|integer',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string',
+    ]);
+
+    $jenis_baru = session()->get("jenis_baru_{$id_layanan}", []);
+
+    $jenis_baru[] = [
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+    ];
+
+    session()->put("jenis_baru_{$id_layanan}", $jenis_baru);
+
+    return redirect()->route('kasir.layanan.layanan_create', ['from' => $request->from ?? 'transaksi'])
+                     ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+}
+
+// =========================
+// CREATE JENIS LAYANAN KASIR (SESSION-LIKE)
+// =========================
+public function sessionCreateJenisKasir($from, Request $request)
+{
+    $mode = $request->query('mode', 'create'); // default 'create'
+    $id_jenis = $request->query('id_jenis');  // untuk edit, opsional
+    $satuan = Satuan::all(); // untuk dropdown
+
+    if ($mode === 'edit') {
+        return view('kasir.layanan.tambah_jenis_layanan_edit', [
+            'from' => $from,
+            'satuan' => $satuan,
+            'id_jenis' => $id_jenis
+        ]);
+    } else {
+        return view('kasir.layanan.tambah_jenis_layanan_create', [
+            'from' => $from,
+            'satuan' => $satuan
+        ]);
+    }
+}
+
+// =========================
+// STORE JENIS LAYANAN KASIR (SESSION-LIKE)
+// =========================
+public function sessionStoreJenisKasir(Request $request, $from)
+{
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|exists:satuan,id_satuan',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string',
+        'keterangan' => 'nullable|string',
+    ]);
+
+    $jenis_baru = session()->get("jenis_baru_{$from}", []);
+
+    $jenis_baru[] = [
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+    ];
+
+    session()->put("jenis_baru_{$from}", $jenis_baru);
+
+    return redirect()->route('kasir.layanan.layanan_create', ['from' => $from])
+                     ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+}
+
+// =========================
+// SIMPAN JENIS LAYANAN SEMENTARA KASIR
+// =========================
+public function storeJenisKasirSession(Request $request, $from)
+{
+    $request->validate([
+        'nama_jenis'  => 'required|string|max:255',
+        'id_satuan'   => 'required|exists:satuan,id_satuan',
+        'harga'       => 'required|numeric',
+        'lama'        => 'required|numeric',
+        'lama_satuan' => 'required|string',
+        'keterangan'  => 'nullable|string',
+        'gambar'      => 'nullable|image|max:2048',
+    ]);
+
+    // Handle upload gambar (opsional)
+    $gambar = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time().'_'.$file->getClientOriginalName();
+        $file->move(public_path('images'), $filename);
+        $gambar = $filename;
+    }
+
+    // Ambil session jenis baru untuk layanan $from
+    $jenis_baru = session()->get("jenis_baru_{$from}", []);
+
+    $jenis_baru[] = [
+        'nama_jenis'  => $request->nama_jenis,
+        'id_satuan'   => $request->id_satuan,
+        'harga'       => $request->harga,
+        'lama'        => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan'  => $request->keterangan,
+        'gambar'      => $gambar,
+    ];
+
+    session()->put("jenis_baru_{$from}", $jenis_baru);
+
+    // Redirect ke halaman kasir -> layanan_create
+    return redirect()->route('kasir.layanan.layanan_create')
+                     ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+}
+
+// Hapus layanan kasir
+public function destroyKasir($id)
+{
+    $layanan = Layanan::findOrFail($id);
+
+    // Hapus semua jenis terkait
+    JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
+
+    // Hapus layanan
+    $layanan->delete();
+
+    return redirect()->route('kasir.layanan.index')
+                     ->with('success', 'Layanan berhasil dihapus!');
+}
+
+// Duplikat layanan kasir
+public function duplicateKasir($id)
+{
+    $layanan = Layanan::with('jenis')->findOrFail($id);
+
+    $new = $layanan->replicate();
+    $new->nama_layanan .= ' (Copy)';
+    $new->save();
+
+    foreach ($layanan->jenis as $jenis) {
+        $j = $jenis->replicate();
+        $j->id_layanan = $new->id_layanan;
+        $j->save();
+    }
+
+    return redirect()->route('kasir.layanan.index')
+                     ->with('success', 'Layanan berhasil diduplikat!');
+}
+
 
 }
