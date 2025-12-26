@@ -22,7 +22,7 @@ class LaundryOrderController extends Controller
     {
         return response()->json([
             'status'  => true,
-            'layanan' => Layanan::with('jenisLayanan')->get(),
+            'layanan' => Layanan::with('jenis')->get(),
             'parfum'  => Parfum::all(),
         ]);
     }

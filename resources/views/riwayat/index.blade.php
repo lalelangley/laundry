@@ -29,10 +29,10 @@
                     $tabs = [
                         'antrian' => ['label' => 'Antrian', 'icon' => 'clock-history'],
                         'proses' => ['label' => 'Proses', 'icon' => 'arrow-repeat'],
-                        'selesai' => ['label' => 'Selesai', 'icon' => 'check-all'],
                         'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle'],
                         'pick_up' => ['label' => 'Pick Up', 'icon' => 'box-seam'],
                         'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'truck'],
+                        'selesai' => ['label' => 'Selesai', 'icon' => 'check-all'],
                         'batal' => ['label' => 'Batal', 'icon' => 'x-circle']
                     ];
                 @endphp

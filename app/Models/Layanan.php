@@ -11,16 +11,19 @@ class Layanan extends Model
 
     protected $table = 'layanan';
     protected $primaryKey = 'id_layanan';
-    protected $fillable = ['nama_layanan', 'proses'];
+    protected $fillable = [
+        'nama_layanan',
+        'gambar',
+        'proses',
+    ];
 
-    // Relasi: Layanan punya banyak jenis layanan
-    public function jenisLayanan()
+    protected $casts = [
+        'proses' => 'string'
+    ];
+
+    public function jenis()
     {
         return $this->hasMany(JenisLayanan::class, 'id_layanan', 'id_layanan');
     }
-    public function jenis()
-{
-    return $this->hasMany(JenisLayanan::class, 'id_layanan', 'id_layanan');
-}
 
 }

@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class DetailTransaksi extends Model
 {
-    use HasFactory;
-
     protected $table = 'detail_transaksi';
     protected $primaryKey = 'id_detail_transaksi';
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'id_transaksi',
@@ -19,31 +19,20 @@ class DetailTransaksi extends Model
         'id_parfum',
         'harga',
         'qty',
-        'diskon',
-        'tipe_diskon',
-        'total_harga',
-        'status_transaksi',
-        'tgl_transaksi',
+        'keterangan',
+        'id_satuan',
+        'tipe_diskon'
     ];
 
-    protected $casts = [
-        'harga' => 'double',
-        'qty' => 'double',
-        'diskon' => 'double',
-        'total_harga' => 'double',
-        'lama_hari' => 'integer',
-        'lama_jam' => 'integer',
-        'status_transaksi' => 'integer',
-        'tgl_transaksi' => 'date',
-    ];
-
-    // =========================
-    // RELASI
-    // =========================
+    // ================= RELATIONS =================
 
     public function transaksi()
     {
-        return $this->belongsTo(Transaksi::class, 'id_transaksi');
+        return $this->belongsTo(
+            Transaksi::class,
+            'id_transaksi',
+            'id_transaksi'
+        );
     }
 
     public function layanan()
@@ -52,15 +41,14 @@ class DetailTransaksi extends Model
     }
 
     public function jenis()
-{
-    return $this->belongsTo(
-        JenisLayanan::class,
-        'id_jenis_layanan',     
-        'id_jenis_layanan'      
-    );
-}
+    {
+        return $this->belongsTo(JenisLayanan::class, 'id_jenis_layanan');
+    }
 
-
+    public function satuan()
+    {
+        return $this->belongsTo(Satuan::class, 'id_satuan');
+    }
 
     public function parfum()
     {

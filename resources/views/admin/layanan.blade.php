@@ -2,35 +2,37 @@
 
 @section('content')
 
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <div class="min-h-screen bg-gray-50 pb-24">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
         @php
-            $backUrl = request('from') === 'transaksi'
-                ? route('transaksi.create')
-                : route('admin.dashboard');
+        $from = request('from');
+        $idTransaksi = request('id_transaksi'); // FIX UTAMA
+
+        $backUrl = match ($from) {
+            'transaksi' => route('transaksi.create'),
+            'riwayat'   => route('riwayat.detail', ['id' => $idTransaksi]),
+            default     => route('admin.dashboard'),
+        };
         @endphp
+
 
         <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
         </a>
-
         <span class="text-2xl font-bold">Kelola Layanan</span>
     </div>
 
     <div class="px-8 py-6 space-y-6">
         {{-- SEARCH + SORT --}}
         <div class="flex items-center gap-3">
-            <!-- SEARCH BOX -->
             <div class="relative flex-1">
                 <i class="bi bi-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                <input id="searchInput"
-                       type="text"
-                       placeholder="Cari layanan..."
-                       class="w-full pl-12 pr-4 py-4 rounded-xl bg-white shadow-md outline-none focus:ring-2 focus:ring-yellow-400 transition-all">
+                <input id="searchInput" type="text" placeholder="Cari layanan..."
+                    class="w-full pl-12 pr-4 py-4 rounded-xl bg-white shadow-md outline-none focus:ring-2 focus:ring-yellow-400 transition-all">
             </div>
-
-            <!-- SORT BUTTON -->
             <button class="bg-white px-6 py-4 rounded-xl shadow-md hover:shadow-lg flex items-center gap-2 hover:bg-gray-50 transition-all">
                 <i class="bi bi-arrow-down-up text-xl"></i>
                 <span class="font-semibold hidden sm:inline">Sort</span>
@@ -43,66 +45,45 @@
             <div class="layanan-item bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 relative group"
                  data-id="{{ $item->id_layanan }}"
                  data-name="{{ $item->nama_layanan }}"
-                 data-mode="{{ request('from') === 'transaksi' ? 'transaksi' : 'edit' }}">
-
+                 data-mode="transaksi">
                 <div class="p-6">
-                    {{-- HEADER CARD --}}
                     <div class="flex items-start justify-between mb-4 pb-4 border-b-2 border-gray-100">
                         <div class="flex-1">
-                            <h3 class="text-xl font-bold text-gray-800 capitalize mb-2">
-                                {{ $item->nama_layanan }}
-                            </h3>
-
-                            {{-- ICON PROSES --}}
+                            <h3 class="text-xl font-bold text-gray-800 capitalize mb-2">{{ $item->nama_layanan }}</h3>
                             @php
-                                $icons = [
-                                    'Cuci' => 'bi bi-droplet',
-                                    'Kering' => 'bi bi-wind',
-                                    'Setrika' => 'bi bi-iron'
-                                ];
-
+                                $icons = ['Cuci'=>'bi bi-droplet','Kering'=>'bi bi-wind','Setrika'=>'bi bi-iron'];
                                 $raw = $item->proses ?? '';
-
-                                if (is_string($raw) && Str::startsWith(trim($raw), '[')) {
-                                    $steps = json_decode($raw, true) ?: [];
+                                if(is_string($raw) && Str::startsWith(trim($raw),'[')){
+                                    $steps = json_decode($raw,true) ?: [];
                                 } else {
-                                    $clean = trim($raw, "[]\"' ");
-                                    $parts = $clean === '' ? [] : explode(',', $clean);
-                                    $steps = array_map('trim', $parts);
+                                    $parts = array_map('trim', explode(',', trim($raw,"[]\"' ")));
+                                    $steps = array_filter($parts, fn($s)=>$s!=='');
                                 }
-
-                                $steps = array_values(array_filter($steps, fn($s) => $s !== '' && $s !== null));
                             @endphp
-
                             <div class="flex items-center gap-2 flex-wrap">
-                                @foreach($steps as $i => $step)
+                                @foreach($steps as $i=>$step)
                                     <div class="flex items-center gap-1.5 bg-yellow-50 px-3 py-1.5 rounded-lg">
                                         <i class="{{ $icons[$step] ?? 'bi bi-gear' }} text-yellow-600 text-lg"></i>
                                         <span class="text-sm font-semibold text-gray-700">{{ $step }}</span>
                                     </div>
-
-                                    @if ($i < count($steps) - 1)
-                                        <i class="bi bi-chevron-right text-gray-300"></i>
-                                    @endif
+                                    @if($i < count($steps)-1) <i class="bi bi-chevron-right text-gray-300"></i> @endif
                                 @endforeach
                             </div>
                         </div>
 
-                        {{-- DROPDOWN MENU --}}
+                        {{-- DROPDOWN --}}
                         <div class="dropdown-area relative">
                             <button class="dropdown-btn text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                 <i class="bi bi-three-dots-vertical text-xl"></i>
                             </button>
-
                             <ul class="dropdown-menu hidden absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 z-50">
                                 <li>
                                     <button onclick="confirmDuplicate('{{ route('layanan.duplicate', $item->id_layanan) }}')"
-                                       class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-yellow-50 transition-colors">
+                                            class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-yellow-50 transition-colors">
                                         <i class="bi bi-layers text-lg text-blue-600"></i>
                                         <span class="font-medium">Duplikat</span>
                                     </button>
                                 </li>
-
                                 <li class="border-t border-gray-100">
                                     <button onclick="confirmDelete('{{ route('layanan.destroy', $item->id_layanan) }}')"
                                             class="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors">
@@ -114,28 +95,19 @@
                         </div>
                     </div>
 
-                    {{-- LIST JENIS --}}
+                    {{-- JENIS --}}
                     @if($item->jenis->count() > 0)
                         <div class="space-y-4">
-                            @foreach ($item->jenis as $jenis)
+                            @foreach($item->jenis as $jenis)
                             <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                                <!-- GAMBAR -->
                                 <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0">
-                                    <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
-                                         class="w-full h-full object-cover"
-                                         alt="{{ $jenis->nama_jenis }}">
+                                    <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}" class="w-full h-full object-cover" alt="{{ $jenis->nama_jenis }}">
                                 </div>
-
-                                <!-- INFO -->
                                 <div class="flex-1 min-w-0">
-                                    <p class="font-bold text-lg text-gray-800 capitalize mb-1 truncate">
-                                        {{ $jenis->nama_jenis }}
-                                    </p>
-
+                                    <p class="font-bold text-lg text-gray-800 capitalize mb-1 truncate">{{ $jenis->nama_jenis }}</p>
                                     <p class="text-green-600 font-semibold mb-2">
-                                        Rp {{ number_format($jenis->harga, 0, ',', '.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
+                                        Rp {{ number_format($jenis->harga,0,',','.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
                                     </p>
-
                                     <div class="flex items-center gap-1.5 text-gray-500 text-sm">
                                         <i class="bi bi-clock"></i>
                                         <span>{{ $jenis->lama }} {{ $jenis->lama_satuan }}</span>
@@ -153,18 +125,16 @@
                 </div>
             </div>
             @empty
-            <div class="col-span-full flex flex-col items-center justify-center py-16">
-                <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <i class="bi bi-gear-wide-connected text-5xl text-gray-400"></i>
-                </div>
+            <div class="text-center py-16">
+                <i class="bi bi-gear-wide-connected text-5xl text-gray-400 mb-4"></i>
                 <p class="text-xl text-gray-500 font-semibold">Tidak ada layanan</p>
                 <p class="text-gray-400 text-sm mt-2">Silahkan tambahkan layanan baru</p>
             </div>
             @endforelse
         </div>
 
-        {{-- BUTTON TAMBAH --}}
-        <a href="{{ route('layanan.create', ['from' => request('from')]) }}"
+        {{-- TAMBAH --}}
+        <a href="{{ route('layanan.create', ['from'=>'transaksi']) }}"
            class="block bg-yellow-400 hover:bg-yellow-500 py-4 rounded-2xl font-bold text-black text-center shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2">
             <i class="bi bi-plus-circle-fill text-xl"></i>
             Tambah Layanan
@@ -172,41 +142,25 @@
     </div>
 </div>
 
-{{-- ====================== MODAL LAYANAN ====================== --}}
-<div id="modalLayanan"
-  class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
-
-    <div id="modalBox"
-         class="bg-white w-full max-w-lg mx-auto rounded-2xl shadow-2xl overflow-hidden">
-
-        <!-- MODAL HEADER -->
+{{-- MODAL --}}
+<div id="modalLayanan" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
+    <div class="bg-white w-full max-w-lg mx-auto rounded-2xl shadow-2xl overflow-hidden">
         <div class="bg-yellow-400 p-6">
             <h2 id="modalTitle" class="text-2xl font-bold text-black text-center"></h2>
         </div>
-
-        <!-- MODAL BODY -->
         <div class="p-6 space-y-5">
-            <!-- QTY INPUT -->
             <div>
                 <label class="block font-bold text-gray-700 mb-2">Jumlah Kuantitas</label>
                 <div class="relative">
                     <i class="bi bi-123 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                    <input id="qtyInput" type="number" step="0.01"
-                           class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
-                           placeholder="Masukkan qty">
+                    <input id="qtyInput" type="number" step="0.01" class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" placeholder="Masukkan qty">
                 </div>
-                <p class="text-xs text-gray-500 mt-2">
-                    <i class="bi bi-info-circle"></i> Gunakan tanda titik (.) untuk angka desimal
-                </p>
             </div>
-
-            <!-- PARFUM SELECT -->
             <div>
                 <label class="block font-bold text-gray-700 mb-2">Pilih Parfum</label>
                 <div class="relative">
                     <i class="bi bi-flower1 absolute left-4 top-1/2 transform -translate-y-1/2 text-pink-400 text-xl z-10"></i>
-                    <select id="parfumSelect"
-                            class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all appearance-none bg-white">
+                    <select id="parfumSelect" class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all appearance-none bg-white">
                         <option value="">Pilih Parfum</option>
                         @foreach ($parfum as $p)
                             <option value="{{ $p->id_parfum }}">{{ $p->nama_parfum }}</option>
@@ -215,15 +169,10 @@
                     <i class="bi bi-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
                 </div>
             </div>
-
-            <!-- BUTTONS -->
             <div class="flex gap-3 pt-2">
-                <button onclick="document.getElementById('modalLayanan').classList.add('hidden')"
-                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition-all">
-                    Batal
-                </button>
-                <button id="btnSave"
-                        class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all">
+                <button onclick="closeModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition-all">Batal</button>
+                <button id="btnSave" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
+                        data-mode="{{ request('from') }}" data-id="" data-transaksi="{{ request('id') }}">
                     Simpan
                 </button>
             </div>
@@ -312,10 +261,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalDelete = document.getElementById("modalDelete");
     const formDelete = document.getElementById("formDelete");
 
-    function openModal(name, id) {
+    // ================= MODAL UTAMA =================
+    function openModal(name, id, mode = "transaksi", riwayatId = null) {
         modal.classList.remove("hidden");
         modalTitle.innerText = name;
+
         btnSave.dataset.id = id;
+        btnSave.dataset.mode = mode;
+        btnSave.dataset.riwayat = riwayatId ?? "";
+
         qtyInput.value = "";
         parfumSelect.value = "";
         
@@ -334,10 +288,16 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.classList.add("hidden");
     }
 
-    // DUPLICATE FUNCTIONS
+    window.closeModal = closeModal;
+
+    modal.addEventListener("click", e => {
+        if (e.target === modal) closeModal();
+    });
+
+    // ================= DUPLICATE =================
     window.confirmDuplicate = function(url) {
         modalDuplicate.classList.remove("hidden");
-        btnConfirmDuplicate.onclick = function() {
+        btnConfirmDuplicate.onclick = () => {
             window.location.href = url;
         };
     };
@@ -346,7 +306,11 @@ document.addEventListener("DOMContentLoaded", () => {
         modalDuplicate.classList.add("hidden");
     };
 
-    // DELETE FUNCTIONS
+    modalDuplicate.addEventListener("click", e => {
+        if (e.target === modalDuplicate) closeDuplicateModal();
+    });
+
+    // ================= DELETE =================
     window.confirmDelete = function(url) {
         modalDelete.classList.remove("hidden");
         formDelete.action = url;
@@ -356,87 +320,87 @@ document.addEventListener("DOMContentLoaded", () => {
         modalDelete.classList.add("hidden");
     };
 
-    // Close modals on backdrop click
-    modalDuplicate.addEventListener("click", e => {
-        if (e.target === modalDuplicate) closeDuplicateModal();
-    });
-
     modalDelete.addEventListener("click", e => {
         if (e.target === modalDelete) closeDeleteModal();
     });
 
-    modal.addEventListener("click", e => {
-        if (e.target === modal) closeModal();
-    });
+    // ================= KLIK LAYANAN =================
+document.querySelectorAll('.layanan-item').forEach(card => {
+    card.addEventListener('click', () => {
+        const from = "{{ request('from') }}";          // dari URL
+        const riwayatId = "{{ request('id_transaksi') }}"; // kalau dari riwayat
+        const idLayanan = card.dataset.id;
 
-    document.querySelectorAll('.layanan-item').forEach(card => {
-        card.addEventListener('click', () => {
-            
-            const mode = card.dataset.mode;
-
-            if (mode === 'transaksi') {
-                openModal(card.dataset.name, card.dataset.id);
-                return;
-            }
-
-            window.location.href =
-        "{{ route('layanan.edit', ['id' => '__id__']) }}"
-            .replace('__id__', card.dataset.id);
-        });
-    });
-
-    document.querySelectorAll(".dropdown-area").forEach(area => {
-        area.addEventListener("click", function(e){
-            e.stopPropagation();
-        });
-    });
-
-    btnSave.addEventListener("click", () => {
-
-        const qty = qtyInput.value.trim();
-        const parfum = parfumSelect.value;
-
-        if (!qty || qty <= 0) {
-            alert("Masukkan qty valid.");
-            return;
+        if (from === "riwayat" && riwayatId) {
+            // kalau dari riwayat, tetap modal untuk tambah layanan
+            openModal(card.dataset.name, idLayanan, "riwayat", riwayatId);
+        } else if (from === "transaksi") {
+            // dari transaksi, buka modal
+            openModal(card.dataset.name, idLayanan, "transaksi");
+        } else {
+            // dari dashboard / halaman layanan biasa -> langsung ke edit
+            window.location.href = `/admin/layanan/${idLayanan}/edit`;
         }
+    });
 
-        const id = btnSave.dataset.id;
+});
 
-        const parfumNama = parfumSelect.options[parfumSelect.selectedIndex].text;
-        const url = `/admin/transaksi/add-layanan/${id}?qty=${qty}&parfum=${parfum}&parfum_nama=${encodeURIComponent(parfumNama)}`;
-
-        fetch(url)
-            .then(res => res.json())
-            .then(() => {
-                closeModal();
-                window.location.href = "/admin/transaksi/create";
-            })
-            .catch(err => {
-                console.error("ERROR:", err);
-                alert("Gagal menambah layanan.");
-            });
+    // ================= DROPDOWN =================
+    document.querySelectorAll(".dropdown-area").forEach(area => {
+        area.addEventListener("click", e => e.stopPropagation());
     });
 
     document.querySelectorAll(".dropdown-btn").forEach(btn => {
         btn.addEventListener("click", function (e) {
             e.stopPropagation();
-
             const menu = this.nextElementSibling;
-
             document.querySelectorAll(".dropdown-menu").forEach(m => {
                 if (m !== menu) m.classList.add("hidden");
             });
-
             menu.classList.toggle("hidden");
         });
     });
 
-    document.querySelectorAll(".dropdown-menu").forEach(menu => {
-        menu.addEventListener("click", function (e) {
-            e.stopPropagation();
-        });
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.add("hidden"));
     });
+
+    // ================= ADD LAYANAN =================
+    btnSave.addEventListener("click", () => {
+        const qty = qtyInput.value.trim();
+        const parfum = parfumSelect.value || null;
+
+        if (!qty || qty <= 0) return;
+
+        const idLayanan = btnSave.dataset.id;
+        const mode = btnSave.dataset.mode;
+        const idRiwayat = btnSave.dataset.riwayat;
+
+        let url = mode === "riwayat"
+        ? `/admin/riwayat/${idRiwayat}/add-layanan/${idLayanan}`
+        : `/admin/transaksi/add-layanan/${idLayanan}`;
+
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ qty, parfum })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                window.location.href = mode === "transaksi"
+                    ? "{{ route('transaksi.create') }}"
+                    : `/admin/riwayat/${idRiwayat}/edit`;
+            }
+        })
+        .catch(console.error);
+    });
+
 });
 </script>
 @endsection

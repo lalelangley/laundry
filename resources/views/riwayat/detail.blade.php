@@ -75,6 +75,7 @@
         <div class="grid grid-cols-12 gap-6">
             {{-- LEFT COLUMN --}}
             <div class="col-span-12 lg:col-span-8 space-y-6">
+<<<<<<< HEAD
                 {{-- DETAIL ORDER --}}
                 <div class="bg-white shadow-lg rounded-2xl p-6">
                     <h2 class="font-bold text-xl mb-5 flex items-center gap-3 text-gray-800 pb-4 border-b-2 border-gray-100">
@@ -116,6 +117,58 @@
                     </div>
                 </div>
 
+=======
+               {{-- DETAIL ORDER --}}
+<div class="bg-white shadow-lg rounded-2xl p-6">
+    
+    {{-- HEADER --}}
+    <div class="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
+        <h2 class="font-bold text-xl flex items-center gap-3 text-gray-800">
+            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <i class="bi bi-basket-fill text-xl text-red-600"></i>
+            </div>
+            Detail Order
+        </h2>
+
+        {{-- BUTTON EDIT (KANAN) --}}
+        @if($transaksi->status_transaksi == 'antrian')
+            <a href="{{ route('riwayat.edit', $transaksi->id_transaksi) }}"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
+                <i class="bi bi-pencil-fill"></i>
+                Edit Layanan
+            </a>
+        @endif
+    </div>
+    
+    {{-- LIST LAYANAN --}}
+    <div class="space-y-4">
+        @foreach($detail as $item)
+            <div class="flex justify-between items-center gap-4 p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
+                <div class="flex-1 space-y-2">
+                    <p class="font-bold text-lg text-gray-800">
+                        {{ $item->nama_jenis }} 
+                        <span class="text-gray-500 font-normal">({{ $item->nama_layanan }})</span>
+                    </p>
+                    <p class="text-gray-600 text-sm flex items-center gap-2">
+                        <i class="bi bi-tag-fill text-yellow-500"></i>
+                        Rp {{ number_format($item->harga_jenis,0,',','.') }} / {{ $item->satuan }}
+                    </p>
+                    <div class="bg-green-50 px-3 py-2 rounded-lg inline-block">
+                        <p class="font-semibold text-green-700">
+                            SubTotal: Rp {{ number_format($item->total_harga,0,',','.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-500 px-6 py-4 rounded-xl font-bold text-white text-center whitespace-nowrap">
+                    {{ $item->qty }} {{ $item->satuan }}
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+
+>>>>>>> web
                 {{-- INFORMASI TRANSAKSI & STATUS --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {{-- INFORMASI TRANSAKSI --}}
@@ -226,24 +279,40 @@
 
     {{-- Tombol Selesaikan --}}
     @if($transaksi->status_transaksi == 'proses')
+<<<<<<< HEAD
         <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
         class="bg-green-600 hover:bg-green-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-check-circle-fill text-xl"></i> Selesaikan Order
+=======
+        <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
+        class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+            <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
+>>>>>>> web
         </a>
     @endif
 
     {{-- Tombol Siap Diambil --}}
     @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
+<<<<<<< HEAD
         <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
         class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-box-arrow-in-down text-xl"></i> Siap Diambil
+=======
+        <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
+        class="bg-yellow-400 hover:bg-yellow-500 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+            <i class="bi bi-box-arrow-in-down text-xl"></i> Order Selesai
+>>>>>>> web
         </a>
     @endif
 
     {{-- Tombol Bayar --}}
     @if($sisaBayar > 0)
         <button onclick="openModalBayar()"
+<<<<<<< HEAD
             class="bg-yellow-400 hover:bg-yellow-500 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+=======
+            class="bg-green-600 hover:bg-green-700 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+>>>>>>> web
             <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
         </button>
     @endif

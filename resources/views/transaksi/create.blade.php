@@ -128,7 +128,10 @@ $keterangan = session('keterangan_transaksi', '');
         @endif
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> web
         {{-- KETERANGAN TRANSAKSI --}}
         <form id="checkoutForm" action="{{ route('transaksi.checkout') }}" method="POST">
             @csrf

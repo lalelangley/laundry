@@ -7,6 +7,5 @@
             <option value="{{ $kasir->id_kasir }}">{{ $kasir->nama }}</option>
         @endforeach
     </select>
-
     <button type="submit">Lanjut</button>
 </form>

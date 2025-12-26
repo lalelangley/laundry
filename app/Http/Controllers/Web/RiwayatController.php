@@ -10,6 +10,9 @@ use App\Models\DetailTransaksi;
 use App\Models\JenisLayanan;
 use App\Models\Pelanggan;
 use App\Models\Satuan;
+use App\Models\Layanan;
+use App\Models\Parfum;
+
 
 class RiwayatController extends Controller
 {
@@ -27,36 +30,49 @@ class RiwayatController extends Controller
 
     /** FORM EDIT DATA */
     public function edit($id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
-        return view('riwayat.edit', compact('transaksi'));
-    }
+{
+    // Ambil transaksi beserta relasi
+    $riwayat = Transaksi::with(['detail.jenis.satuan', 'detail.parfum', 'pelanggan'])
+        ->findOrFail($id);
 
-    /** UPDATE DATA TRANSAKSI */
-    public function update(Request $request, $id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
+    $detail = $riwayat->detail;       // collection detail transaksi
+    $pelanggan = $riwayat->pelanggan; // data pelanggan
+    $parfum = Parfum::all();          // semua parfum
 
-        if ($transaksi->status_transaksi !== 'antrian') {
-            return redirect()->back()->with('error', 'Transaksi tidak bisa diedit karena sudah diproses.');
+    return view('riwayat.edit', compact(
+        'riwayat',
+        'detail',
+        'pelanggan',
+        'parfum'
+    ));
+}
+
+
+   /** UPDATE DATA TRANSAKSI */
+public function update(Request $request, $id)
+{
+    $riwayat = Transaksi::findOrFail($id);
+
+    foreach ($request->detail as $id_detail => $d) {
+        $detail = DetailTransaksi::find($id_detail);
+        if ($detail) {
+            $detail->update([
+                'qty' => $d['qty'],
+                'id_parfum' => $d['id_parfum'] ?? null,
+                'harga' => $detail->harga, // biar harga tetap sama
+            ]);
         }
-
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'no_hp' => 'required|string|max:20',
-            'alamat' => 'nullable|string',
-            'tanggal' => 'required|date',
-            'total_harga' => 'required|numeric',
-            'status_transaksi' => 'required|string'
-        ]);
-
-        $transaksi->update($request->only([
-            'nama_pelanggan','no_hp','alamat','tanggal','total_harga','status_transaksi'
-        ]));
-
-        return redirect()->route('riwayat.index')
-                         ->with('success', 'Transaksi berhasil diperbarui!');
     }
+
+    // update total transaksi
+    $total = DetailTransaksi::where('id_transaksi', $id)
+        ->sum(DB::raw('qty * harga'));
+    $riwayat->update(['total_harga' => $total]);
+
+    // 🔹 redirect ke halaman detail
+    return redirect()->route('riwayat.detail', ['id' => $id])
+                     ->with('success', 'Transaksi berhasil diperbarui');
+}
 
     /** UPDATE STATUS TRANSAKSI */
     public function updateStatus(Request $request, $id)
@@ -74,6 +90,7 @@ class RiwayatController extends Controller
     {
         Transaksi::findOrFail($id)->delete();
         return back()->with('success', 'Riwayat transaksi berhasil dihapus');
+        
     }
 
     /** DETAIL TRANSAKSI */
@@ -119,16 +136,19 @@ class RiwayatController extends Controller
     }
 
     /** SELESAI ORDER */
-    public function selesaiOrder($id)
-    {
-        $trx = Transaksi::findOrFail($id);
-        if ($trx->status_transaksi === 'proses') {
-            $trx->status_transaksi = 'selesai';
-            $trx->save();
-        }
-        return redirect()->route('riwayat.index',['tab'=>'selesai'])
-                         ->with('success','Transaksi berhasil diselesaikan!');
+public function selesaiOrder($id)
+{
+    $trx = Transaksi::findOrFail($id);
+
+    if (in_array($trx->status_transaksi, ['proses', 'siap_di_ambil'])) {
+        $trx->status_transaksi = 'selesai';
+        $trx->save();
     }
+
+    return redirect()
+        ->route('riwayat.index', ['tab' => 'selesai'])
+        ->with('success','Transaksi berhasil diselesaikan!');
+}
 
     /** SIAP DIAMBIL */
     public function siapDiAmbil($id)
@@ -162,9 +182,12 @@ class RiwayatController extends Controller
         if ($sisaTagihan <= 0) {
             $trs->status_bayar = 'lunas';
             $trs->tgl_lunas = now();
-            if ($trs->status_transaksi == 'selesai') {
-                $trs->status_transaksi = 'siap_di_ambil';
+            if ($sisaTagihan <= 0) {
+                $trs->status_bayar = 'lunas';
+                $trs->tgl_lunas = now();
+                // status_transaksi JANGAN diubah di sini
             }
+
         } elseif ($totalBayarBaru > 0) {
             $trs->status_bayar = 'DP';
             $trs->tgl_lunas = null;
@@ -179,31 +202,33 @@ class RiwayatController extends Controller
 
 public function editLayanan($id)
 {
-    $detail = DetailTransaksi::with('layanan', 'jenis', 'transaksi')->findOrFail($id);
+    // $id = id_detail_transaksi
+    $detail = DetailTransaksi::with([
+        'layanan',
+        'jenis.satuan',
+        'transaksi.pelanggan'
+    ])->findOrFail($id);
 
-    $trx = $detail->transaksi ?? null;
+    $riwayat = $detail->transaksi;
 
-    if ($trx && $trx->id_pelanggan) {
-        $pelanggan = Pelanggan::find($trx->id_pelanggan);
-    } elseif ($trx) {
-        $pelanggan = (object)[
-            'nama' => $trx->nama_pelanggan,
-            'no_hp' => $trx->no_hp,
-            'gambar' => null
-        ];
-    } else {
-        $pelanggan = (object)[
-            'nama' => 'Pelanggan Tidak Diketahui',
-            'no_hp' => '-',
-            'gambar' => null
-        ];
+    if (!$riwayat) {
+        abort(404, 'Transaksi tidak ditemukan');
     }
 
-    $parfum = DB::table('parfum')->get();
-    $satuan = Satuan::all();
+    $pelanggan = $riwayat->pelanggan ?? (object)[
+        'nama'   => $riwayat->nama_pelanggan,
+        'no_hp'  => $riwayat->no_hp,
+        'gambar' => null
+    ];
 
-    return view('riwayat.edit', compact('detail', 'pelanggan', 'parfum', 'satuan'));
-
+    return view('riwayat.edit', [
+        // view kamu expect collection
+        'detail'    => collect([$detail]),
+        'riwayat'   => $riwayat,
+        'pelanggan' => $pelanggan,
+        'parfum'    => Parfum::all(),
+        'satuan'    => Satuan::all(),
+    ]);
 }
 
 
@@ -244,7 +269,126 @@ public function editLayanan($id)
         }
         session()->forget("jenis_baru_{$layanan->id_layanan}");
 
-        return redirect()->route('riwayat.detail',$detail->id_transaksi)
-                         ->with('success','Layanan berhasil diperbarui.');
+       return redirect()->route('riwayat.edit', $detail->id_transaksi)
+        ->with('success','Layanan berhasil diperbarui.');
+
     }
+ 
+/** TAMBAH LAYANAN KE RIWAYAT (TRANSAKSI SUDAH ADA) */
+public function storeLayanan(Request $request, $id)
+{
+    $request->validate([
+        'id_layanan' => 'required|exists:layanan,id_layanan',
+        'qty'        => 'required|numeric|min:0.01',
+        'parfum'     => 'nullable|exists:parfum,id_parfum',
+    ]);
+
+    $layanan = Layanan::with('jenis')->findOrFail($request->id_layanan);
+    $jenis   = $layanan->jenis->first();
+
+    if (!$jenis) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Jenis layanan tidak ditemukan'
+        ], 422);
+    }
+
+    $key  = "riwayat_{$id}/layanan";
+    $data = session()->get($key, []);
+
+    $data[] = [
+        'id_layanan' => $layanan->id_layanan,
+        'qty'        => $request->qty,
+        'id_parfum'  => $request->parfum,
+    ];
+
+    session()->put($key, $data);
+
+    return response()->json([
+        'success'  => true,
+        'redirect' => route('riwayat.edit', $id)
+    ]);
 }
+
+public function addLayanan(Request $request, $id)
+{
+    $request->validate([
+        'id_layanan' => 'required|exists:layanan,id_layanan',
+        'qty'        => 'required|numeric|min:0.01',
+        'parfum'     => 'nullable|exists:parfum,id_parfum',
+    ]);
+
+    $layanan = Layanan::with('jenis')->findOrFail($request->id_layanan);
+    $jenis = $layanan->jenis->first();
+
+    if (!$jenis) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Jenis layanan tidak ditemukan'
+        ], 422);
+    }
+
+    // simpan langsung ke database
+    $detail = \App\Models\DetailTransaksi::create([
+        'id_transaksi'     => $id,
+        'id_layanan'       => $layanan->id_layanan,
+        'id_jenis_layanan' => $jenis->id_jenis_layanan,
+        'qty'              => $request->qty,
+        'id_parfum'        => $request->parfum,
+        'harga'            => $jenis->harga,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'redirect' => route('riwayat.edit', $id)
+    ]);
+}
+
+public function addLayananPage($id)
+{
+    $riwayat = Transaksi::findOrFail($id);
+    $layananUtama = Layanan::with('jenis.satuan')->get();
+    $parfum = Parfum::all();
+
+    return view('riwayat.addlayanan', compact(
+        'riwayat',
+        'layananUtama',
+        'parfum'
+    ));
+}
+public function updateDetail(Request $request, $id)
+{
+    $detail = DetailTransaksi::findOrFail($id);
+
+    $detail->update([
+        'qty' => $request->qty,
+        'id_parfum' => $request->id_parfum
+    ]);
+
+    return response()->json([
+    'success' => true,
+    'transaksi_id' => $detail->id_transaksi
+]);
+
+}
+
+public function deleteDetail($id)
+{
+    $detail = DetailTransaksi::find($id);
+    if(!$detail) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Detail transaksi tidak ditemukan'
+        ]);
+    }
+
+    $detail->delete();
+
+    return response()->json([
+        'success' => true,
+    ]);
+}
+
+
+}
+

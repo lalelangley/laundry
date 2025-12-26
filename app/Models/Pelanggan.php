@@ -30,6 +30,7 @@ class Pelanggan extends Authenticatable
 
     protected $hidden = [
         'password',
-        'remember_token',
+        'email',
+        'jk',
     ];
 }

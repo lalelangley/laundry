@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Layanan;
 use App\Models\JenisLayanan;
+
 use App\Models\Satuan;  
 
 class LayananController extends Controller
@@ -250,8 +251,6 @@ public function createJenis($id_layanan, Request $request)
     }
 }
 
-
-
 // STORE JENIS
 public function storeJenis(Request $request)
     {
@@ -462,9 +461,7 @@ public function addJenisEdit(Request $request, $from)
                      ->with('success', 'Jenis layanan berhasil ditambahkan!');
 }
 
-
 // di App\Http\Controllers\Web\LayananController.php
-
 public function addJenisSessionForm($from)
 {
     // Ambil daftar satuan untuk form
@@ -478,44 +475,56 @@ public function addJenisSessionForm($from)
 
 public function addLayanan(Request $request, $id)
 {
-    $qty = $request->qty ?? 1;
+    // $id = ID RIWAYAT
+    $idRiwayat = $id;
 
-    // CARI LAYANAN
-    $layanan = \App\Models\Layanan::find($id);
+    // 🔥 id_layanan HARUS dari body
+    $idLayanan = $request->id_layanan;
 
+    if (!$idLayanan) {
+        return response()->json([
+            'success' => false,
+            'message' => 'ID layanan tidak ditemukan'
+        ], 422);
+    }
+
+    $layanan = \App\Models\Layanan::find($idLayanan);
     if (!$layanan) {
-        return response()->json(['error' => 'Layanan tidak ditemukan'], 404);
+        return response()->json([
+            'success' => false,
+            'message' => 'Layanan tidak ditemukan'
+        ], 404);
     }
 
-    // CARI JENIS PERTAMA
     $jenis = $layanan->jenis()->first();
-
     if (!$jenis) {
-        return response()->json(['error' => 'Jenis layanan tidak ditemukan'], 404);
+        return response()->json([
+            'success' => false,
+            'message' => 'Jenis layanan tidak ditemukan'
+        ], 404);
     }
 
-    // TAMBAHKAN KE SESSION
-    $order = session()->get('order_layanan', []);
-
+    $qty = $request->qty ?? 1;
     $parfum = $request->parfum;
 
-$order[] = [
-    'id_layanan'  => $layanan->id_layanan,
-    'nama_layanan'=> $layanan->nama_layanan,
-    'qty'         => $qty,
-    'harga'       => $jenis->harga * $qty,
-    'jenis'       => $jenis->nama_jenis,
-    'satuan'      => $jenis->satuan->nama_satuan ?? '-',
-    'id_parfum'   => $parfum
-];
+    $key = "riwayat_{$idRiwayat}_layanan";
 
+    $riwayatLayanan = session()->get($key, []);
 
-    session()->put('order_layanan', $order);
+    $riwayatLayanan[] = [
+        'id_layanan'   => $layanan->id_layanan,
+        'nama_layanan' => $layanan->nama_layanan,
+        'qty'          => $qty,
+        'harga'        => $jenis->harga * $qty,
+        'jenis'        => $jenis->nama_jenis,
+        'satuan'       => $jenis->satuan->nama_satuan ?? '-',
+        'id_parfum'    => $parfum,
+    ];
 
-     return response()->json([
-        'id_diterima' => $id,
-        'layanan_ada' => \App\Models\Layanan::find($id),
-        'semua_id' => \App\Models\Layanan::pluck('id_layanan')
+    session()->put($key, $riwayatLayanan);
+
+    return response()->json([
+        'success' => true
     ]);
 }
 

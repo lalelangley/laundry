@@ -6,22 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-{
-    Schema::create('admin', function (Blueprint $table) {
-        $table->id('id_admin');
-        $table->string('nama_admin');
-        $table->string('username')->unique();
-        $table->string('password');
-        $table->timestamps();
-    });
-}
-    /**
-     * Reverse the migrations.
-     */
+    {
+        Schema::create('admin', function (Blueprint $table) {
+            $table->id('id_admin');
+            $table->string('nama_admin');
+            $table->string('username')->unique();
+            $table->string('password');
+            $table->timestamps();
+        });
+    }
+
     public function down(): void
     {
         Schema::dropIfExists('admin');

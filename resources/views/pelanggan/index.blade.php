@@ -27,31 +27,47 @@
 </div>
 
 {{-- LIST PELANGGAN --}}
-<div class="px-5 mt-5 space-y-4 mb-24"> 
+<div class="px-5 mt-5 space-y-4 mb-24">
     @foreach ($pelanggan as $item)
-        <div class="bg-white rounded-2xl px-4 py-4 flex gap-3 items-center shadow cursor-pointer">
-            
-            {{-- Foto --}}
-            @if ($item->gambar)
-                <img src="{{ asset('storage/'.$item->gambar) }}"
-                     class="w-16 h-16 rounded-xl object-cover">
-            @else
-                <div class="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center">
-                    <i class="bi bi-camera text-3xl text-gray-400"></i>
-                </div>
-            @endif
+        <div class="bg-white rounded-2xl px-4 py-4 flex gap-3 items-center shadow justify-between relative group cursor-pointer"
+             onclick="window.location='{{ route('pelanggan.edit', $item->id_pelanggan) }}'">
 
-            {{-- Detail --}}
-            <div>
-                <div class="text-xl font-semibold">{{ $item->nama_pelanggan }}</div>
+            <div class="flex gap-3 items-center">
+                {{-- Foto --}}
+                @if ($item->gambar)
+                    <img src="{{ asset('storage/'.$item->gambar) }}"
+                         class="w-16 h-16 rounded-xl object-cover">
+                @else
+                    <div class="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center">
+                        <i class="bi bi-camera text-3xl text-gray-400"></i>
+                    </div>
+                @endif
 
-                <div class="flex items-center text-gray-600 text-base">
-                    <i class="bi bi-envelope me-2"></i>{{ $item->email }}
-                </div>
+                {{-- Detail --}}
+                <div>
+                    <div class="text-xl font-semibold">{{ $item->nama_pelanggan }}</div>
 
-                <div class="flex items-center text-gray-600 text-base">
-                    <i class="bi bi-telephone me-2"></i>{{ $item->no_hp }}
+                    <div class="flex items-center text-gray-600 text-base">
+                        <i class="bi bi-envelope me-2"></i>{{ $item->email }}
+                    </div>
+
+                    <div class="flex items-center text-gray-600 text-base">
+                        <i class="bi bi-telephone me-2"></i>{{ $item->no_hp }}
+                    </div>
                 </div>
+            </div>
+
+            {{-- Tombol hapus (muncul saat hover) --}}
+            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <form action="{{ route('pelanggan.destroy', $item->id_pelanggan) }}" method="POST"
+                      onsubmit="return confirm('Yakin mau hapus pelanggan ini?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold shadow-md transition-all">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </form>
             </div>
 
         </div>

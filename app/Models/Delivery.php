@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Delivery extends Model
 {
+    use HasFactory;
+
     protected $table = 'delivery';
     protected $primaryKey = 'id_delivery';
-    public $incrementing = true;
-    protected $keyType = 'int';
 
     protected $fillable = [
         'id_transaksi',
@@ -21,36 +22,18 @@ class Delivery extends Model
     ];
 
     // ======================
-    // ENUM STATUS DELIVERY
-    // ======================
-    public const STATUS_PENDING       = 'pending';
-    public const STATUS_ACCEPTED      = 'accepted';
-    public const STATUS_OTW_PICKUP    = 'on_the_way_to_pickup';
-    public const STATUS_PICKUP_DONE   = 'pickup_done';
-    public const STATUS_OTW_DELIVERY  = 'on_the_way_to_delivery';
-    public const STATUS_DELIVERY_DONE = 'delivery_done';
-
-    // ======================
     // RELASI
     // ======================
 
-    // Delivery → Transaksi
+    // Delivery milik satu transaksi
     public function transaksi()
     {
-        return $this->belongsTo(
-            Transaksi::class,
-            'id_transaksi',
-            'id_transaksi'
-        );
+        return $this->belongsTo(Transaksi::class, 'id_transaksi', 'id_transaksi');
     }
 
-    // Delivery → Driver
+    // Delivery milik satu driver (optional)
     public function driver()
     {
-        return $this->belongsTo(
-            Driver::class,
-            'id_driver',
-            'id_driver'
-        );
+        return $this->belongsTo(Driver::class, 'id_driver', 'id_driver');
     }
 }

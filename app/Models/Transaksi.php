@@ -22,46 +22,52 @@ protected $fillable = [
     'status_bayar',
     'total_harga',
     'total_bayar',
-    'dp',
+    'dp',                 // <--- pastikan ini ada
     'diskon',
     'tipe_diskon',
-    'tgl_transaksi',
-    'tgl_estimasi',
-    'tgl_lunas',
+    'status_bayar',
+    'status_transaksi',
     'keterangan',
+    'tgl_lunas',
+    'tgl_estimasi',
+    'tgl_transaksi',
+    'id_kasir',
+    'id_metode_bayar',
 ];
 
-
-protected $casts = [
-    'total_harga' => 'double',
-    'total_bayar' => 'double',
-    'dp'          => 'double',
-    'diskon'      => 'double',
-];
-
-
-
-    // ===========================
-    // RELASI DETAIL TRANSAKSI
-    // ===========================
+    // 🔥 Tambahkan relasi ini
     public function detail()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
 
-    // ===========================
-    // RELASI DELIVERY
-    // ===========================
-    public function delivery()
-    {
-        return $this->hasOne(Delivery::class, 'id_transaksi');
-    }
-
-    // ===========================
-    // RELASI PELANGGAN
-    // ===========================
     public function pelanggan()
     {
-        return $this->belongsTo(Pelanggan::class, 'id_pelanggan');
+        return $this->belongsTo(Pelanggan::class, 'id_pelanggan', 'id_pelanggan');
     }
+
+    public function parfum()
+    {
+        return $this->belongsTo(Parfum::class, 'id_parfum', 'id_satuan_parfum');
+    }
+
+    public function kasir()
+    {
+        return $this->belongsTo(User::class, 'id_kasir');
+    }
+
+    public function metodeBayar()
+    {
+        return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar');
+    }
+
+    public function delivery()
+    {
+        return $this->hasOne(
+            Delivery::class,
+            'id_transaksi',
+            'id_transaksi'
+        );
+
+}
 }

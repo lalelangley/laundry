@@ -5,8 +5,10 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    public function up(): void
+    public function up()
     {
+        DB::statement("DROP VIEW IF EXISTS v_laporan_kasir");
+
         DB::statement("
             CREATE VIEW v_laporan_kasir AS
             SELECT 
@@ -17,11 +19,11 @@ return new class extends Migration
                 COALESCE(SUM(t.total_bayar), 0) AS total_uang_masuk
             FROM kasir k
             LEFT JOIN transaksi t ON t.id_kasir = k.id_kasir
-            GROUP BY k.id_kasir
+            GROUP BY k.id_kasir, k.nama_kasir, k.no_hp
         ");
     }
 
-    public function down(): void
+    public function down()
     {
         DB::statement("DROP VIEW IF EXISTS v_laporan_kasir");
     }
