@@ -10,15 +10,21 @@ use App\Http\Controllers\Web\TransaksiController;
 use App\Http\Controllers\Web\LaporanController;
 use App\Http\Controllers\Web\RiwayatController;
 use App\Http\Controllers\Web\UserManagerController;
-use App\Http\Controllers\Web\OnlineorderWeb;
+use App\Http\Controllers\PengaturanController;
+use App\Http\Controllers\SekuritiController;
+use App\Http\Controllers\ChangePasswordController;
 
 /*
 |--------------------------------------------------------------------------
 | AUTH
 |--------------------------------------------------------------------------
 */
-Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login.show');
+Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthWebController::class, 'processLogin'])->name('login.process');
+
+// LOGIN KASIR (TANPA MIDDLEWARE)
+Route::get('/kasir/login', [AuthWebController::class, 'showLogin'])->name('kasir.login');
+Route::post('/kasir/login', [AuthWebController::class, 'processLogin'])->name('kasir.login.process');
 
 Route::post('/logout', function () {
     Auth::guard('admin')->logout();
@@ -26,6 +32,182 @@ Route::post('/logout', function () {
     request()->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
+
+
+Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
+
+    // ================= DASHBOARD =================
+    Route::get('/dashboard', [AuthWebController::class, 'kasirDashboard'])
+        ->name('kasir.dashboard');
+
+    Route::post('/kasir/logout', function () {
+        Auth::guard('kasir')->logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+        return redirect('/kasir/login');
+    })->name('kasir.logout');
+
+    // ================= TRANSAKSI =================
+    Route::get('/transaksi/pelanggan', [TransaksiController::class, 'pelangganKasir'])
+        ->name('kasir.transaksi.pelanggan');
+
+    Route::get('/transaksi/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])
+        ->name('kasir.transaksi.setPelanggan');
+
+    Route::get('/transaksi/create', [TransaksiController::class, 'createKasir'])
+        ->name('kasir.transaksi.create');
+
+    Route::get('/transaksi/checkout', [TransaksiController::class, 'checkoutKasir'])
+        ->name('kasir.transaksi.checkout');
+
+    Route::post('/transaksi/add-layanan/{id}', [TransaksiController::class, 'addLayananKasir'])
+        ->name('kasir.transaksi.addLayanan');
+
+    Route::post('/transaksi/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananKasir'])
+        ->name('kasir.transaksi.temp_store_layanan');
+
+    Route::post('/transaksi/update-keterangan', [TransaksiController::class, 'updateKeteranganKasir'])
+        ->name('kasir.transaksi.updateKeterangan');
+
+    Route::post('/transaksi/bayar', [TransaksiController::class, 'bayarKasir'])
+        ->name('kasir.transaksi.bayar');
+
+    Route::get('/transaksi/print/{id}', [TransaksiController::class, 'printKasir'])
+        ->name('kasir.transaksi.print');
+
+    Route::post('/transaksi/remove/{id}', [TransaksiController::class, 'removeKasir'])
+        ->name('kasir.transaksi.remove');
+
+    Route::get('/transaksi/reset', function () {
+        session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
+        return redirect()->route('kasir.dashboard');
+    })->name('kasir.transaksi.reset');
+
+    // ================= PELANGGAN =================
+    Route::get('/pelanggan/create', [AuthWebController::class, 'createKasir'])
+        ->name('kasir.pelanggan.create');
+
+    Route::post('/pelanggan/store', [AuthWebController::class, 'storeKasir'])
+        ->name('kasir.pelanggan.store');
+
+    Route::get('/pelanggan/{id}/edit', [AuthWebController::class, 'pelangganEditKasir'])
+        ->name('kasir.pelanggan.edit');
+
+    Route::put('/pelanggan/{id}', [AuthWebController::class, 'pelangganUpdateKasir'])
+        ->name('kasir.pelanggan.update');
+
+    Route::delete('/pelanggan/{id}', [AuthWebController::class, 'pelangganDestroyKasir'])
+        ->name('kasir.pelanggan.destroy');
+
+    Route::get('/pelanggan', [AuthWebController::class, 'pelangganIndexKasir'])
+        ->name('kasir.pelanggan.index');
+
+    // ================= LAYANAN =================
+    Route::get('/layanan', [LayananController::class, 'index'])
+        ->name('kasir.layanan.index');
+
+    Route::get('/layanan/{id}/edit', [LayananController::class, 'edit'])
+        ->whereNumber('id')
+        ->name('kasir.layanan.edit');
+
+    Route::get('/layanan/{id}/duplicate', [LayananController::class, 'duplicateKasir'])
+        ->whereNumber('id')
+        ->name('kasir.layanan.duplicate');
+
+    Route::get('/layanan/{from}/create', [LayananController::class, 'layananCreateKasir'])
+        ->whereIn('from', ['transaksi','dashboard'])
+        ->name('kasir.layanan.layanan_create');
+
+    Route::put('/layanan/{id}', [LayananController::class, 'update'])
+        ->whereNumber('id')
+        ->name('kasir.layanan.update');
+
+    Route::post('/layanan/store', [LayananController::class, 'storeKasir'])
+        ->name('kasir.layanan.store');
+
+    Route::delete('/layanan/{id}', [LayananController::class, 'destroyKasir'])
+        ->whereNumber('id')
+        ->name('kasir.layanan.destroy');
+
+    // ================= JENIS LAYANAN =================
+    Route::prefix('layanan')->group(function () {
+        Route::get('{from}/jenis/add', [LayananController::class, 'sessionCreateJenisKasir'])
+            ->name('kasir.session.create') 
+            ->whereNumber('from');
+
+        Route::post('{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenisKasir'])
+            ->name('kasir.session.store');
+
+        Route::get('{id_layanan}/jenis/create', [LayananController::class, 'createJenisKasir'])
+            ->name('kasir.jenis.create')
+            ->whereNumber('id_layanan');
+
+        Route::post('{id_layanan}/jenis/store', [LayananController::class, 'storeJenisKasir'])
+            ->name('kasir.jenis.store')
+            ->whereNumber('id_layanan');
+    });
+
+    // ================= RIWAYAT =================
+    Route::prefix('riwayat')->group(function () {
+        Route::get('/', [RiwayatController::class, 'indexKasir'])
+            ->name('kasir.riwayat.index');
+
+        Route::get('/{id}/detail', [RiwayatController::class, 'detailKasir'])
+            ->name('kasir.riwayat.detail');
+
+        Route::get('/{id}/show', [RiwayatController::class, 'showKasir'])
+            ->name('kasir.riwayat.show');
+
+        Route::get('/{id}/edit', [RiwayatController::class, 'editKasir'])
+            ->name('kasir.riwayat.edit');
+
+        Route::put('/{id}', [RiwayatController::class, 'updateKasir'])
+            ->name('kasir.riwayat.update');
+
+        Route::get('/{id}/proses', [RiwayatController::class, 'prosesOrderKasir'])
+            ->name('kasir.riwayat.proses');
+
+        Route::get('/{id}/batal', [RiwayatController::class, 'batalOrderKasir'])
+            ->name('kasir.riwayat.batal');
+
+        Route::get('/{id}/selesai', [RiwayatController::class, 'selesaiOrderKasir'])
+            ->name('kasir.riwayat.selesai');
+
+        Route::get('/{id}/siap-di-ambil', [RiwayatController::class, 'siapDiAmbilKasir'])
+            ->name('kasir.riwayat.siap_di_ambil');
+    });
+
+    // ================= SATUAN & PARFUM =================
+    Route::prefix('satuan')->group(function () {
+        Route::get('/', [SatuanParfumController::class, 'satuanIndexKasir'])->name('kasir.satuan.index');
+        Route::get('/create', [SatuanParfumController::class, 'satuanCreateKasir'])->name('kasir.satuan.create');
+        Route::post('/store', [SatuanParfumController::class, 'satuanStoreKasir'])->name('kasir.satuan.store');
+        Route::get('/{id}/edit', [SatuanParfumController::class, 'satuanEditKasir'])->name('kasir.satuan.edit');
+        Route::put('/{id}', [SatuanParfumController::class, 'satuanUpdateKasir'])->name('kasir.satuan.update');
+        Route::delete('/{id}', [SatuanParfumController::class, 'satuanDestroyKasir'])->name('kasir.satuan.destroy');
+    });
+
+    Route::prefix('parfum')->group(function () {
+        Route::get('/', [SatuanParfumController::class, 'parfumIndexKasir'])->name('kasir.parfum.index');
+        Route::get('/create', [SatuanParfumController::class, 'parfumCreateKasir'])->name('kasir.parfum.create');
+        Route::post('/store', [SatuanParfumController::class, 'parfumStoreKasir'])->name('kasir.parfum.store');
+        Route::get('/{id}/edit', [SatuanParfumController::class, 'parfumEditKasir'])->name('kasir.parfum.edit');
+        Route::put('/{id}', [SatuanParfumController::class, 'parfumUpdateKasir'])->name('kasir.parfum.update');
+        Route::delete('/{id}', [SatuanParfumController::class, 'parfumDestroyKasir'])->name('kasir.parfum.destroy');
+    });
+
+    // ================= PENGELUARAN =================
+    Route::prefix('pengeluaran')->group(function () {
+        Route::get('/', [LaporanController::class, 'indexKasir'])->name('kasir.pengeluaran.index');
+        Route::get('/create', [LaporanController::class, 'createKasir'])->name('kasir.pengeluaran.create');
+        Route::post('/', [LaporanController::class, 'storeKasir'])->name('kasir.pengeluaran.store');
+        Route::get('/{id}/edit', [LaporanController::class, 'editKasir'])->name('kasir.pengeluaran.edit');
+        Route::put('/{id}', [LaporanController::class, 'updateKasir'])->name('kasir.pengeluaran.update');
+        Route::delete('/{id}', [LaporanController::class, 'destroyKasir'])->name('kasir.pengeluaran.destroy');
+    });
+
+});
+
 
 /*
 |--------------------------------------------------------------------------
@@ -40,22 +222,9 @@ Route::get('admin/dashboard', [AuthWebController::class, 'adminDashboard'])
     ->name('admin.dashboard');
 
 // Admin Biasa
-Route::get('admin2/dashboard', [AuthWebController::class, 'admin2Dashboard'])
+Route::get('dashboard', [AuthWebController::class, 'admin2Dashboard'])
     ->middleware('auth:admin')
     ->name('admin2.dashboard');
-
-// Kasir
-Route::get('kasir/dashboard', [AuthWebController::class, 'kasirDashboard'])
-    ->middleware('auth:kasir')
-    ->name('kasir.dashboard');
-
-    Route::get('/online-order', [OnlineorderWeb::class, 'index'])->name('onlineorder.index');
-    Route::get('/online-order/{id}', [OnlineorderWeb::class, 'detail'])
-        ->name('onlineorder.detail');
-
-    Route::post('/online-order/{id}/assign-driver',
-        [OnlineorderWeb::class, 'assignDriver'])
-        ->name('onlineorder.assign');
 
     // ===== USER MANAGER =====
     Route::get('/manager', [UserManagerController::class, 'index'])->name('manager.index');
@@ -179,38 +348,8 @@ Route::get('kasir/dashboard', [AuthWebController::class, 'kasirDashboard'])
         return view('manager.kasir.create');
     })->name('manager.kasir.create');
     Route::post('/manager/status', [UserManagerController::class, 'updateStatus'])->name('manager.update.status');
-});
-// ======================================
-// RIWAYAT (BENAR) — URL menjadi /admin/riwayat/...
-// ======================================
-Route::prefix('admin/riwayat')->group(function () {
-
-    // EDIT LAYANAN DETAIL — DI ATAS
-    Route::get('/layanan/{id}/edit', [RiwayatController::class, 'editLayanan'])
-        ->name('riwayat.edit_layanan');
-
-    Route::put('/layanan/{id}', [RiwayatController::class, 'updateLayanan'])
-        ->name('riwayat.update_layanan');
-
-    Route::get('/{id}/add-layanan', [RiwayatController::class, 'addLayanan'])
-        ->name('riwayat.addLayanan');
-
-    Route::get('/', [RiwayatController::class, 'index'])->name('riwayat.index');
-
-    Route::get('/{id}/edit', [RiwayatController::class, 'edit'])->name('riwayat.edit');
-    Route::put('/{id}', [RiwayatController::class, 'update'])->name('riwayat.update');
-    Route::delete('/{id}', [RiwayatController::class, 'destroy'])->name('riwayat.destroy');
-
-    Route::get('/{id}', [RiwayatController::class, 'show'])->name('riwayat.show');
-    Route::get('/{id}/detail', [RiwayatController::class, 'detail'])->name('riwayat.detail');
-
-    Route::get('/{id}/proses', [RiwayatController::class, 'prosesOrder'])->name('riwayat.proses');
-    Route::get('/{id}/selesai', [RiwayatController::class, 'selesaiOrder'])->name('riwayat.selesai');
-    Route::get('/{id}/siap-di-ambil', [RiwayatController::class, 'siapDiAmbil'])->name('riwayat.siap_di_ambil');
-
-    Route::get('/{id}/bayar', [RiwayatController::class, 'bayarOrder'])->name('riwayat.bayar');
-    Route::post('/{id}/bayar', [RiwayatController::class, 'bayarSubmit'])->name('riwayat.bayar.submit');
-
-    Route::get('/{id}/batal', [RiwayatController::class, 'batalOrder'])->name('riwayat.batal');
-
+     
+    Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
+    Route::get('/sekuriti', [SekuritiController::class, 'index'])->name('sekuriti.index');
+    Route::get('/change-password', [ChangePasswordController::class, 'index'])->name('change.password');
 });

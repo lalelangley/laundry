@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Models\Admin;
 use App\Models\Kasir;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\Role;
 use App\Models\Menu;
 use App\Models\MenuRole;
+use Carbon\Carbon;
 
 
 class AuthWebController extends Controller
@@ -146,17 +148,52 @@ public function admin2Dashboard()
     // =============================
     // DASHBOARD KASIR
     // =============================
-    public function kasirDashboard()
-    {
-        $kasir = auth()->guard('kasir')->user();
+public function kasirDashboard()
+{
+    $kasir = auth()->guard('kasir')->user();
+    $totalOmzet      = Transaksi::sum('total_bayar');
 
-        if (!$kasir) {
-            return redirect()->route('login.show')
-                ->with('error', 'Silakan login dulu');
-        }
+   if (!Auth::guard('kasir')->check()) {
+    abort(403, 'Kasir belum login');
+}
 
-        return view('kasir.dashboard', compact('kasir'));
-    }
+
+
+    // =============================
+    // CARD DASHBOARD
+    // =============================
+
+    // MASUK (antrian)
+    $masuk = Transaksi::where('status_transaksi', 'antrian')->count();
+
+    // HARUS SELESAI HARI INI
+    $harusSelesai = Transaksi::whereDate('tgl_estimasi', Carbon::today())
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->count();
+
+    // TERLAMBAT
+    $terlambat = Transaksi::whereDate('tgl_estimasi', '<', Carbon::today())
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->count();
+
+    // =============================
+    // DATA TABLE (ORDER AKTIF)
+    // =============================
+    $orders = Transaksi::with(['detail.jenis.satuan', 'pelanggan'])
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->orderBy('tgl_transaksi', 'DESC')
+        ->get();
+
+    return view('kasir.dashboard', compact(
+        'kasir',
+        'masuk',
+        'harusSelesai',
+        'terlambat',
+        'orders',
+        'totalOmzet'
+    ));
+}
+
 
     // =============================
     // LIST PELANGGAN
