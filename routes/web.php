@@ -48,7 +48,7 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         request()->session()->invalidate();
         request()->session()->regenerateToken();
         return redirect('/kasir/login');
-    })->name('logout');
+    })->name('kasir.logout');
 
     // ================= TRANSAKSI (Minimal Permission) =================
     Route::get('/transaksi/pelanggan', [TransaksiController::class, 'pelangganKasir'])
@@ -469,14 +469,10 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
 | ADMIN AREA (Super Admin & Admin)
 |--------------------------------------------------------------------------
 */
-Route::prefix('admin')->middleware('auth:admin')->name('admin.')->group(function () {
-    
-    // Dashboard (No Permission)
-    Route::get('/dashboard', [AuthWebController::class, 'adminDashboard'])->name('dashboard');
+Route::prefix('admin')->middleware('auth:admin')->group(function () {
 
-    // ================= DASHBOARD (No Permission) =================
-    Route::get('/dashboard', [AuthWebController::class, 'adminDashboard'])
-        ->name('admin.dashboard');
+        Route::get('/dashboard', [AuthWebController::class, 'adminDashboard'])
+            ->name('admin.dashboard');
 
     // ================= USER MANAGER (Super Admin Only - Role Check) =================
     Route::prefix('manager')->name('manager.')
@@ -661,6 +657,15 @@ Route::prefix('admin')->middleware('auth:admin')->name('admin.')->group(function
         Route::delete('/{id}', [PesananOnlineController::class, 'destroy'])
             ->middleware('permission:delete')
             ->name('destroy');
+              Route::get(
+            '/delivery',
+            [PesananOnlineController::class, 'listDeliveryOnline']
+        )->name('pesanan.online.delivery');
+
+        Route::post(
+            '/delivery/{id}/assign-driver',
+            [PesananOnlineController::class, 'assignDriver']
+        )->name('pesanan.online.assignDriver');
     });
 
     // ================= RIWAYAT (With Permission) =================

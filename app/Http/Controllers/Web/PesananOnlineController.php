@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
+use App\Models\Delivery;
+use App\Models\Driver;
+
 
 class PesananOnlineController extends Controller
 {
@@ -312,4 +315,31 @@ public function detail($id)
         return redirect()->route('admin2.pesanan.online.index')
             ->with('success', 'Pesanan berhasil dihapus');
     }
+    // ==================== DELIVERY ONLINE ====================
+
+    public function listDeliveryOnline()
+    {
+        $deliveries = Delivery::with('transaksi')
+            ->whereNull('id_driver')
+            ->get();
+
+        return view('pesanan_online.delivery.index', compact('deliveries'));
+    }
+    public function assignDriver(Request $request, $id)
+{
+    $request->validate([
+        'id_driver' => 'required|exists:driver,id_driver'
+    ]);
+
+    Delivery::where('id_delivery', $id)->update([
+        'id_driver' => $request->id_driver,
+        'status'    => 'accepted'
+    ]);
+
+    return redirect()
+        ->route('pesanan.online.delivery')
+        ->with('success', 'Driver berhasil ditugaskan');
+}
+
+
 }

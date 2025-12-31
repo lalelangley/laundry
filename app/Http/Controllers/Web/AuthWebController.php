@@ -56,15 +56,14 @@ public function processLogin(Request $request)
         $request->session()->regenerate();
 
         if ($admin->role_id == 1) {
-    auth()->guard('admin')->login($admin);
-    $request->session()->regenerate();
-    return redirect()->route('admin.dashboard');
-    } else {
-        auth()->guard('admin2')->login($admin);
+        auth()->guard('admin')->login($admin);
         $request->session()->regenerate();
-        return redirect()->route('admin2.dashboard');
-    }
-
+        return redirect()->route('admin.dashboard');
+        } else {
+            auth()->guard('admin2')->login($admin);
+            $request->session()->regenerate();
+            return redirect()->route('admin2.dashboard');
+        }
 }
 
     if ($role === 'kasir') {
@@ -87,6 +86,7 @@ public function processLogin(Request $request)
 
     return back()->with('error', 'Role tidak dikenali');
 }
+
 public function admin2Dashboard()
 {
     $admin = auth()->guard('admin2')->user();
