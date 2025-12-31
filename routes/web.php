@@ -461,12 +461,9 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         ->name('admin.dashboard');
 
     // ================= USER MANAGER (Super Admin Only - Role Check) =================
-    Route::middleware(function ($request, $next) {
-        if (auth('admin')->user()->role_id != 1) {
-            abort(403, 'Hanya Super Admin yang bisa akses halaman ini');
-        }
-        return $next($request);
-    })->prefix('manager')->name('manager.')->group(function () {
+    Route::prefix('manager')->name('manager.')
+        ->middleware('superadmin')  // <- Cleaner approach
+        ->group(function () {
         Route::get('/', [UserManagerController::class, 'index'])->name('index');
         Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
         Route::post('/admin', [AuthWebController::class, 'storeAdmin'])->name('admin.store');
