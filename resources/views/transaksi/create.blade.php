@@ -76,7 +76,8 @@ $keterangan = session('keterangan_transaksi', '');
 
                         {{-- GAMBAR --}}
                         <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                            <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
+                            <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                                            class="w-full h-full object-cover">
                         </div>
 
                         {{-- DETAIL --}}
@@ -158,12 +159,9 @@ $keterangan = session('keterangan_transaksi', '');
                         });
                     });
                 </script>
-
             </div>
         </form>
-
     </div>
-
 </div>
 
 
@@ -216,12 +214,8 @@ $keterangan = session('keterangan_transaksi', '');
                 confirmButtonColor: "#facc15",
                 confirmButtonText: "Oke"
             });
-
             return;
         }
     });
 </script>
-
-
-
 @endsection

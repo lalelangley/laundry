@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Dashboard Admin')
+@section('title', 'Dashboard Kasir')
 
 @section('content')
 
@@ -174,7 +174,7 @@
                         </td>
 
                         <td class="px-4 py-3 text-center">
-                            <a href="{{ route('riwayat.detail', $o->id_transaksi) }}"
+                            <a href="{{ route('kasir.riwayat.detail', $o->id_transaksi) }}"
                                class="bg-yellow-400 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500 transition">
                                 Detail
                             </a>

@@ -22,6 +22,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\AuthenticateAdmin; // middleware khusus admin
 use App\Http\Middleware\SuperAdmin;        // middleware khusus super admin
+use App\Http\Middleware\SuperAdminOnly;    // ← TAMBAH: middleware super admin baru
+use App\Http\Middleware\CheckPermission;   // ← TAMBAH: middleware check permission
 use App\Http\Middleware\RedirectIfAuthenticated;
 
 class Kernel extends HttpKernel
@@ -65,8 +67,10 @@ class Kernel extends HttpKernel
      */
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.admin' => \App\Http\Middleware\AuthenticateAdmin::class, // opsional
-        'super.admin' => \App\Http\Middleware\SuperAdmin::class,       // middleware super admin
+        'auth.admin' => \App\Http\Middleware\AuthenticateAdmin::class,
+        'super.admin' => \App\Http\Middleware\SuperAdmin::class,       // middleware super admin (existing)
+        'superadmin' => \App\Http\Middleware\SuperAdminOnly::class,    // ← TAMBAH: middleware super admin (new - cleaner)
+        'permission' => \App\Http\Middleware\CheckPermission::class,   // ← TAMBAH: middleware check permission (CRUD access control)
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,

@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Checkout Kasir')
+@section('title', 'Checkout')
 
 @section('content')
 
@@ -17,7 +17,8 @@
     {{-- CARD PELANGGAN --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
         <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-            <img src="{{ asset('images/default-user.png') }}" class="w-full h-full object-cover">
+             <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                                            class="w-full h-full object-cover">
         </div>
         <div>
             <p class="text-xl font-bold leading-tight">{{ $pelanggan['nama_pelanggan'] }}</p>
@@ -111,12 +112,28 @@
 <div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
     <div>
         <p class="text-sm">Total Harga</p>
-        <p id="totalHargaFooter" class="text-2xl font-bold">Rp {{ array_sum(array_map(fn($d)=>$d['harga']*$d['qty'],$detail)) }}</p>
+        <p id="totalHargaFooter" class="text-2xl font-bold">Rp {{ number_format($totalHarga,0,',','.') }}</p>
     </div>
     <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow font-bold">Bayar</button>
 </div>
 
-{{-- POPUP BAYAR --}}
+<!-- POPUP ALERT CUSTOM -->
+<div id="customAlert" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[9999] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate__animated animate__shakeX">
+        <div class="flex flex-col items-center">
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-red-500 text-4xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Perhatian!</h3>
+            <p id="alertMessage" class="text-center text-gray-600 mb-6 leading-relaxed"></p>
+            <button id="btnCloseAlert" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP BAYAR -->
 <div id="popupBayar" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50 hidden">
     <div id="popupBoxBayar" class="bg-white rounded-3xl w-full max-w-md shadow-2xl p-5 relative animate__animated animate__fadeInUp">
         <div class="bg-yellow-400 text-center py-3 rounded-2xl mb-4 relative">
@@ -141,7 +158,7 @@
     </div>
 </div>
 
-{{-- POPUP SUCCESS --}}
+<!-- POPUP SUCCESS -->
 <div id="popupSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-3xl w-full max-w-md shadow-xl p-7 text-center animate__animated animate__zoomIn">
         <div class="w-36 h-36 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -175,7 +192,7 @@
             </div>
         </div>
 
-        <a href="{{ route('kasir.transaksi.create') }}" class="block w-full py-3 bg-green-600 text-white text-lg font-bold rounded-2xl text-center">
+        <a href="{{ route('kasir.transaksi.pelanggan') }}" class="block w-full py-3 bg-green-600 text-white text-lg font-bold rounded-2xl text-center">
             Buat Transaksi Baru
         </a>
     </div>
@@ -183,9 +200,33 @@
 
 @endsection
 
+
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
+    // ===== CUSTOM ALERT FUNCTION =====
+    const showAlert = (message) => {
+        const customAlert = document.getElementById('customAlert');
+        const alertMessage = document.getElementById('alertMessage');
+        const btnCloseAlert = document.getElementById('btnCloseAlert');
+        
+        alertMessage.textContent = message;
+        customAlert.classList.remove('hidden');
+        
+        btnCloseAlert.onclick = () => {
+            customAlert.classList.add('hidden');
+        };
+        
+        // Close on outside click
+        customAlert.onclick = (e) => {
+            if (e.target === customAlert) {
+                customAlert.classList.add('hidden');
+            }
+        };
+    };
+
+    // ===== GLOBAL =====
     const btnRupiah = document.getElementById('btnRupiah');
     const btnPersen = document.getElementById('btnPersen');
     const inputDiskon = document.getElementById('inputDiskon');
@@ -194,135 +235,189 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalAwal = {{ $totalHarga }};
     let mode = "rupiah";
 
+    // ===== HITUNG DISKON =====
     const hitungDiskon = () => {
         let value = parseFloat(inputDiskon.value) || 0;
-        let potongan = mode==="persen" ? totalAwal * Math.min(value,100)/100 : value;
+        let potongan = mode === "persen" ? totalAwal * Math.min(value,100)/100 : value;
         potongan = Math.min(Math.max(potongan,0), totalAwal);
         let totalAkhir = totalAwal - potongan;
-        infoDiskon.style.display="block";
-        infoDiskon.innerHTML=`<span class="font-semibold">Diskon :</span> Rp${potongan.toLocaleString('id-ID')}<br><span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>`;
-        totalHargaFooter.textContent=`Rp ${totalAkhir.toLocaleString('id-ID')}`;
+
+        infoDiskon.style.display = "block";
+        infoDiskon.innerHTML = `
+            <span class="font-semibold">Diskon :</span> Rp${potongan.toLocaleString('id-ID')}<br>
+            <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
+        `;
+        totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
         return totalAkhir;
     };
 
-    btnRupiah.addEventListener('click',()=>{
-        mode="rupiah";
+    btnRupiah.addEventListener('click', () => {
+        mode = "rupiah";
         btnRupiah.classList.add('bg-yellow-400');
         btnPersen.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder="Diskon / Rupiah";
+        inputDiskon.placeholder = "Diskon / Rupiah";
         hitungDiskon();
     });
 
-    btnPersen.addEventListener('click',()=>{
-        mode="persen";
+    btnPersen.addEventListener('click', () => {
+        mode = "persen";
         btnPersen.classList.add('bg-yellow-400');
         btnRupiah.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder="Diskon / Persen %";
+        inputDiskon.placeholder = "Diskon / Persen %";
         hitungDiskon();
     });
 
     inputDiskon.addEventListener('input', hitungDiskon);
 
+    // ===== TOGGLE LANGSUNG BAYAR =====
     const toggleBayar = document.getElementById('toggleBayar');
     const statusBayar = document.getElementById('statusBayar');
     const hiddenBayar = document.getElementById('hiddenLangsungBayar');
 
-    toggleBayar.addEventListener('click',()=>{
-        if(hiddenBayar.value==="1"){
-            hiddenBayar.value="0";
-            statusBayar.textContent="Tidak";
-            toggleBayar.textContent="✖ Tidak Bayar";
+    toggleBayar.addEventListener('click', () => {
+        if(hiddenBayar.value === "1") {
+            hiddenBayar.value = "0";
+            statusBayar.textContent = "Tidak";
+            toggleBayar.textContent = "✖ Tidak Bayar";
             toggleBayar.classList.replace("bg-yellow-400","bg-red-400");
-        }else{
-            hiddenBayar.value="1";
-            statusBayar.textContent="Aktif";
-            toggleBayar.textContent="✔ Langsung Bayar";
+        } else {
+            hiddenBayar.value = "1";
+            statusBayar.textContent = "Aktif";
+            toggleBayar.textContent = "✔ Langsung Bayar";
             toggleBayar.classList.replace("bg-red-400","bg-yellow-400");
         }
     });
 
-    const popupBayar=document.getElementById("popupBayar");
-    const closePopup=document.getElementById("closePopup");
-    const tombolBayar=document.getElementById("btnBayar");
-    const popupNama=document.getElementById("popupNama");
-    const popupTotal=document.getElementById("popupTotal");
-    const inputBayar=document.getElementById("popupInputBayar");
+    // ===== POPUP BAYAR =====
+    const popupBayar = document.getElementById("popupBayar");
+    const closePopup = document.getElementById("closePopup");
+    const tombolBayar = document.getElementById("btnBayar");
+    const popupNama = document.getElementById("popupNama");
+    const popupTotal = document.getElementById("popupTotal");
+    const inputBayar = document.getElementById("popupInputBayar");
 
-    const updatePopupBayar=()=>{
-        const totalAkhir=hitungDiskon();
-        popupTotal.textContent="Rp "+totalAkhir.toLocaleString('id-ID');
-        if(hiddenBayar.value==="1"){inputBayar.value=totalAkhir;inputBayar.readOnly=true;}
-        else{inputBayar.value="";inputBayar.readOnly=false;}
+    const updatePopupBayar = () => {
+        const totalAkhir = hitungDiskon();
+        popupTotal.textContent = "Rp " + totalAkhir.toLocaleString('id-ID');
+
+        if(hiddenBayar.value === "1"){ // langsung bayar
+            inputBayar.value = totalAkhir;
+            inputBayar.readOnly = true;
+        } else {
+            inputBayar.value = "";
+            inputBayar.readOnly = false;
+        }
     };
 
-    tombolBayar.addEventListener("click",()=>{
-        popupNama.textContent="{{ $pelanggan['nama_pelanggan'] }}";
+    tombolBayar.addEventListener("click", () => {
+        popupNama.textContent = "{{ $pelanggan['nama_pelanggan'] }}";
         updatePopupBayar();
         popupBayar.classList.remove("hidden");
     });
 
-    closePopup.addEventListener("click",()=>popupBayar.classList.add("hidden"));
-    inputDiskon.addEventListener('input',updatePopupBayar);
+    closePopup.addEventListener("click", () => popupBayar.classList.add("hidden"));
 
-    const popupSuccess=document.getElementById("popupSuccess");
-    const succTotal=document.getElementById("succTotal");
-    const succBayar=document.getElementById("succBayar");
-    const succDiskon=document.getElementById("succDiskon");
-    const succNama=document.getElementById("succNama");
-    const succHp=document.getElementById("succHp");
+    inputDiskon.addEventListener('input', updatePopupBayar);
 
-    const formatDateTime=dt=>dt?dt.replace('T',' ')+':00':null;
+    // ===== SUCCESS POPUP =====
+    const popupSuccess = document.getElementById("popupSuccess");
+    const succTotal = document.getElementById("succTotal");
+    const succBayar = document.getElementById("succBayar");
+    const succDiskon = document.getElementById("succDiskon");
+    const succNama = document.getElementById("succNama");
+    const succHp = document.getElementById("succHp");
 
-    document.getElementById("btnSimpanPembayaran").addEventListener("click",async()=>{
-        try{
-            const total=hitungDiskon();
-            const bayar=parseFloat(inputBayar.value)||0;
-            const diskon=parseFloat(inputDiskon.value)||0;
-            const tipe_diskon=btnPersen.classList.contains("bg-yellow-400")?"percent":"nominal";
-            const keterangan=document.getElementById("keteranganTransaksi").value||null;
-            const id_metode_bayar=document.getElementById("selectMetodeBayar").value||null;
-            const tgl_masuk=formatDateTime(document.getElementById("tgl_masuk").value);
-            const tgl_estimasi=formatDateTime(document.getElementById("tgl_estimasi").value);
-            const langsung=parseInt(hiddenBayar.value);
+    const formatDateTime = dt => dt ? dt.replace('T', ' ') + ':00' : null;
 
-            const res=await fetch("{{ route('kasir.transaksi.bayar') }}",{
-                method:"POST",
-                headers:{"Content-Type":"application/json","X-CSRF-TOKEN":"{{ csrf_token() }}"},
-                body:JSON.stringify({jumlah_bayar:bayar,dp:bayar,langsung_bayar:langsung,total_harga:total+diskon,diskon:diskon,tipe_diskon:tipe_diskon,keterangan:keterangan,id_metode_bayar:id_metode_bayar,tgl_masuk:tgl_masuk,tgl_estimasi:tgl_estimasi})
+    document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
+        try {
+            const total = hitungDiskon();
+            const bayar = parseFloat(inputBayar.value) || 0;
+            const diskon = parseFloat(inputDiskon.value) || 0;
+            const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
+            const keterangan = document.getElementById("keteranganTransaksi").value || null;
+            const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
+            const tgl_masuk = formatDateTime(document.getElementById("tgl_masuk").value);
+            const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
+            const langsung = parseInt(hiddenBayar.value);
+
+            // VALIDASI DENGAN CUSTOM ALERT
+            if (bayar <= 0) {
+                showAlert("Jumlah bayar / DP tidak boleh kosong!");
+                return;
+            }
+
+            if (bayar > total) {
+                showAlert("DP tidak boleh lebih besar dari total harga!");
+                return;
+            }
+
+            if (langsung === 0 && bayar >= total) {
+                showAlert("Jika bayar penuh, silakan aktifkan Langsung Bayar!");
+                return;
+            }
+
+            const res = await fetch("{{ route('kasir.transaksi.bayar') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    jumlah_bayar: bayar,
+                    dp: bayar,
+                    langsung_bayar: langsung,
+                    total_harga: total,
+                    diskon: diskon,
+                    tipe_diskon: tipe_diskon,
+                    keterangan: keterangan,
+                    id_metode_bayar: id_metode_bayar,
+                    tgl_masuk: tgl_masuk,
+                    tgl_estimasi: tgl_estimasi
+                })
             });
-            if(!res.ok){alert("Gagal menyimpan");return;}
-            const data=await res.json();
+
+            if (!res.ok) {
+                showAlert("Gagal menyimpan transaksi. Silakan coba lagi!");
+                return;
+            }
+
+            const data = await res.json();
             popupBayar.classList.add("hidden");
 
-            succTotal.textContent="Rp "+parseInt(data.total).toLocaleString("id-ID");
-            succDiskon.textContent="Rp "+parseInt(data.diskon??0).toLocaleString("id-ID");
-            succNama.textContent=data.nama;
-            succHp.textContent=data.hp;
-            succBayar.textContent="Rp "+parseInt(data.bayar??0).toLocaleString("id-ID");
+            succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+            succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
+            succNama.textContent = data.nama;
+            succHp.textContent = data.hp;
+            succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
 
-            const oldLabel=document.getElementById("labelStatusBayar");
-            if(oldLabel) oldLabel.remove();
-            if(data.status_bayar&&data.status_bayar!="lunas"){
-                let label=document.createElement("p");
-                label.id="labelStatusBayar";
-                label.classList.add(data.status_bayar.toLowerCase()=="dp"?"text-orange-500":"text-red-500","font-bold","mt-2");
-                label.textContent="Status: "+data.status_bayar.toUpperCase();
+            // hapus status lama
+            document.getElementById("labelStatusBayar")?.remove();
+
+            if (data.status_bayar && data.status_bayar !== "lunas") {
+                const label = document.createElement("p");
+                label.id = "labelStatusBayar";
+                label.classList.add(
+                    data.status_bayar.toLowerCase() === "dp"
+                        ? "text-orange-500"
+                        : "text-red-500",
+                    "font-bold",
+                    "mt-2"
+                );
+                label.textContent = "Status: " + data.status_bayar.toUpperCase();
                 popupSuccess.querySelector(".bg-white")?.appendChild(label);
             }
 
             popupSuccess.classList.remove("hidden");
 
-        }catch(err){console.error(err);alert("Terjadi kesalahan.");}
+        } catch (err) {
+            console.error(err);
+            showAlert("Terjadi kesalahan pada sistem. Silakan coba lagi!");
+        }
     });
-
-    document.getElementById("btnSelesai").addEventListener("click",()=>window.location.href="{{ route('kasir.dashboard') }}");
-    document.getElementById("btnCetak").addEventListener("click",()=>window.print());
-    document.getElementById("btnBagikan").addEventListener("click",async()=>{
-        const shareText=`Transaksi Berhasil!\nTotal: ${succTotal.textContent}\nBayar: ${succBayar.textContent}`;
-        if(navigator.share) await navigator.share({text:shareText});
-        else alert("Fitur share tidak tersedia");
-    });
-
+    document.getElementById("btnSelesai").addEventListener("click", () => {
+    window.location.href = "{{ route('kasir.dashboard') }}";
+});
 });
 </script>
 @endsection

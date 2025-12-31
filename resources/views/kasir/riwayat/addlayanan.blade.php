@@ -7,7 +7,7 @@
 <div class="min-h-screen bg-gray-50 pb-24">
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
-   <a href="{{ route('riwayat.edit', $riwayat->id_transaksi) }}"
+   <a href="{{ route('kasir.riwayat.edit', $riwayat->id_transaksi) }}"
    class="text-black text-3xl font-bold">
     <i class="bi bi-arrow-left"></i>
 </a>
@@ -311,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
 
     try {
-        const res = await fetch(`/admin/riwayat/${idRiwayat}/add-layanan`, {
+        const res = await fetch(`/kasir/riwayat/${idRiwayat}/add-layanan`, {
             method: "POST",
             body: formData
         });
@@ -319,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (data.success) {
             // redirect ke edit.blade.php
-            window.location.href = `/admin/riwayat/${idRiwayat}/edit`;
+            window.location.href = `/kasir/riwayat/${idRiwayat}/edit`;
         } else {
             alert(data.message || "Gagal menambah layanan");
         }

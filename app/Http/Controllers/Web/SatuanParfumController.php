@@ -165,4 +165,145 @@ class SatuanParfumController extends Controller
 
         return redirect()->route('parfum.index')->with('success', 'Parfum berhasil dihapus.');
     }
+
+    // ================================
+// SATUAN (KASIR)
+// ================================
+
+public function satuanIndexKasir(Request $request)
+{
+    $query = Satuan::query();
+
+    if ($request->search) {
+        $query->where('nama_satuan', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->sort == 'desc') {
+        $query->orderBy('nama_satuan', 'desc');
+    } else {
+        $query->orderBy('nama_satuan', 'asc');
+    }
+
+    $satuan = $query->get();
+
+    return view('kasir.satuan.index', compact('satuan'));
+}
+
+public function satuanCreateKasir()
+{
+    return view('kasir.satuan.create');
+}
+
+public function satuanStoreKasir(Request $request)
+{
+    $request->validate([
+        'nama_satuan' => 'required|max:50'
+    ]);
+
+    Satuan::create([
+        'nama_satuan' => $request->nama_satuan
+    ]);
+
+    return redirect()->route('kasir.satuan.index')
+        ->with('success', 'Satuan berhasil ditambahkan.');
+}
+
+public function satuanEditKasir($id)
+{
+    $satuan = Satuan::where('id_satuan', $id)->firstOrFail();
+    return view('kasir.satuan.edit', compact('satuan'));
+}
+
+public function satuanUpdateKasir(Request $request, $id)
+{
+    $request->validate([
+        'nama_satuan' => 'required|max:50'
+    ]);
+
+    Satuan::where('id_satuan', $id)->update([
+        'nama_satuan' => $request->nama_satuan
+    ]);
+
+    return redirect()->route('kasir.satuan.index')
+        ->with('success', 'Satuan berhasil diupdate.');
+}
+
+public function satuanDestroyKasir($id)
+{
+    Satuan::where('id_satuan', $id)->delete();
+
+    return redirect()->route('kasir.satuan.index')
+        ->with('success', 'Satuan berhasil dihapus.');
+}
+
+// ================================
+// PARFUM (KASIR)
+// ================================
+
+public function parfumIndexKasir(Request $request)
+{
+    $query = Parfum::query();
+
+    if ($request->search) {
+        $query->where('nama_parfum', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->sort == 'desc') {
+        $query->orderBy('nama_parfum', 'desc');
+    } else {
+        $query->orderBy('nama_parfum', 'asc');
+    }
+
+    $parfum = $query->get();
+
+    return view('kasir.parfum.index', compact('parfum'));
+}
+
+public function parfumCreateKasir()
+{
+    return view('kasir.parfum.create');
+}
+
+public function parfumStoreKasir(Request $request)
+{
+    $request->validate([
+        'nama_parfum' => 'required|max:100'
+    ]);
+
+    Parfum::create([
+        'nama_parfum' => $request->nama_parfum
+    ]);
+
+    return redirect()->route('kasir.parfum.index')
+        ->with('success', 'Parfum berhasil ditambahkan.');
+}
+
+public function parfumEditKasir($id)
+{
+    $parfum = Parfum::where('id_parfum', $id)->firstOrFail();
+    return view('kasir.parfum.edit', compact('parfum'));
+}
+
+public function parfumUpdateKasir(Request $request, $id)
+{
+    $request->validate([
+        'nama_parfum' => 'required|max:100'
+    ]);
+
+    Parfum::where('id_parfum', $id)->update([
+        'nama_parfum' => $request->nama_parfum
+    ]);
+
+    return redirect()->route('kasir.parfum.index')
+        ->with('success', 'Parfum berhasil diupdate.');
+}
+
+public function parfumDestroyKasir($id)
+{
+    Parfum::where('id_parfum', $id)->delete();
+
+    return redirect()->route('kasir.parfum.index')
+        ->with('success', 'Parfum berhasil dihapus.');
+}
+
 }

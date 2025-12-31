@@ -49,39 +49,76 @@ $keterangan = session('keterangan_transaksi', '');
                 <span class="text-xl font-semibold">Detail Order</span>
             </div>
 
-            <a href="{{ route('kasir.layanan.index') }}"
+            <a href="{{ route('kasir.layanan.index', ['from' => 'transaksi'])}}"
                class="bg-yellow-400 px-4 py-3 rounded-2xl text-black font-bold shadow hover:bg-yellow-500 transition">
                 Tambah Layanan
             </a>
         </div>
 
         {{-- LIST LAYANAN --}}
-        @if(count($detail) === 0)
+        @if (count($detail) === 0)
+
             <div class="text-center py-10">
                 <i class="bi bi-search text-7xl text-yellow-400"></i>
                 <p class="mt-4 font-semibold text-gray-600">List Layanan kosong</p>
                 <p class="text-sm text-gray-500">Silahkan tambahkan layanan terlebih dahulu</p>
             </div>
+
         @else
             <div class="space-y-5">
-                @foreach($detail as $d)
-                <div class="bg-gray-100 p-5 rounded-3xl shadow">
+                @foreach ($detail as $d)
+                <div class="group bg-gray-100 p-5 rounded-3xl shadow hover:shadow-lg transition">
+
                     <div class="flex gap-4">
+
+                        {{-- GAMBAR --}}
                         <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                            <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
+                            <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                                            class="w-full h-full object-cover">
                         </div>
 
+                        {{-- DETAIL --}}
                         <div class="flex-1">
                             <p class="font-bold text-lg leading-tight">
-                                {{ $d['nama_layanan'] }}{{ isset($d['jenis']) ? ' '.$d['jenis'] : '' }}
+                                {{ $d['nama_layanan'] }} ({{ isset($d['jenis']) ? ' '.$d['jenis'] : '' }})
                             </p>
+
+                            {{-- tanpa satuan --}}
                             <p class="text-sm text-gray-700">
                                 Rp{{ number_format($d['harga'],0,',','.') }}
                             </p>
+
+                            <p class="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                                <i class="bi bi-bag-heart-fill text-red-500"></i>
+                                {{ empty($d['parfum_nama']) || $d['parfum_nama'] === 'Pilih Parfum'
+                                ? 'Tanpa parfum'
+                                : $d['parfum_nama'] }}  
+                            </p>
+
                             <p class="font-semibold mt-1">
                                 SubTotal : Rp{{ number_format($d['harga'] * $d['qty'],0,',','.') }}
                             </p>
                         </div>
+
+                        {{-- QTY + REMOVE --}}
+                        <div class="flex flex-col items-end">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-700">Qty</p>
+                                <p class="text-lg font-bold">{{ $d['qty'] }}</p>
+                            </div>
+
+                            <form 
+                                action="{{ route('transaksi.remove', $d['id_layanan']) }}" 
+                                method="POST"
+                                class="mt-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto"
+                            >
+                                @csrf
+                                <button type="submit" class="bg-red-500 text-white p-2 rounded-full shadow">
+                                    <i class="bi bi-trash-fill text-lg"></i>
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
                 </div>
                 @endforeach
@@ -89,7 +126,7 @@ $keterangan = session('keterangan_transaksi', '');
         @endif
 
          {{-- KETERANGAN TRANSAKSI --}}
-        <form id="checkoutForm" action="{{ route('transaksi.checkout') }}" method="POST">
+        <form id="checkoutForm" action="{{ route('kasir.transaksi.checkout') }}" method="POST">
             @csrf
             <div class="bg-white rounded-3xl p-5 shadow-xl mt-6">
                 <p class="font-semibold mb-2">Keterangan</p>
@@ -100,7 +137,7 @@ $keterangan = session('keterangan_transaksi', '');
 
                 <script>
                     document.getElementById('keteranganTransaksi').addEventListener('input', function () {
-                        fetch("{{ route('transaksi.updateKeterangan') }}", {
+                        fetch("{{ route('kasir.transaksi.updateKeterangan') }}", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",

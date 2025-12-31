@@ -8,7 +8,7 @@
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-6 py-5 rounded-b-3xl shadow flex items-center justify-between sticky top-0 z-10">
         <div class="flex items-center gap-4">
-            <a href="{{ route('laporan.index') }}" class="text-3xl font-bold">
+            <a href="{{ route('kasir.laporan.index') }}" class="text-3xl font-bold">
                 <i class="bi bi-arrow-left"></i>
             </a>
             <h1 class="text-xl font-bold">Laporan Pengeluaran</h1>

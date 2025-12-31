@@ -5,7 +5,7 @@
 <div class="min-h-screen bg-gray-50">
     <!-- HEADER -->
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+        <a href="{{ route('kasir.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold">Kelola Parfum</span>
@@ -56,12 +56,12 @@
 
                 <!-- ACTIONS -->
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('parfum.edit', $p->id_parfum) }}" 
+                    <a href="{{ route('kasir.parfum.edit', $p->id_parfum) }}" 
                        class="bg-green-700 hover:bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                         <i class="bi bi-pencil-fill"></i>
                     </a>
 
-                    <form action="{{ route('parfum.destroy', $p->id_parfum) }}" method="POST" class="inline">
+                    <form action="{{ route('kasir.parfum.destroy', $p->id_parfum) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
                         <button type="submit"
@@ -84,7 +84,7 @@
         </div>
 
         <!-- ADD BUTTON -->
-        <a href="{{ route('parfum.create') }}"
+        <a href="{{ route('kasir.parfum.create') }}"
            class="block bg-yellow-400 hover:bg-yellow-500 py-4 rounded-2xl font-bold text-black text-center shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2">
             <i class="bi bi-plus-circle-fill text-xl"></i>
             Tambah Parfum

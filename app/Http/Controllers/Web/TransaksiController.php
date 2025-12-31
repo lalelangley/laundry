@@ -9,8 +9,10 @@ use App\Models\Layanan;
 use App\Models\Transaksi;
 use App\Models\MetodeBayar;
 use App\Models\Parfum;
+use App\Models\JenisLayanan
 
-class TransaksiController extends \App\Http\Controllers\Controller
+
+class TransaksiController extends Controller
 {
     // ==========================
     // 1. HALAMAN AWAL TRANSAKSI
@@ -206,6 +208,7 @@ public function addLayanan(Request $request, $id)
         // ================================
         // Simpan transaksi
         // ================================
+        // Di method bayar() dan bayarKasir(), tambahkan ini:
         $trans = Transaksi::create([
             'id_pelanggan'     => $pelanggan['id_pelanggan'],
             'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
@@ -217,6 +220,7 @@ public function addLayanan(Request $request, $id)
             'tipe_diskon'      => $tipeDiskon,
             'status_bayar'     => $statusBayar,
             'status_transaksi' => 'antrian',
+            'jenis_transaksi'  => 'offline',  // 🔥 TAMBAHKAN INI
             'keterangan'       => $keterangan,
             'tgl_transaksi'    => now(),
             'tgl_estimasi'     => $tglEstimasi,
@@ -393,7 +397,11 @@ public function addLayanan(Request $request, $id)
             session(['keterangan_transaksi' => $request->keterangan]);
             return response()->json(['success' => true]);
         }
-
+        public function updateKeteranganKasir(Request $request)
+        {
+            session(['keterangan_transaksi' => $request->keterangan]);
+            return response()->json(['success' => true]);
+        }
         public function tempStoreLayanan(Request $request)
     {
         $request->validate([
@@ -515,5 +523,184 @@ public function addLayananKasir(Request $request, $id)
     ]);
 }
 
+// ==========================
+// TAMBAH BERDASARKAN JENIS
+// ==========================
+public function addJenis(Request $request, $idJenis)
+{
+    \Log::info("=== ADD JENIS DEBUG ===");
+    \Log::info("ID diterima: " . $idJenis);
+    \Log::info("Request data: " . json_encode($request->all()));
+    
+    try {
+        $request->validate([
+            'qty'    => 'required|numeric|min:0.01',
+            'parfum' => 'nullable|exists:parfum,id_parfum',
+        ]);
 
+        // 🔥 Coba find() dulu (harusnya works karena primary key udah bener)
+        $jenis = JenisLayanan::find($idJenis);
+        
+        \Log::info("Jenis found: " . ($jenis ? 'YES' : 'NO'));
+        
+        if (!$jenis) {
+            \Log::error("Jenis layanan tidak ditemukan dengan ID: {$idJenis}");
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Jenis layanan tidak ditemukan',
+                'debug' => [
+                    'id_received' => $idJenis,
+                    'type' => gettype($idJenis)
+                ]
+            ], 404);
+        }
+
+        // Load relasi
+        $jenis->load(['layanan', 'satuan']);
+        
+        \Log::info("Jenis data: " . json_encode([
+            'id' => $jenis->id_jenis_layanan,
+            'nama' => $jenis->nama_jenis,
+            'harga' => $jenis->harga
+        ]));
+
+        $cart = session()->get('detail_transaksi', []);
+
+        $newItem = [
+            'id_layanan'       => $jenis->id_layanan,
+            'nama_layanan'     => $jenis->layanan->nama_layanan ?? '-',
+            'id_jenis_layanan' => $jenis->id_jenis_layanan,
+            'jenis'            => $jenis->nama_jenis,
+            'harga'            => $jenis->harga,
+            'qty'              => $request->qty,
+            'satuan'           => $jenis->satuan->nama_satuan ?? '',
+            'keterangan'       => '-',
+            'id_parfum'        => $request->parfum,
+            'parfum_nama'      => $request->parfum
+                ? \App\Models\Parfum::find($request->parfum)?->nama_parfum
+                : null,
+        ];
+
+        $cart[] = $newItem;
+        session()->put('detail_transaksi', $cart);
+
+        \Log::info('Item ditambahkan ke cart', $newItem);
+        \Log::info('Total items di cart: ' . count($cart));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jenis layanan berhasil ditambahkan',
+            'data' => $newItem,
+            'cart_count' => count($cart)
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Validation error: ' . json_encode($e->errors()));
+        return response()->json([
+            'success' => false,
+            'message' => 'Validasi gagal',
+            'errors' => $e->errors()
+        ], 422);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error addJenis: ' . $e->getMessage());
+        \Log::error($e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+// ==========================
+// TAMBAH BERDASARKAN JENIS
+// ==========================
+public function addJenisKasir(Request $request, $idJenis)
+{
+    \Log::info("=== ADD JENIS DEBUG ===");
+    \Log::info("ID diterima: " . $idJenis);
+    \Log::info("Request data: " . json_encode($request->all()));
+    
+    try {
+        $request->validate([
+            'qty'    => 'required|numeric|min:0.01',
+            'parfum' => 'nullable|exists:parfum,id_parfum',
+        ]);
+
+        // 🔥 Coba find() dulu (harusnya works karena primary key udah bener)
+        $jenis = JenisLayanan::find($idJenis);
+        
+        \Log::info("Jenis found: " . ($jenis ? 'YES' : 'NO'));
+        
+        if (!$jenis) {
+            \Log::error("Jenis layanan tidak ditemukan dengan ID: {$idJenis}");
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Jenis layanan tidak ditemukan',
+                'debug' => [
+                    'id_received' => $idJenis,
+                    'type' => gettype($idJenis)
+                ]
+            ], 404);
+        }
+
+        // Load relasi
+        $jenis->load(['layanan', 'satuan']);
+        
+        \Log::info("Jenis data: " . json_encode([
+            'id' => $jenis->id_jenis_layanan,
+            'nama' => $jenis->nama_jenis,
+            'harga' => $jenis->harga
+        ]));
+
+        $cart = session()->get('detail_transaksi', []);
+
+        $newItem = [
+            'id_layanan'       => $jenis->id_layanan,
+            'nama_layanan'     => $jenis->layanan->nama_layanan ?? '-',
+            'id_jenis_layanan' => $jenis->id_jenis_layanan,
+            'jenis'            => $jenis->nama_jenis,
+            'harga'            => $jenis->harga,
+            'qty'              => $request->qty,
+            'satuan'           => $jenis->satuan->nama_satuan ?? '',
+            'keterangan'       => '-',
+            'id_parfum'        => $request->parfum,
+            'parfum_nama'      => $request->parfum
+                ? \App\Models\Parfum::find($request->parfum)?->nama_parfum
+                : null,
+        ];
+
+        $cart[] = $newItem;
+        session()->put('detail_transaksi', $cart);
+
+        \Log::info('Item ditambahkan ke cart', $newItem);
+        \Log::info('Total items di cart: ' . count($cart));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jenis layanan berhasil ditambahkan',
+            'data' => $newItem,
+            'cart_count' => count($cart)
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        \Log::error('Validation error: ' . json_encode($e->errors()));
+        return response()->json([
+            'success' => false,
+            'message' => 'Validasi gagal',
+            'errors' => $e->errors()
+        ], 422);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error addJenis: ' . $e->getMessage());
+        \Log::error($e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }
