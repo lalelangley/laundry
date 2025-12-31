@@ -37,7 +37,6 @@ class AuthController extends Controller
             'password'       => Hash::make($request->password),
             'jk'             => null,
             'gambar'         => null,
-            'role'           => 'pelanggan', // TAMBahkan role
         ]);
 
         // Generate token Sanctum

@@ -9,15 +9,17 @@ use Laravel\Sanctum\HasApiTokens;
 class Kasir extends Authenticatable
 {
     use HasApiTokens, Notifiable;
-
-    protected $table = 'kasir';
+protected $table = 'kasir';
     protected $primaryKey = 'id_kasir';
-   protected $fillable = [
-    'nama_kasir',
-    'no_hp',
-    'password',
-    'gambar',
-];
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    protected $fillable = [
+        'nama_kasir',
+        'no_hp',
+        'password',
+        'gambar',
+    ];
 
 protected $hidden = [
     'password',

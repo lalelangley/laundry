@@ -5,23 +5,27 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        DB::statement("
-            CREATE VIEW v_laporan_metode_bayar AS
-            SELECT 
-                mb.id_metode_bayar,
-                mb.nama_metode_bayar,
-                COUNT(t.id_transaksi) AS jumlah_digunakan,
-                COALESCE(SUM(t.total_bayar), 0) AS total_uang_masuk
-            FROM metode_bayar mb
-            LEFT JOIN transaksi t ON t.id_metode_bayar = mb.id_metode_bayar
-            GROUP BY mb.id_metode_bayar
-        ");
-    }
+public function up()
+{
+    DB::statement("DROP VIEW IF EXISTS v_laporan_pelanggan");
 
-    public function down(): void
-    {
-        DB::statement("DROP VIEW IF EXISTS v_laporan_metode_bayar");
-    }
+    DB::statement("
+        CREATE VIEW v_laporan_pelanggan AS
+        SELECT 
+            p.id_pelanggan,
+            p.nama_pelanggan,
+            p.no_hp,
+            COUNT(t.id_transaksi) AS jumlah_transaksi,
+            COALESCE(SUM(t.total_bayar), 0) AS total_uang_masuk
+        FROM pelanggan p
+        LEFT JOIN transaksi t ON t.id_pelanggan = p.id_pelanggan
+        GROUP BY p.id_pelanggan, p.nama_pelanggan, p.no_hp
+    ");
+}
+
+public function down()
+{
+    DB::statement("DROP VIEW IF EXISTS v_laporan_pelanggan");
+}
+
 };

@@ -261,6 +261,114 @@ public function addLayanan(Request $request, $id)
         ]);
     }
 
+    // ==========================
+    // 7. SIMPAN TRANSAKSI
+    // ==========================
+    public function bayarKasir(Request $request)
+    {
+        $pelanggan = session('pelanggan');
+        $detail    = session('detail_transaksi', []);
+
+        if (!$pelanggan || empty($detail)) {
+            return response()->json(['error' => 'Transaksi tidak valid'], 400);
+        }
+
+        // ================================
+        // Ambil input dari JSON fetch
+        // ================================
+        $diskon       = floatval($request->input('diskon', 0));
+        $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
+        $dp           = floatval($request->input('dp', 0));
+        $langsungBayar= intval($request->input('langsung_bayar', 0));
+        $keterangan   = $request->input('keterangan', '-');
+        $idMetodeBayar= $request->input('id_metode_bayar', 1);
+        $tglEstimasi  = $request->input('tgl_estimasi', now());
+
+        // ================================
+        // Hitung total awal & diskon
+        // ================================
+        $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
+
+        if ($tipeDiskon === 'percent') {
+            $diskon = $totalAwal * ($diskon / 100);
+        }
+
+        $totalAkhir = max($totalAwal - $diskon, 0);
+
+        // ================================
+        // Hitung status bayar
+        // ================================
+        $totalBayar = $dp;
+        if ($langsungBayar === 1 || $dp >= $totalAkhir) {
+            $totalBayar = $totalAkhir;
+            $statusBayar = 'lunas';
+            $tglLunas = now();
+            $dp = 0; // otomatis 0 kalau lunas
+        } elseif ($dp > 0) {
+            $statusBayar = 'DP';
+            $tglLunas = null;
+        } else {
+            $statusBayar = 'belum_lunas';
+            $tglLunas = null;
+        }
+
+        // ================================
+        // Simpan transaksi
+        // ================================
+        $trans = Transaksi::create([
+            'id_pelanggan'     => $pelanggan['id_pelanggan'],
+            'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
+            'no_hp'            => $pelanggan['no_hp'],
+            'total_harga'      => $totalAwal,
+            'total_bayar'      => $totalBayar,
+            'dp'               => $dp,
+            'diskon'           => $diskon,
+            'tipe_diskon'      => $tipeDiskon,
+            'status_bayar'     => $statusBayar,
+            'status_transaksi' => 'antrian',
+            'keterangan'       => $keterangan,
+            'tgl_transaksi'    => now(),
+            'tgl_estimasi'     => $tglEstimasi,
+            'tgl_lunas'        => $tglLunas,
+            'id_kasir'         => auth()->id(),
+            'id_metode_bayar'  => $idMetodeBayar,
+        ]);
+
+        // ================================
+        // Simpan detail transaksi
+        // ================================
+        foreach ($detail as $d) {
+            $jenis = \App\Models\JenisLayanan::with('satuan')
+                ->where('id_jenis_layanan', $d['id_jenis_layanan'])
+                ->first();
+
+            $idSatuan = $jenis?->satuan?->id_satuan ?? null;
+
+            $trans->detail()->create([
+                'id_layanan'       => $d['id_layanan'],
+                'id_jenis_layanan' => $d['id_jenis_layanan'],
+                'id_parfum'        => $d['id_parfum'] ?? null,
+                'harga'            => $d['harga'],
+                'qty'              => $d['qty'],
+                'id_satuan'        => $idSatuan,
+                'tipe_diskon'      => $tipeDiskon,
+            ]);
+        }
+
+        session()->forget(['pelanggan', 'detail_transaksi', 'keterangan_transaksi']);
+
+        return response()->json([
+            'success'      => true,
+            'total'        => $totalAkhir,
+            'bayar'        => $totalBayar,
+            'nama'         => $pelanggan['nama_pelanggan'],
+            'hp'           => $pelanggan['no_hp'],
+            'status_bayar' => $statusBayar,
+            'diskon'       => $diskon,
+            'total_bayar'  => $totalBayar,
+            'tgl_lunas'    => $tglLunas,
+        ]);
+    }
 
         // ==========================
         // 8. PRINT
@@ -285,4 +393,127 @@ public function addLayanan(Request $request, $id)
             session(['keterangan_transaksi' => $request->keterangan]);
             return response()->json(['success' => true]);
         }
+
+        public function tempStoreLayanan(Request $request)
+    {
+        $request->validate([
+            'id_jenis_layanan' => 'required|exists:jenis_layanan,id_layanan',
+            'qty' => 'required|numeric|min:0.01',
+            'parfum' => 'nullable|exists:parfum,id_parfum',
+        ]);
+
+        // Ambil array layanan sementara dari session
+        $layananSementara = session()->get('layanan_temp', []);
+
+        // Tambahkan layanan baru
+        $layananSementara[] = [
+            'id_jenis_layanan' => $request->id_jenis_layanan,
+            'qty' => $request->qty,
+            'parfum' => $request->parfum,
+        ];
+
+        session(['layanan_temp' => $layananSementara]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Layanan berhasil ditambahkan sementara!',
+            'data' => $layananSementara
+        ]);
+    }
+
+// ==========================
+// KASIR - PILIH PELANGGAN
+// ==========================
+public function pelangganKasir()
+{
+    $pelanggan = Pelanggan::orderBy('nama_pelanggan')->get();
+    return view('kasir.transaksi.pelanggan', compact('pelanggan'));
+}
+
+// ==========================
+// KASIR - CREATE TRANSAKSI
+// ==========================
+public function createKasir()
+{
+    return view('kasir.transaksi.create', [
+        'pelanggan'  => session('pelanggan'),
+        'detail'     => session('detail_transaksi', []),
+        'keterangan' => session('keterangan_transaksi'),
+        'total'      => array_sum(
+            array_map(fn($d) => $d['harga'] * $d['qty'], session('detail_transaksi', []))
+        ),
+    ]);
+}
+
+// ==========================
+// KASIR - CHECKOUT
+// ==========================
+public function checkoutKasir()
+{
+    $pelanggan  = session('pelanggan');
+    $detail     = session('detail_transaksi', []);
+    $keterangan = session('keterangan_transaksi');
+
+    if (!$pelanggan) {
+        return redirect()->route('kasir.transaksi.pelanggan')
+            ->with('error', 'Pilih pelanggan dulu');
+    }
+
+    $totalHarga = array_sum(
+        array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
+    );
+
+    return view('kasir.transaksi.checkout', [
+        'pelanggan'    => $pelanggan,
+        'detail'       => $detail,
+        'totalHarga'   => $totalHarga,
+        'metode_bayar' => MetodeBayar::all(),
+        'keterangan'   => $keterangan,
+    ]);
+}
+
+// ==========================
+// KASIR - TAMBAH LAYANAN
+// ==========================
+public function addLayananKasir(Request $request, $id)
+{
+    $layanan = Layanan::with('jenis.satuan')->find($id);
+    if (!$layanan) {
+        return response()->json(['success'=>false,'message' => 'Layanan tidak ditemukan'], 404);
+    }
+
+    // Ambil jenis sesuai request, atau default ke first
+    $jenisId = $request->id_jenis_layanan ?? $layanan->jenis->first()?->id_jenis_layanan;
+    $jenis = $layanan->jenis->where('id_jenis_layanan', $jenisId)->first();
+
+    if (!$jenis) {
+        return response()->json(['success'=>false,'message' => 'Jenis layanan tidak ditemukan'], 404);
+    }
+
+    // Ambil cart lama
+    $cart = session()->get('detail_transaksi', []);
+
+    // Tambahkan layanan baru ke cart
+    $cart[] = [
+        'id_layanan'       => $layanan->id_layanan,
+        'nama_layanan'     => $layanan->nama_layanan,
+        'id_jenis_layanan' => $jenis->id_jenis_layanan,
+        'jenis'            => $jenis->nama_jenis,
+        'harga'            => $jenis->harga,
+        'qty'              => $request->qty ?? 1,
+        'satuan'           => $jenis->satuan->nama_satuan ?? '',
+        'keterangan'       => $request->keterangan ?? '-',
+        'id_parfum'        => $request->parfum ?? null,
+        'parfum_nama'      => $request->parfum ? Parfum::find($request->parfum)?->nama_parfum : null,
+    ];
+
+    session()->put('detail_transaksi', $cart);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Layanan berhasil ditambahkan (Kasir)',
+    ]);
+}
+
+
 }

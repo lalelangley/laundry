@@ -23,7 +23,7 @@ class Layanan extends Model
 
     public function jenis()
     {
-        return $this->hasMany(JenisLayanan::class, 'id_layanan');
+        return $this->hasMany(JenisLayanan::class, 'id_layanan', 'id_layanan');
     }
 
 }

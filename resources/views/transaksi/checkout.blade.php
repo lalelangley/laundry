@@ -247,6 +247,11 @@ document.addEventListener("DOMContentLoaded", () => {
             statusBayar.textContent = "Aktif";
             toggleBayar.textContent = "✔ Langsung Bayar";
             toggleBayar.classList.replace("bg-red-400","bg-yellow-400");
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> c842378ffa117087b054c4c9d4728216779bf064
         }
     });
 
@@ -289,6 +294,112 @@ document.addEventListener("DOMContentLoaded", () => {
     const succNama = document.getElementById("succNama");
     const succHp = document.getElementById("succHp");
 
+<<<<<<< HEAD
+=======
+    const formatDateTime = dt => dt ? dt.replace('T', ' ') + ':00' : null;
+
+document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
+    try {
+        const total = hitungDiskon();
+        const bayar = parseFloat(inputBayar.value) || 0;
+        const diskon = parseFloat(inputDiskon.value) || 0;
+        const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
+        const keterangan = document.getElementById("keteranganTransaksi").value || null;
+        const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
+        const tgl_masuk = formatDateTime(document.getElementById("tgl_masuk").value);
+        const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
+        const langsung = parseInt(hiddenBayar.value);
+
+        const res = await fetch("{{ route('transaksi.bayar') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: JSON.stringify({
+                jumlah_bayar: bayar,
+                dp: bayar,
+                langsung_bayar: langsung,
+                total_harga: total + diskon,
+                diskon: diskon,
+                tipe_diskon: tipe_diskon,
+                keterangan: keterangan,
+                id_metode_bayar: id_metode_bayar,
+                tgl_masuk: tgl_masuk,
+                tgl_estimasi: tgl_estimasi
+            })
+        });
+
+        if(!res.ok){ alert("Gagal menyimpan"); return; }
+        const data = await res.json();
+        popupBayar.classList.add("hidden");
+
+        succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+        succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
+        succNama.textContent = data.nama;
+        succHp.textContent = data.hp;
+        succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
+
+        // Hapus label status lama
+        const oldLabel = document.getElementById("labelStatusBayar");
+        if(oldLabel) oldLabel.remove();
+
+        if(data.status_bayar && data.status_bayar != "lunas"){
+            let label = document.createElement("p");
+            label.id = "labelStatusBayar";
+            label.classList.add(data.status_bayar.toLowerCase()=="dp" ? "text-orange-500" : "text-red-500","font-bold","mt-2");
+            label.textContent = "Status: " + data.status_bayar.toUpperCase();
+            popupSuccess.querySelector(".bg-white")?.appendChild(label);
+>>>>>>> web
+        }
+    });
+
+    // ===== POPUP BAYAR =====
+    const popupBayar = document.getElementById("popupBayar");
+    const closePopup = document.getElementById("closePopup");
+    const tombolBayar = document.getElementById("btnBayar");
+    const popupNama = document.getElementById("popupNama");
+    const popupTotal = document.getElementById("popupTotal");
+    const inputBayar = document.getElementById("popupInputBayar");
+
+<<<<<<< HEAD
+    const updatePopupBayar = () => {
+        const totalAkhir = hitungDiskon();
+        popupTotal.textContent = "Rp " + totalAkhir.toLocaleString('id-ID');
+
+        if(hiddenBayar.value === "1"){ // langsung bayar
+            inputBayar.value = totalAkhir;
+            inputBayar.readOnly = true;
+        } else {
+            inputBayar.value = "";
+            inputBayar.readOnly = false;
+        }
+    };
+=======
+    } catch(err){ console.error(err); alert("Terjadi kesalahan."); }
+});
+>>>>>>> web
+
+    tombolBayar.addEventListener("click", () => {
+        popupNama.textContent = "{{ $pelanggan['nama_pelanggan'] }}";
+        updatePopupBayar();
+        popupBayar.classList.remove("hidden");
+    });
+
+<<<<<<< HEAD
+    closePopup.addEventListener("click", () => popupBayar.classList.add("hidden"));
+
+    inputDiskon.addEventListener('input', updatePopupBayar);
+
+    // ===== SUCCESS POPUP =====
+    const popupSuccess = document.getElementById("popupSuccess");
+    const succTotal = document.getElementById("succTotal");
+    const succBayar = document.getElementById("succBayar");
+    const succDiskon = document.getElementById("succDiskon");
+    const succNama = document.getElementById("succNama");
+    const succHp = document.getElementById("succHp");
+
+>>>>>>> c842378ffa117087b054c4c9d4728216779bf064
     // ===== SIMPAN PEMBAYARAN =====
     document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
         try {
@@ -358,6 +469,20 @@ document.addEventListener("DOMContentLoaded", () => {
         else alert("Fitur share tidak tersedia");
     });
 
+<<<<<<< HEAD
+=======
+=======
+    // ===== BUTTON SUCCESS =====
+    document.getElementById("btnSelesai").addEventListener("click", ()=>window.location.href="{{ route('admin.dashboard') }}");
+    document.getElementById("btnCetak").addEventListener("click", ()=>window.print());
+    document.getElementById("btnBagikan").addEventListener("click", async ()=>{
+        const shareText = `Transaksi Berhasil!\nTotal: ${succTotal.textContent}\nBayar: ${succBayar.textContent}`;
+        if(navigator.share) await navigator.share({text:shareText});
+        else alert("Fitur share tidak tersedia");
+    });
+
+>>>>>>> web
+>>>>>>> c842378ffa117087b054c4c9d4728216779bf064
 });
 </script>
 @endsection

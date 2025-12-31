@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('driver')->group(function () {
+        Route::get('/{id_driver}/history', [DriverTaskController::class, 'getDriverHistory']);
         Route::get('/{id_driver}/tasks', [DriverTaskController::class, 'getPendingTasks']); // task list
         Route::post('/accept-task', [DriverTaskController::class, 'acceptTask']);             // accept task
         Route::post('/on-the-way-to-pickup', [DriverTaskController::class, 'onTheWayToPickup']);

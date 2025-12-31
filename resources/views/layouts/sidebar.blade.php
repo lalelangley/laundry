@@ -1,51 +1,51 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-<!-- Sidebar Overlay -->
+@php
+    if (Auth::guard('kasir')->check()) {
+        $user = Auth::guard('kasir')->user();
+        $nama = $user->nama_kasir;
+        $role = 'Kasir';
+    } elseif (Auth::guard('admin')->check()) {
+        $user = Auth::guard('admin')->user();
+        $nama = $user->nama_admin ?? 'Admin';
+        $role = $user->role->nama_role ?? 'Admin';
+    } else {
+        return; // ⛔ JANGAN TAMPILKAN SIDEBAR JIKA BELUM LOGIN
+    }
+@endphp
+
+<!-- OVERLAY -->
 <div id="sidebarOverlay"
-    class="fixed inset-0 bg-black/40 hidden z-40"
-    onclick="toggleSidebar()">
-</div>
+     class="fixed inset-0 bg-black/40 hidden z-40"
+     onclick="toggleSidebar()"></div>
 
 <!-- SIDEBAR -->
 <div id="sidebar"
-    class="fixed top-0 left-0 w-[80%] sm:w-[300px] h-full bg-[#ffcc00] shadow-xl z-50 -translate-x-full transition-transform duration-300">
-
-    <!-- HEADER -->
-    <div class="p-4 pb-2 border-b border-black/20">
-        <div class="flex items-center justify-between">
-            <div onclick="toggleSidebar()" class="text-3xl cursor-pointer font-bold">×</div>
-        </div>
-    </div>
+     class="fixed top-0 left-0 w-[80%] sm:w-[300px] h-full bg-[#ffcc00] z-50
+            -translate-x-full transition-transform duration-300">
 
     <!-- PROFILE -->
-    <div class="flex flex-col items-center mt-6 mb-8">
-        <img 
-            src="{{ Auth::user()->profile_photo_url ?? asset('images/default-pfp.png') }}" 
-            class="w-20 h-20 rounded-full object-cover border-4 border-yellow-400 shadow"
-            alt="Profile Picture"
-        >
-        
-        <p class="mt-3 font-bold text-lg text-black">
-            {{ auth()->user()->nama ?? 'Admin' }}
-        </p>
-
-        <p class="text-sm text-black/70 -mt-1">
-            Admin Utama
-        </p>
+    <div class="p-4 text-center">
+        <img src="{{ $user->profile_photo_url ?? asset('images/default-pfp.png') }}"
+             class="w-20 h-20 mx-auto rounded-full border-4 border-yellow-300">
+        <p class="mt-3 font-bold">{{ $nama }}</p>
+        <p class="text-sm opacity-70">{{ $role }}</p>
     </div>
 
     <!-- MENU -->
-    <div class="p-4 space-y-2 overflow-y-auto h-[calc(100vh-250px)]">
+    <div class="p-4 space-y-2">
+       @foreach($menus as $menu)
+            @if($menu->route && Route::has($menu->route))
+                <a href="{{ route($menu->route) }}"
+                class="flex items-center gap-3 p-3 rounded-lg hover:bg-yellow-300">
+                    <i class="{{ $menu->icon }}"></i>
+                    <span>{{ $menu->nama_menu }}</span>
+                </a>
+            @endif
+        @endforeach
 
-        <!-- ITEM -->
-        <a href="{{ route('layanan.index') }}" 
-            class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
-                transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
-            <i class="bi bi-basket text-2xl"></i> 
-            <span class="font-bold">LAYANAN</span>
-         </a>
 
-
+<<<<<<< HEAD
         <a href="{{ route('parfum.index') }}" 
             class="flex items-center gap-3 bg-[#ffcc00] p-4 rounded-lg shadow
                 transition-all duration-150 hover:bg-yellow-300 hover:shadow-lg hover:scale-[1.02]">
@@ -111,23 +111,31 @@
 
         <!-- LOGOUT -->
         <form action="{{ route('logout') }}" method="POST" class="w-full">
+=======
+       {{-- LOGOUT --}}
+    @if(Auth::guard('kasir')->check())
+        <form method="POST" action="{{ route('kasir.logout') }}">
+>>>>>>> c842378ffa117087b054c4c9d4728216779bf064
             @csrf
-            <button type="submit"
-                class="flex items-center gap-3 bg-red-500 text-white p-4 rounded-lg shadow w-full text-left
-                       transition-all duration-150 hover:bg-red-600 hover:shadow-lg hover:scale-[1.02]">
-                <i class="bi bi-box-arrow-right text-2xl"></i>
-                <span class="font-bold">LOG OUT</span>
+            <button class="w-full bg-red-500 text-white p-3 rounded-lg mt-4">
+                Logout
             </button>
         </form>
+    @elseif(Auth::guard('admin')->check())
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button class="w-full bg-red-500 text-white p-3 rounded-lg mt-4">
+                Logout
+            </button>
+        </form>
+    @endif
 
     </div>
 </div>
 
 <script>
-    function toggleSidebar() {
-        const sb = document.getElementById('sidebar');
-        const ov = document.getElementById('sidebarOverlay');
-        sb.classList.toggle('-translate-x-full');
-        ov.classList.toggle('hidden');
-    }
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('-translate-x-full');
+    document.getElementById('sidebarOverlay').classList.toggle('hidden');
+}
 </script>

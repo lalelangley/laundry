@@ -44,21 +44,30 @@
                 <form method="POST" action="{{ route('login.process') }}">
                     @csrf
 
-                    <!-- DROPDOWN USER (Admin + Kasir) -->
+                   <!-- DROPDOWN USER (Super Admin + Admin + Kasir) -->
                     <label class="font-medium">Pilih User</label>
-                    <select name="user_id"
-                        class="w-full mt-1 mb-4 p-3 rounded-xl focus:ring-2 focus:ring-black">
-                        
+                    <select name="user_id" class="w-full mt-1 mb-4 p-3 rounded-xl focus:ring-2 focus:ring-black" required>
                         <option value="">-- Pilih --</option>
 
+                        <!-- Super Admin -->
+                        <optgroup label="Super Admin">
+                            @foreach($admins->where('role_id', 1) as $superAdmin)
+                                <option value="admin-{{ $superAdmin->id_admin }}">
+                                    {{ $superAdmin->nama }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+
+                        <!-- Admin Biasa -->
                         <optgroup label="Admin">
-                            @foreach($admins as $admin)
+                            @foreach($admins->where('role_id', '!=', 1) as $admin)
                                 <option value="admin-{{ $admin->id_admin }}">
                                     {{ $admin->nama }}
                                 </option>
                             @endforeach
                         </optgroup>
 
+                        <!-- Kasir -->
                         <optgroup label="Kasir">
                             @foreach($kasirs as $kasir)
                                 <option value="kasir-{{ $kasir->id_kasir }}">
@@ -66,8 +75,8 @@
                                 </option>
                             @endforeach
                         </optgroup>
-
                     </select>
+
 
                     <!-- PIN -->
                     <label class="font-medium">Masukkan PIN</label>
