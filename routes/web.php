@@ -16,7 +16,7 @@ use App\Http\Controllers\Web\RiwayatController;
 Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login.show');
 Route::post('/login', [AuthWebController::class, 'processLogin'])->name('login.process');
 
-Route::post('/logout', function () {
+Route::post('/logout', function (): RedirectResponse {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
@@ -69,9 +69,6 @@ Route::get('/admin/transaksi/add-layanan/{id}', [TransaksiController::class, 'ad
 // Checkout
 Route::post('/transaksi/checkout', [TransaksiController::class, 'checkout'])
     ->name('transaksi.checkout');
-Route::post('/admin/transaksi/checkout', [TransaksiController::class, 'checkout'])
-     ->name('transaksi.checkout');
-
 
 // Remove layanan
 Route::post('/admin/transaksi/remove/{id}', [TransaksiController::class, 'remove'])
