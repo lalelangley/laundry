@@ -75,10 +75,6 @@
         <div class="grid grid-cols-12 gap-6">
             {{-- LEFT COLUMN --}}
             <div class="col-span-12 lg:col-span-8 space-y-6">
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
                 {{-- DETAIL ORDER --}}
                 <div class="bg-white shadow-lg rounded-2xl p-6">
                     <h2 class="font-bold text-xl mb-5 flex items-center gap-3 text-gray-800 pb-4 border-b-2 border-gray-100">
@@ -120,9 +116,6 @@
                     </div>
                 </div>
 
-<<<<<<< HEAD
-=======
-=======
                {{-- DETAIL ORDER --}}
 <div class="bg-white shadow-lg rounded-2xl p-6">
     
@@ -173,8 +166,6 @@
     </div>
 </div>
 
->>>>>>> web
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
                 {{-- INFORMASI TRANSAKSI & STATUS --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {{-- INFORMASI TRANSAKSI --}}
@@ -285,56 +276,36 @@
 
     {{-- Tombol Selesaikan --}}
     @if($transaksi->status_transaksi == 'proses')
-<<<<<<< HEAD
+
         <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
         class="bg-green-600 hover:bg-green-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-check-circle-fill text-xl"></i> Selesaikan Order
-=======
-<<<<<<< HEAD
-        <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
-        class="bg-green-600 hover:bg-green-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-check-circle-fill text-xl"></i> Selesaikan Order
-=======
+
         <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
         class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
->>>>>>> web
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
+
         </a>
     @endif
 
     {{-- Tombol Siap Diambil --}}
     @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
-<<<<<<< HEAD
+
         <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
         class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-box-arrow-in-down text-xl"></i> Siap Diambil
-=======
-<<<<<<< HEAD
-        <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
-        class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-box-arrow-in-down text-xl"></i> Siap Diambil
-=======
+
         <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
         class="bg-yellow-400 hover:bg-yellow-500 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-box-arrow-in-down text-xl"></i> Order Selesai
->>>>>>> web
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
+
         </a>
     @endif
 
     {{-- Tombol Bayar --}}
     @if($statusBayar !== 'lunas')
         <button onclick="openModalBayar()"
-<<<<<<< HEAD
             class="bg-yellow-400 hover:bg-yellow-500 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-=======
-<<<<<<< HEAD
-            class="bg-yellow-400 hover:bg-yellow-500 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-=======
-            class="bg-green-600 hover:bg-green-700 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
->>>>>>> web
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
             <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
         </button>
     @endif

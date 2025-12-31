@@ -13,9 +13,9 @@ use App\Models\Satuan;
 use App\Models\Layanan;
 use App\Models\Parfum;
 
+
 class RiwayatController extends Controller
 {
-
     /** TAMPILKAN RIWAYAT */
    public function index(Request $request)
 {
@@ -105,8 +105,6 @@ public function update(Request $request, $id)
     {
         Transaksi::findOrFail($id)->delete();
 
-        return back()->with('success', 'Riwayat transaksi berhasil dihapus');
-
         return redirect()
             ->route('riwayat.index')
             ->with('success', 'Riwayat transaksi berhasil dihapus');
@@ -156,16 +154,19 @@ public function update(Request $request, $id)
     }
 
     /** SELESAI ORDER */
-    public function selesaiOrder($id)
-    {
-        $trx = Transaksi::findOrFail($id);
-        if ($trx->status_transaksi === 'proses') {
-            $trx->status_transaksi = 'selesai';
-            $trx->save();
-        }
-        return redirect()->route('riwayat.index',['tab'=>'selesai'])
-                         ->with('success','Transaksi berhasil diselesaikan!');
+public function selesaiOrder($id)
+{
+    $trx = Transaksi::findOrFail($id);
+
+    if (in_array($trx->status_transaksi, ['proses', 'siap_di_ambil'])) {
+        $trx->status_transaksi = 'selesai';
+        $trx->save();
     }
+
+    return redirect()
+        ->route('riwayat.index', ['tab' => 'selesai'])
+        ->with('success','Transaksi berhasil diselesaikan!');
+}
 
     /** SIAP DIAMBIL */
     public function siapDiAmbil($id)
@@ -286,15 +287,11 @@ public function editLayanan($id)
         }
         session()->forget("jenis_baru_{$layanan->id_layanan}");
 
-
-        return redirect()->route('riwayat.detail',$detail->id_transaksi)
-                         ->with('success','Layanan berhasil diperbarui.');
-    }
-}
        return redirect()->route('riwayat.edit', $detail->id_transaksi)
         ->with('success','Layanan berhasil diperbarui.');
-}
 
+    }
+ 
 /** TAMBAH LAYANAN KE RIWAYAT (TRANSAKSI SUDAH ADA) */
 public function storeLayanan(Request $request, $id)
 {
@@ -444,7 +441,6 @@ public function indexKasir(Request $request)
 
     return view('kasir.riwayat.index', compact('riwayat','tab'));
 }
-
 
 /** DETAIL TRANSAKSI UNTUK KASIR */
 public function detailKasir($id)
@@ -772,5 +768,5 @@ public function batalOrderKasir($id)
                      ->with('success','Transaksi berhasil dibatalkan!');
 }
 
-}
 
+}

@@ -15,28 +15,19 @@ class PesananOnlineController extends Controller
     // ==================== KASIR ====================
     
     public function indexKasir(Request $request)
-    {
-        $tab = $request->get('tab', 'menunggu_konfirmasi');
+{
+    $tab = $request->get('tab', 'menunggu_konfirmasi');
+    $statusMap = $this->statusMap();
 
-        // Mapping tab ke status_transaksi di DB
-        $statusMap = [
-            'menunggu_konfirmasi' => ['antrian'], // sesuaikan
-            'dikonfirmasi' => ['dikonfirmasi'],
-            'proses' => ['proses'],
-            'siap_di_ambil' => ['siap_di_ambil'],
-            'siap_di_antar' => ['siap_di_antar'],
-            'selesai' => ['selesai'],
-            'ditolak' => ['batal'],
-        ];
+    $pesanan = Transaksi::with('detail_transaksi')
+        ->where('jenis_transaksi', 'online')
+        ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
+        ->orderByDesc('tgl_transaksi')
+        ->get();
 
-        $pesanan = Transaksi::with('detail_transaksi')
-            ->where('jenis_transaksi', 'online')
-            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-            ->orderBy('tgl_transaksi', 'desc')
-            ->get();
-        
-        return view('kasir.pesanan_online.index', compact('pesanan', 'tab'));
-    }
+    return view('kasir.pesanan_online.index', compact('pesanan', 'tab'));
+}
+
     
     public function detailKasir($id)
     {
@@ -118,26 +109,17 @@ class PesananOnlineController extends Controller
 public function index(Request $request)
 {
     $tab = $request->get('tab', 'menunggu_konfirmasi');
-
-    // Mapping tab ke status_transaksi di DB
-    $statusMap = [
-        'menunggu_konfirmasi' => ['antrian'], // sesuaikan
-        'dikonfirmasi' => ['dikonfirmasi'],
-        'proses' => ['proses'],
-        'siap_di_ambil' => ['siap_di_ambil'],
-        'siap_di_antar' => ['siap_di_antar'],
-        'selesai' => ['selesai'],
-        'ditolak' => ['batal'],
-    ];
+    $statusMap = $this->statusMap();
 
     $pesanan = Transaksi::with('detail_transaksi')
         ->where('jenis_transaksi', 'online')
         ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-        ->orderBy('tgl_transaksi', 'desc')
+        ->orderByDesc('tgl_transaksi')
         ->get();
 
     return view('pesanan_online.index', compact('pesanan', 'tab'));
 }
+
 
 
 public function detail($id)
@@ -218,28 +200,19 @@ public function detail($id)
     // ==================== ADMIN2 ====================
     
     public function indexAdmin2(Request $request)
-    {
-        $tab = $request->get('tab', 'menunggu_konfirmasi');
+{
+    $tab = $request->get('tab', 'menunggu_konfirmasi');
+    $statusMap = $this->statusMap();
 
-        // Mapping tab ke status_transaksi di DB
-        $statusMap = [
-            'menunggu_konfirmasi' => ['antrian'], // sesuaikan
-            'dikonfirmasi' => ['dikonfirmasi'],
-            'proses' => ['proses'],
-            'siap_di_ambil' => ['siap_di_ambil'],
-            'siap_di_antar' => ['siap_di_antar'],
-            'selesai' => ['selesai'],
-            'ditolak' => ['batal'],
-        ];
+    $pesanan = Transaksi::with('detail_transaksi')
+        ->where('jenis_transaksi', 'online')
+        ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
+        ->orderByDesc('tgl_transaksi')
+        ->get();
 
-        $pesanan = Transaksi::with('detail_transaksi')
-            ->where('jenis_transaksi', 'online')
-            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-            ->orderBy('tgl_transaksi', 'desc')
-            ->get();
+    return view('admin2.pesanan_online.index', compact('pesanan', 'tab'));
+}
 
-        return view('admin2.pesanan_online.index', compact('pesanan', 'tab'));
-    }
     
     public function detailAdmin2($id)
     {
@@ -341,5 +314,17 @@ public function detail($id)
         ->with('success', 'Driver berhasil ditugaskan');
 }
 
+private function statusMap()
+{
+    return [
+        'menunggu_konfirmasi' => ['antrian'],
+        'dikonfirmasi'        => ['dikonfirmasi'],
+        'proses'              => ['proses'],
+        'siap_di_ambil'       => ['siap_di_ambil'],
+        'siap_di_antar'       => ['siap_di_antar'],
+        'selesai'             => ['selesai'],
+        'ditolak'             => ['ditolak'], // 🔥 SAMAKAN
+    ];
+}
 
 }

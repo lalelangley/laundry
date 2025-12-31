@@ -11,7 +11,6 @@ class DriverTaskController extends Controller
     // ======================================================
     // GET TASKS FOR THIS DRIVER
     // ======================================================
-<<<<<<< HEAD
  public function getPendingTasks($driverId)
 {
     $myTasks = Delivery::with([
@@ -22,18 +21,6 @@ class DriverTaskController extends Controller
         'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
         'transaksi.detail.parfum:id_parfum,nama_parfum',
     ])
-=======
-    public function getPendingTasks($driverId)
-    {
-        $tasks = Delivery::with([
-            'transaksi:id_transaksi,id_pelanggan,status_transaksi,keterangan,tgl_transaksi',
-            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga',
-            'transaksi.detail.layanan:id_layanan,nama_layanan',
-            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
-            'transaksi.detail.parfum:id_parfum,nama_parfum',
-        ])
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
         ->where('id_driver', $driverId)
         ->whereIn('status', [
             'pending',
@@ -42,17 +29,6 @@ class DriverTaskController extends Controller
             'picked_up',
             'on_the_way_to_laundry',
             'on_the_way_to_customer',
-<<<<<<< HEAD
-])
-        ->get();
-
-    return response()->json([
-        'success' => true,
-        'tasks' => $myTasks,
-    ]);
-}
-
-=======
         ])
         ->get();
 
@@ -61,7 +37,6 @@ class DriverTaskController extends Controller
             'tasks' => $tasks,
         ]);
     }
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
 
     // ======================================================
     // DRIVER ACTIONS (ACCEPT, PICKUP, DELIVERY, ETC)

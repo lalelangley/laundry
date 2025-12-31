@@ -30,87 +30,6 @@ class LaundryOrderController extends Controller
     // ======================
     // CREATE ORDER
     // ======================
-<<<<<<< HEAD
-public function createOrder(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'id_pelanggan' => 'required|exists:pelanggan,id_pelanggan',
-
-        'items' => 'required|array|min:1',
-        'items.*.id_layanan' => 'required|exists:layanan,id_layanan',
-        'items.*.id_jenis'   => 'required|exists:jenis_layanan,id_jenis_layanan',
-        'items.*.id_parfum'  => 'required|exists:parfum,id_parfum',
-
-        'catatan'      => 'nullable|string',
-        'alamat_kirim' => 'nullable|string',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'status' => false,
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    $pelanggan = Pelanggan::find($request->id_pelanggan);
-
-    // Alamat
-    $alamatKirim = $request->alamat_kirim ?? $pelanggan->alamat;
-
-    // Buat transaksi awal (harga 0 dulu)
-    $transaksi = Transaksi::create([
-        'id_pelanggan'     => $pelanggan->id_pelanggan,
-        'nama_pelanggan'   => $pelanggan->nama_pelanggan,
-        'no_hp'            => $pelanggan->no_hp,
-        'status_transaksi' => 0,
-        'total_harga'      => 0,   // harga nanti
-        'total_bayar'      => 0,
-        'tgl_transaksi'    => date('Y-m-d'),
-        'catatan'          => $request->catatan,
-    ]);
-
-    // Insert detail tanpa harga
-    foreach ($request->items as $item) {
-        $layanan = Layanan::find($item['id_layanan']);
-        $jenis   = JenisLayanan::find($item['id_jenis']);
-        $parfum  = Parfum::find($item['id_parfum']);
-
-        DetailTransaksi::create([
-            'id_transaksi' => $transaksi->id_transaksi,
-            'id_layanan'   => $layanan->id_layanan,
-            'id_jenis'     => $jenis->id_jenis,
-            'id_parfum'    => $parfum->id_parfum,
-            'nama_layanan' => $layanan->nama_layanan,
-            'nama_jenis'   => $jenis->nama_jenis,
-            'nama_parfum'  => $parfum->nama_parfum,
-            'qty'          => 0,    // nanti diisi karyawan
-            'harga'        => 0,    // nanti diisi karyawan
-            'total_harga'  => 0,    // nanti dihitung qty * harga
-            'status_transaksi' => 0,
-            'tgl_transaksi' => date('Y-m-d'),
-        ]);
-    }
-
-    // Delivery
-    Delivery::create([
-        'id_transaksi'  => $transaksi->id_transaksi,
-        'jenis'         => 'pickup',
-        'alamat_tujuan' => $alamatKirim,
-        'status'        => 'menunggu',
-        'catatan'       => $request->catatan ?? 'Menunggu driver pickup cucian',
-    ]);
-
-    return response()->json([
-        'status'  => true,
-        'message' => 'Order berhasil dibuat (harga belum ditentukan)',
-        'data'    => $transaksi
-    ]);
-}
-
-
-
-
-=======
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -191,16 +110,11 @@ public function createOrder(Request $request)
         }
     }
 
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
     // ======================
     // GET ORDER BY PELANGGAN
     // ======================
     public function getOrders(Request $request)
     {
-<<<<<<< HEAD
-        $orders = Transaksi::with('detail')
-            ->where('id_pelanggan', $request->id_pelanggan)
-=======
         $id = $request->query('id_pelanggan');
 
         if (!$id) {
@@ -217,7 +131,6 @@ public function createOrder(Request $request)
                 'delivery'
             ])
             ->where('id_pelanggan', $id)
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
             ->orderBy('id_transaksi', 'DESC')
             ->get();
 
@@ -228,15 +141,6 @@ public function createOrder(Request $request)
     }
 
     // ======================
-<<<<<<< HEAD
-    // ORDER DETAIL
-    // ======================
-    public function orderDetail($id)
-    {
-        $order = Transaksi::with('detail')
-            ->where('id_transaksi', $id)
-            ->first();
-=======
     // GET ORDER DETAIL
     // ======================
     public function getOrderDetail($id)
@@ -249,7 +153,6 @@ public function createOrder(Request $request)
         ])
         ->where('id_transaksi', $id)
         ->first();
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
 
         if (!$order) {
             return response()->json([
