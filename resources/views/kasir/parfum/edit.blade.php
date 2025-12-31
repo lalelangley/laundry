@@ -4,13 +4,13 @@
 
 {{-- HEADER --}}
 <div class="w-full bg-yellow-400 p-4 flex items-center">
-    <a href="{{ route('parfum.index') }}" class="text-2xl mr-3">←</a>
+    <a href="{{ route('kasir.parfum.index') }}" class="text-2xl mr-3">←</a>
     <h1 class="text-xl font-bold">Edit Parfum</h1>
 </div>
 
 <div class="p-4 bg-white min-h-screen">
 
-    <form action="{{ route('parfum.update', $parfum->id_parfum) }}" method="POST">
+    <form action="{{ route('kasir.parfum.update', $parfum->id_parfum) }}" method="POST">
         @csrf
         @method('PUT')
 

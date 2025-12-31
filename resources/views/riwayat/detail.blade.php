@@ -250,7 +250,7 @@
     @endif
 
     {{-- Tombol Bayar --}}
-    @if($sisaBayar > 0)
+    @if($statusBayar !== 'lunas')
         <button onclick="openModalBayar()"
             class="bg-green-600 hover:bg-green-700 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
@@ -258,12 +258,25 @@
     @endif
 
     {{-- Batalkan --}}
-    @if($transaksi->status_transaksi != 'selesai' && $transaksi->status_transaksi != 'siap_di_ambil')
-        <a href="{{ route('riwayat.batal', $transaksi->id_transaksi) }}"
-        class="bg-gray-500 hover:bg-gray-600 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+        @if(
+        $transaksi->status_transaksi !== 'batal' &&
+        $transaksi->status_transaksi !== 'selesai' &&
+        $transaksi->status_transaksi !== 'siap_di_ambil' &&
+        $statusBayar !== 'lunas'
+    )
+    <form action="{{ route('riwayat.batal', $transaksi->id_transaksi) }}"
+        method="POST"
+        onsubmit="return confirm('Yakin ingin membatalkan transaksi ini?')">
+        @csrf
+        @method('PATCH')
+
+        <button type="submit"
+            class="bg-gray-500 hover:bg-gray-600 w-full text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-x-lg text-lg"></i> Batalkan Transaksi
-        </a>
+        </button>
+    </form>
     @endif
+
 
     {{-- Hapus --}}
     <form action="{{ route('riwayat.destroy', $transaksi->id_transaksi) }}" method="POST"
@@ -316,9 +329,16 @@
                     <label class="font-bold text-gray-700 block mb-2">Masukkan Nominal Pelunasan</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 transform -translate-y-1/2 font-bold text-gray-500">Rp</span>
-                        <input type="number" name="jumlah_bayar"
+                        <<input
+                            type="text"
+                            name="jumlah_bayar"
+                            id="jumlahBayar"
+                            inputmode="numeric"
                             class="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
-                            placeholder="Masukkan nominal..." required min="1" max="{{ $sisaBayar }}">
+                            placeholder="Masukkan nominal..."
+                            required
+                            value="{{ $sisaBayar }}"
+                        >
                     </div>
                 </div>
 

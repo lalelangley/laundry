@@ -1,4 +1,4 @@
-<?
+<?php
 
 namespace App\Http\Middleware;
 
@@ -9,23 +9,25 @@ use App\Models\MenuRole;
 
 class CheckPermission
 {
-    public function handle(Request $request, Closure $next, $menu, $action = 'view')
+    public function handle(Request $request, Closure $next, $menuRoute, $action = 'view')
     {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+        // ambil user admin / kasir
+        if (Auth::guard('admin')->check()) {
+            $user = Auth::guard('admin')->user();
+        } elseif (Auth::guard('kasir')->check()) {
+            $user = Auth::guard('kasir')->user();
+        } else {
+            abort(401);
         }
 
-        // cek permission
         $permission = MenuRole::where('role_id', $user->role_id)
-            ->whereHas('menu', function ($q) use ($menu) {
-                $q->where('slug', $menu);
+            ->whereHas('menu', function ($q) use ($menuRoute) {
+                $q->where('route', $menuRoute);
             })
             ->first();
 
-        if (!$permission || $permission['can_' . $action] != 1) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        if (!$permission || !($permission->{'can_'.$action} ?? false)) {
+            abort(403, 'Anda tidak memiliki hak akses');
         }
 
         return $next($request);

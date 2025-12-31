@@ -17,6 +17,12 @@ return [
             'driver' => 'session',
             'provider' => 'admins',
         ],
+
+        'admin2' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
+
          'kasir' => [
             'driver' => 'session',
             'provider' => 'kasir', // ✅ benar
@@ -33,6 +39,7 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
         ],
+        
         'kasir' => [
             'driver' => 'eloquent',
             'model' => App\Models\Kasir::class,

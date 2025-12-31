@@ -4,40 +4,40 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 @php
-$riwayat = $detail->first()?->transaksi;
 $backUrl = request()->from === 'dashboard'
-    ? route('admin.dashboard')
+    ? route('kasir.dashboard')
     : ($riwayat
-        ? route('riwayat.detail', ['id' => $riwayat->id_transaksi])
+        ? route('kasir.riwayat.detail', ['id' => $riwayat->id_transaksi])
         : url()->previous());
 @endphp
 
 {{-- HEADER --}}
-<div class="bg-yellow-400 px-6 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-    <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
-        <i class="bi bi-arrow-left"></i>
-    </a>
-    <span class="text-2xl font-bold text-black">Edit Transaksi</span>
-</div>
+    <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
+        <a href="{{ route('kasir.riwayat.detail', ['id' => $riwayat->id_transaksi]) }}" 
+        class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <span class="text-2xl font-bold text-black">Edit Transaksi</span>
+    </div>
 
 {{-- USER INFO --}}
 <div class="bg-white mx-4 mt-4 rounded-xl p-4 flex items-center gap-4 shadow">
-   @if($pelanggan && $pelanggan->gambar)
+    @if($pelanggan && $pelanggan->gambar)
         <img src="{{ asset('storage/'.$pelanggan->gambar) }}" class="w-24 h-24 rounded-xl object-cover border-2 border-gray-200 shadow-sm">
-        @else
-            <div class="w-24 h-24 rounded-xl bg-gray-100 border-2 border-gray-200 flex items-center justify-center text-gray-400 shadow-sm">
-                <i class="bi bi-person-fill text-4xl"></i>
-            </div>
-        @endif
-        <div>
-             <p class="text-xl font-bold capitalize text-gray-800">
-                {{ $pelanggan->nama ?? $pelanggan->nama_pelanggan ?? 'Pelanggan Umum' }}
-            </p>
-                <p class="text-gray-500 mt-1 flex items-center gap-2">
-                     <i class="bi bi-telephone-fill"></i>
-                    {{ $pelanggan->no_hp ?? '-' }}
-                </p>
+    @else
+        <div class="w-24 h-24 rounded-xl bg-gray-100 border-2 border-gray-200 flex items-center justify-center text-gray-400 shadow-sm">
+            <i class="bi bi-person-fill text-4xl"></i>
         </div>
+    @endif
+    <div>
+        <p class="text-xl font-bold capitalize text-gray-800">
+            {{ $pelanggan->nama ?? $pelanggan->nama_pelanggan ?? 'Pelanggan Umum' }}
+        </p>
+        <p class="text-gray-500 mt-1 flex items-center gap-2">
+            <i class="bi bi-telephone-fill"></i>
+            {{ $pelanggan->no_hp ?? '-' }}
+        </p>
+    </div>
 </div>
 
 {{-- DETAIL ORDER HEADER --}}
@@ -46,7 +46,7 @@ $backUrl = request()->from === 'dashboard'
         <i class="bi bi-basket-fill text-2xl"></i> Detail Order
     </div>
     @if($riwayat)
-        <a href="{{ route('riwayat.add_layanan_page', $riwayat->id_transaksi) }}"
+        <a href="{{ route('kasir.riwayat.addlayanan', $riwayat->id_transaksi) }}"
            class="bg-yellow-400 px-4 py-2 rounded-xl text-black font-semibold">
             Tambah Layanan
         </a>
@@ -54,58 +54,63 @@ $backUrl = request()->from === 'dashboard'
 </div>
 
 {{-- DETAIL LAYANAN FORM --}}
-<form action="{{ route('riwayat.update', $riwayat->id_transaksi) }}" method="POST">
+<form action="{{ route('kasir.riwayat.update', $riwayat->id_transaksi) }}" method="POST">
     @csrf
     @method('PUT')
 
-
     <div class="mx-4 mt-3 space-y-4 pb-32" id="layananList">
         @foreach ($detail as $d)
-        <div class="bg-white rounded-xl p-4 shadow flex gap-4 items-center layanan-item group"
-             data-id="{{ $d->id_detail_transaksi }}"
-             data-nama="{{ optional($d->jenis)->nama_jenis }}"
-             data-qty="{{ $d->qty }}"
-             data-parfum="{{ $d->id_parfum ?? '' }}"
-             data-harga="{{ $d->harga }}"
-             data-satuan="{{ optional($d->jenis->satuan)->nama_satuan ?? 'Pcs' }}"
-             onclick="openModalLayanan(this)">
+            @php
+                $satuan = optional($d->jenis->satuan)->nama_satuan ?? 'Pcs';
+                $namaJenis = optional($d->jenis)->nama_jenis ?? 'Jenis tidak tersedia';
+                $harga = $d->harga ?? 0;
+                $subtotal = $d->qty * $harga;
+            @endphp
+            <div class="bg-white rounded-xl p-4 shadow flex gap-4 items-center layanan-item group"
+                data-id="{{ $d->id_detail_transaksi }}"
+                data-nama="{{ $namaJenis }}"
+                data-qty="{{ $d->qty }}"
+                data-parfum="{{ $d->id_parfum ?? '' }}"
+                data-harga="{{ $harga }}"
+                data-satuan="{{ $satuan }}"
+                onclick="openModalLayanan(this)">
 
-            {{-- IMAGE --}}
-            <img src="{{ optional($d->jenis)->gambar ?? asset('img/noimage.png') }}"
-                 class="w-20 h-20 rounded-lg object-cover">
+                {{-- IMAGE --}}
+                <img src="{{ optional($d->jenis)->gambar ? asset('storage/'.$d->jenis->gambar) : asset('img/noimage.png') }}"
+                     class="w-20 h-20 rounded-lg object-cover">
 
-            {{-- INFO --}}
-            <div class="flex-1">
-                <div class="text-lg font-semibold">
-                    {{ optional($d->jenis)->nama_jenis ?? 'Jenis tidak tersedia' }}
-                </div>
-                <div class="text-gray-600 text-sm">
-                    Rp{{ number_format($d->harga,0,',','.') }} / {{ optional($d->jenis->satuan)->nama_satuan ?? 'Pcs' }}
-                </div>
-                <div class="mt-2 font-semibold subtotal">
-                    SubTotal: Rp{{ number_format($d->qty * $d->harga,0,',','.') }}
+                {{-- INFO --}}
+                <div class="flex-1">
+                    <div class="text-lg font-semibold">
+                        {{ optional($d->jenis)->nama_jenis ?? 'Jenis tidak tersedia' }}
+                    </div>
+                    <div class="text-gray-600 text-sm">
+                        Rp{{ number_format($d->harga,0,',','.') }} / {{ optional($d->jenis->satuan)->nama_satuan ?? 'Pcs' }}
+                    </div>
+                    <div class="mt-2 font-semibold subtotal">
+                        SubTotal: Rp{{ number_format($d->qty * $d->harga,0,',','.') }}
+                    </div>
+
+                    {{-- HIDDEN INPUT --}}
+                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][qty]" value="{{ $d->qty }}" class="qty-input">
+                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][id_parfum]" value="{{ $d->id_parfum ?? '' }}" class="parfum-input">
                 </div>
 
-                {{-- HIDDEN INPUT --}}
-                <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][qty]" value="{{ $d->qty }}" class="qty-input">
-                <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][id_parfum]" value="{{ $d->id_parfum ?? '' }}" class="parfum-input">
+                {{-- QTY + DELETE --}}
+                <div class="flex flex-col items-end gap-2 text-right">
+                    <div>
+                        <div class="font-bold text-gray-800">Qty</div>
+                        <div class="qty-display">{{ $d->qty }} {{ $satuan }}</div>
+                    </div>
+
+                    <button type="button"
+                        data-url="{{ route('kasir.riwayat.deleteDetail', $d->id_detail_transaksi) }}"
+                        onclick="event.stopPropagation(); deleteLayanan(this)"
+                        class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </div>
             </div>
-
-            {{-- QTY + DELETE --}}
-            <div class="flex flex-col items-end gap-2 text-right">
-                <div>
-                    <div class="font-bold text-gray-800">Qty</div>
-                    <div class="qty-display">{{ $d->qty }} {{ optional($d->jenis->satuan)->nama_satuan ?? 'Pcs' }}</div>
-                </div>
-
-                <button type="button"
-                    data-url="{{ route('riwayat.delete_detail', $d->id_detail_transaksi) }}"
-                    onclick="event.stopPropagation(); deleteLayanan(this)"
-                    class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow">
-                    <i class="bi bi-trash-fill"></i>
-                </button>
-            </div>
-        </div>
         @endforeach
     </div>
 
@@ -246,6 +251,5 @@ function deleteLayanan(button){
         alert('Terjadi kesalahan server');
     });
 }
-
 </script>
 @endsection

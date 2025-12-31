@@ -24,28 +24,24 @@ class AppServiceProvider extends ServiceProvider
 {
     View::composer('layouts.sidebar', function ($view) {
 
-        if (Auth::guard('kasir')->check()) {
+    if (auth('admin')->check()) {
+        $roleId = auth('admin')->user()->role_id;
+    } elseif (auth('kasir')->check()) {
+        $roleId = auth('kasir')->user()->role_id;
+    } else {
+        $view->with('menus', collect());
+        return;
+    }
 
-            // ✅ KASIR: ROLE_ID = 2
-            $menus = Menu::where('role_id', 2)
-                ->where('status', 1)
-                ->orderBy('urutan')
-                ->get();
+    $menus = Menu::whereHas('roles', function ($q) use ($roleId) {
+            $q->where('role_id', $roleId)
+              ->where('can_view', 1);
+        })
+        ->where('status', 1)
+        ->orderBy('urutan')
+        ->get();
 
-        } elseif (Auth::guard('admin')->check()) {
-
-            $admin = Auth::guard('admin')->user();
-
-            $menus = Menu::where('role_id', $admin->role_id)
-                ->where('status', 1)
-                ->orderBy('urutan')
-                ->get();
-
-        } else {
-            $menus = collect();
-        }
-
-        $view->with('menus', $menus);
-    });
+    $view->with('menus', $menus);
+});
 }
 }

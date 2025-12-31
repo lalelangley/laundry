@@ -22,6 +22,17 @@ class Menu extends Model
         return $this->hasMany(MenuRole::class, 'menu_id');
     }
 
+    // 🔥 TAMBAHKAN INI
+    public function roles()
+    {
+        return $this->belongsToMany(
+            Role::class,
+            'menu_role',
+            'menu_id',
+            'role_id'
+        )->withPivot('can_view', 'can_add', 'can_edit', 'can_delete');
+    }
+
     public function parent()
     {
         return $this->belongsTo(Menu::class, 'parent_id');

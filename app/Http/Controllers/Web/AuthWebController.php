@@ -52,20 +52,20 @@ public function processLogin(Request $request)
         // Login dengan guard admin
         auth()->guard('admin')->login($admin);
         
-        // PENTING: Simpan ke session juga
-        session(['admin_id' => $admin->id_admin]);
-        session(['admin_role_id' => $admin->role_id]);
-        
         // Regenerate session untuk keamanan
         $request->session()->regenerate();
 
-        // Redirect sesuai role
-        if ($admin->role_id == 1) { // super admin
-            return redirect()->route('admin.dashboard');
-        } else { // admin biasa
-            return redirect()->route('admin2.dashboard');
-        }
+        if ($admin->role_id == 1) {
+    auth()->guard('admin')->login($admin);
+    $request->session()->regenerate();
+    return redirect()->route('admin.dashboard');
+    } else {
+        auth()->guard('admin2')->login($admin);
+        $request->session()->regenerate();
+        return redirect()->route('admin2.dashboard');
     }
+
+}
 
     if ($role === 'kasir') {
         $kasir = Kasir::find($id);
@@ -89,27 +89,44 @@ public function processLogin(Request $request)
 }
 public function admin2Dashboard()
 {
-    $admin = auth()->guard('admin')->user();
+    $admin = auth()->guard('admin2')->user();
+    $totalOmzet      = Transaksi::sum('total_bayar');
     if (!$admin || $admin->role_id == 1) {
         return redirect()->route('login.show')->with('error', 'Silakan login sebagai admin biasa');
     }
 
-    $totalPelanggan  = Pelanggan::count();
-    $totalKasir      = Kasir::count();
-    $totalTransaksi  = Transaksi::count();
-    $totalOmzet      = Transaksi::sum('total_bayar');
+    // =============================
+    // CARD DASHBOARD
+    // =============================
 
+    // MASUK (antrian)
+    $masuk = Transaksi::where('status_transaksi', 'antrian')->count();
+
+    // HARUS SELESAI HARI INI
+    $harusSelesai = Transaksi::whereDate('tgl_estimasi', Carbon::today())
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->count();
+
+    // TERLAMBAT
+    $terlambat = Transaksi::whereDate('tgl_estimasi', '<', Carbon::today())
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->count();
+
+    // =============================
+    // DATA TABLE (ORDER AKTIF)
+    // =============================
     $orders = Transaksi::with(['detail.jenis.satuan', 'pelanggan'])
-                ->orderBy('id_transaksi', 'DESC')
-                ->get();
+        ->whereIn('status_transaksi', ['antrian', 'proses'])
+        ->orderBy('tgl_transaksi', 'DESC')
+        ->get();
 
     return view('admin2.dashboard', compact(
         'admin',
-        'totalPelanggan',
-        'totalKasir',
-        'totalTransaksi',
-        'totalOmzet',
-        'orders'
+        'masuk',
+        'harusSelesai',
+        'terlambat',
+        'orders',
+        'totalOmzet'
     ));
 }
 
@@ -156,8 +173,6 @@ public function kasirDashboard()
    if (!Auth::guard('kasir')->check()) {
     abort(403, 'Kasir belum login');
 }
-
-
 
     // =============================
     // CARD DASHBOARD

@@ -17,7 +17,8 @@
     {{-- CARD PELANGGAN --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
         <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-            <img src="{{ asset('images/default-user.png') }}" class="w-full h-full object-cover">
+             <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                                            class="w-full h-full object-cover">
         </div>
         <div>
             <p class="text-xl font-bold leading-tight">{{ $pelanggan['nama_pelanggan'] }}</p>
@@ -116,6 +117,22 @@
     <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow font-bold">Bayar</button>
 </div>
 
+<!-- POPUP ALERT CUSTOM -->
+<div id="customAlert" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[9999] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate__animated animate__shakeX">
+        <div class="flex flex-col items-center">
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-red-500 text-4xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Perhatian!</h3>
+            <p id="alertMessage" class="text-center text-gray-600 mb-6 leading-relaxed"></p>
+            <button id="btnCloseAlert" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- POPUP BAYAR -->
 <div id="popupBayar" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50 hidden">
     <div id="popupBoxBayar" class="bg-white rounded-3xl w-full max-w-md shadow-2xl p-5 relative animate__animated animate__fadeInUp">
@@ -161,12 +178,6 @@
                 </div>
                 <span class="font-semibold mt-1">Selesai</span>
             </div>
-            <div class="flex flex-col items-center cursor-pointer" id="btnCetak">
-                <div class="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <i class="bi bi-printer text-3xl text-white"></i>
-                </div>
-                <span class="font-semibold mt-1">Cetak</span>
-            </div>
             <div class="flex flex-col items-center cursor-pointer" id="btnBagikan">
                 <div class="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center">
                     <i class="bi bi-share text-3xl text-white"></i>
@@ -187,6 +198,27 @@
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
+    // ===== CUSTOM ALERT FUNCTION =====
+    const showAlert = (message) => {
+        const customAlert = document.getElementById('customAlert');
+        const alertMessage = document.getElementById('alertMessage');
+        const btnCloseAlert = document.getElementById('btnCloseAlert');
+        
+        alertMessage.textContent = message;
+        customAlert.classList.remove('hidden');
+        
+        btnCloseAlert.onclick = () => {
+            customAlert.classList.add('hidden');
+        };
+        
+        // Close on outside click
+        customAlert.onclick = (e) => {
+            if (e.target === customAlert) {
+                customAlert.classList.add('hidden');
+            }
+        };
+    };
 
     // ===== GLOBAL =====
     const btnRupiah = document.getElementById('btnRupiah');
@@ -291,75 +323,95 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const formatDateTime = dt => dt ? dt.replace('T', ' ') + ':00' : null;
 
-document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
-    try {
-        const total = hitungDiskon();
-        const bayar = parseFloat(inputBayar.value) || 0;
-        const diskon = parseFloat(inputDiskon.value) || 0;
-        const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
-        const keterangan = document.getElementById("keteranganTransaksi").value || null;
-        const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
-        const tgl_masuk = formatDateTime(document.getElementById("tgl_masuk").value);
-        const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
-        const langsung = parseInt(hiddenBayar.value);
+    document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
+        try {
+            const total = hitungDiskon();
+            const bayar = parseFloat(inputBayar.value) || 0;
+            const diskon = parseFloat(inputDiskon.value) || 0;
+            const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
+            const keterangan = document.getElementById("keteranganTransaksi").value || null;
+            const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
+            const tgl_masuk = formatDateTime(document.getElementById("tgl_masuk").value);
+            const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
+            const langsung = parseInt(hiddenBayar.value);
 
-        const res = await fetch("{{ route('transaksi.bayar') }}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": "{{ csrf_token() }}"
-            },
-            body: JSON.stringify({
-                jumlah_bayar: bayar,
-                dp: bayar,
-                langsung_bayar: langsung,
-                total_harga: total + diskon,
-                diskon: diskon,
-                tipe_diskon: tipe_diskon,
-                keterangan: keterangan,
-                id_metode_bayar: id_metode_bayar,
-                tgl_masuk: tgl_masuk,
-                tgl_estimasi: tgl_estimasi
-            })
-        });
+            // VALIDASI DENGAN CUSTOM ALERT
+            if (bayar <= 0) {
+                showAlert("Jumlah bayar / DP tidak boleh kosong!");
+                return;
+            }
 
-        if(!res.ok){ alert("Gagal menyimpan"); return; }
-        const data = await res.json();
-        popupBayar.classList.add("hidden");
+            if (bayar > total) {
+                showAlert("DP tidak boleh lebih besar dari total harga!");
+                return;
+            }
 
-        succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
-        succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
-        succNama.textContent = data.nama;
-        succHp.textContent = data.hp;
-        succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
+            if (langsung === 0 && bayar >= total) {
+                showAlert("Jika bayar penuh, silakan aktifkan Langsung Bayar!");
+                return;
+            }
 
-        // Hapus label status lama
-        const oldLabel = document.getElementById("labelStatusBayar");
-        if(oldLabel) oldLabel.remove();
+            const res = await fetch("{{ route('transaksi.bayar') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    jumlah_bayar: bayar,
+                    dp: bayar,
+                    langsung_bayar: langsung,
+                    total_harga: total,
+                    diskon: diskon,
+                    tipe_diskon: tipe_diskon,
+                    keterangan: keterangan,
+                    id_metode_bayar: id_metode_bayar,
+                    tgl_masuk: tgl_masuk,
+                    tgl_estimasi: tgl_estimasi
+                })
+            });
 
-        if(data.status_bayar && data.status_bayar != "lunas"){
-            let label = document.createElement("p");
-            label.id = "labelStatusBayar";
-            label.classList.add(data.status_bayar.toLowerCase()=="dp" ? "text-orange-500" : "text-red-500","font-bold","mt-2");
-            label.textContent = "Status: " + data.status_bayar.toUpperCase();
-            popupSuccess.querySelector(".bg-white")?.appendChild(label);
+            if (!res.ok) {
+                showAlert("Gagal menyimpan transaksi. Silakan coba lagi!");
+                return;
+            }
+
+            const data = await res.json();
+            popupBayar.classList.add("hidden");
+
+            succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+            succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
+            succNama.textContent = data.nama;
+            succHp.textContent = data.hp;
+            succBayar.textContent = "Rp " + parseInt(data.bayar ?? 0).toLocaleString("id-ID");
+
+            // hapus status lama
+            document.getElementById("labelStatusBayar")?.remove();
+
+            if (data.status_bayar && data.status_bayar !== "lunas") {
+                const label = document.createElement("p");
+                label.id = "labelStatusBayar";
+                label.classList.add(
+                    data.status_bayar.toLowerCase() === "dp"
+                        ? "text-orange-500"
+                        : "text-red-500",
+                    "font-bold",
+                    "mt-2"
+                );
+                label.textContent = "Status: " + data.status_bayar.toUpperCase();
+                popupSuccess.querySelector(".bg-white")?.appendChild(label);
+            }
+
+            popupSuccess.classList.remove("hidden");
+
+        } catch (err) {
+            console.error(err);
+            showAlert("Terjadi kesalahan pada sistem. Silakan coba lagi!");
         }
-
-        popupSuccess.classList.remove("hidden");
-
-    } catch(err){ console.error(err); alert("Terjadi kesalahan."); }
-});
-
-
-    // ===== BUTTON SUCCESS =====
-    document.getElementById("btnSelesai").addEventListener("click", ()=>window.location.href="{{ route('admin.dashboard') }}");
-    document.getElementById("btnCetak").addEventListener("click", ()=>window.print());
-    document.getElementById("btnBagikan").addEventListener("click", async ()=>{
-        const shareText = `Transaksi Berhasil!\nTotal: ${succTotal.textContent}\nBayar: ${succBayar.textContent}`;
-        if(navigator.share) await navigator.share({text:shareText});
-        else alert("Fitur share tidak tersedia");
     });
-
+    document.getElementById("btnSelesai").addEventListener("click", () => {
+    window.location.href = "{{ route('admin.dashboard') }}";
+});
 });
 </script>
 @endsection

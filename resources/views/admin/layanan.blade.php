@@ -99,22 +99,30 @@
                     @if($item->jenis->count() > 0)
                         <div class="space-y-4">
                             @foreach($item->jenis as $jenis)
-                            <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                                <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0">
-                                    <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}" class="w-full h-full object-cover" alt="{{ $jenis->nama_jenis }}">
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-bold text-lg text-gray-800 capitalize mb-1 truncate">{{ $jenis->nama_jenis }}</p>
-                                    <p class="text-green-600 font-semibold mb-2">
-                                        Rp {{ number_format($jenis->harga,0,',','.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
-                                    </p>
-                                    <div class="flex items-center gap-1.5 text-gray-500 text-sm">
-                                        <i class="bi bi-clock"></i>
-                                        <span>{{ $jenis->lama }} {{ $jenis->lama_satuan }}</span>
+                                <div class="jenis-item flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                                    data-id-layanan="{{ $item->id_layanan }}"
+                                    data-id-jenis="{{ $jenis->id_jenis_layanan }}"
+                                    data-nama="{{ $jenis->nama_jenis }}">
+
+                                    <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0">
+                                        <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
+                                            class="w-full h-full object-cover">
+                                    </div>
+
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-lg text-gray-800 capitalize truncate">
+                                            {{ $jenis->nama_jenis }}
+                                        </p>
+                                        <p class="text-green-600 font-semibold">
+                                            Rp {{ number_format($jenis->harga,0,',','.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
+                                        </p>
+                                        <div class="flex items-center gap-1.5 text-gray-500 text-sm">
+                                            <i class="bi bi-clock"></i>
+                                            {{ $jenis->lama }} {{ $jenis->lama_satuan }}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            @endforeach
+                           @endforeach
                         </div>
                     @else
                         <div class="text-center py-8">
@@ -172,7 +180,7 @@
             <div class="flex gap-3 pt-2">
                 <button onclick="closeModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition-all">Batal</button>
                 <button id="btnSave" class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
-                        data-mode="{{ request('from') }}" data-id="" data-transaksi="{{ request('id') }}">
+                        data-mode="{{ request('from') }}" data-id="" data-transaksi="{{ request('id_transaksi') }}">
                     Simpan
                 </button>
             </div>
@@ -240,17 +248,15 @@
 </div>
 
 @endsection
-
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
     const modal = document.getElementById("modalLayanan");
     const modalTitle = document.getElementById("modalTitle");
     const qtyInput = document.getElementById("qtyInput");
     const parfumSelect = document.getElementById("parfumSelect");
     const btnSave = document.getElementById("btnSave");
-
+    const addJenisTransaksiUrl = "{{ route('transaksi.addJenis', ':id') }}";
     // MODAL DUPLICATE
     const modalDuplicate = document.getElementById("modalDuplicate");
     const btnConfirmDuplicate = document.getElementById("btnConfirmDuplicate");
@@ -263,13 +269,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function openModal(name, id, mode = "transaksi", riwayatId = null) {
         modal.classList.remove("hidden");
         modalTitle.innerText = name;
-
         btnSave.dataset.id = id;
         btnSave.dataset.mode = mode;
         btnSave.dataset.riwayat = riwayatId ?? "";
-
         qtyInput.value = "";
         parfumSelect.value = "";
+        btnSave.disabled = false;
+        btnSave.style.pointerEvents = 'auto';
     }
 
     function closeModal() {
@@ -313,25 +319,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ================= KLIK LAYANAN =================
-document.querySelectorAll('.layanan-item').forEach(card => {
-    card.addEventListener('click', () => {
-        const from = "{{ request('from') }}";          // dari URL
-        const riwayatId = "{{ request('id_transaksi') }}"; // kalau dari riwayat
-        const idLayanan = card.dataset.id;
+    document.querySelectorAll('.layanan-item').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.jenis-item')) return;
 
-        if (from === "riwayat" && riwayatId) {
-            // kalau dari riwayat, tetap modal untuk tambah layanan
-            openModal(card.dataset.name, idLayanan, "riwayat", riwayatId);
-        } else if (from === "transaksi") {
-            // dari transaksi, buka modal
-            openModal(card.dataset.name, idLayanan, "transaksi");
-        } else {
-            // dari dashboard / halaman layanan biasa -> langsung ke edit
-            window.location.href = `/admin/layanan/${idLayanan}/edit`;
-        }
+            const from = "{{ request('from') }}";
+            const riwayatId = "{{ request('id_transaksi') }}";
+            const idLayanan = card.dataset.id;
+
+            if (from === "transaksi") return;
+
+            if (from === "riwayat" && riwayatId) {
+                openModal(card.dataset.name, idLayanan, "riwayat", riwayatId);
+            } else {
+                window.location.href = `/admin/layanan/${idLayanan}/edit`;
+            }
+        });
     });
 
-});
+    // ================= KLIK JENIS LAYANAN =================
+    document.querySelectorAll('.jenis-item').forEach(item => {
+        item.addEventListener('click', e => {
+            e.stopPropagation();
+
+            const from = "{{ request('from') }}";
+            const riwayatId = "{{ request('id_transaksi') }}";
+            const idJenis = item.dataset.idJenis;
+            const namaJenis = item.dataset.nama;
+
+            if (from === "transaksi") {
+                openModal(namaJenis, idJenis, "transaksi");
+            }
+
+            if (from === "riwayat" && riwayatId) {
+                openModal(namaJenis, idJenis, "riwayat", riwayatId);
+            }
+        });
+    });
 
     // ================= DROPDOWN =================
     document.querySelectorAll(".dropdown-area").forEach(area => {
@@ -353,42 +377,115 @@ document.querySelectorAll('.layanan-item').forEach(card => {
         document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.add("hidden"));
     });
 
-    // ================= ADD LAYANAN =================
-    btnSave.addEventListener("click", () => {
-        const qty = qtyInput.value.trim();
-        const parfum = parfumSelect.value || null;
-
-        if (!qty || qty <= 0) return;
-
-        const idLayanan = btnSave.dataset.id;
-        const mode = btnSave.dataset.mode;
-        const idRiwayat = btnSave.dataset.riwayat;
-
-        let url = mode === "riwayat"
-        ? `/admin/riwayat/${idRiwayat}/add-layanan/${idLayanan}`
-        : `/admin/transaksi/add-layanan/${idLayanan}`;
-
-
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({ qty, parfum })
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.success) {
-                window.location.href = mode === "transaksi"
-                    ? "{{ route('transaksi.create') }}"
-                    : `/admin/riwayat/${idRiwayat}/edit`;
+    // ================= TOMBOL SIMPAN =================
+    if (btnSave) {
+        btnSave.addEventListener("click", function(e) {
+            e.preventDefault();
+            
+            console.log('🔥 Button Simpan diklik!');
+            
+            const qty = qtyInput.value.trim();
+            if (!qty || qty <= 0) {
+                alert("Qty wajib diisi dan harus lebih dari 0");
+                return;
             }
-        })
-        .catch(console.error);
-    });
 
+            const parfum = parfumSelect.value || null;
+            const idJenis = btnSave.dataset.id;
+            const mode = btnSave.dataset.mode;
+            const idRiwayat = btnSave.dataset.riwayat;
+            
+            console.log('📦 Data yang akan dikirim:');
+            console.log('  - ID Jenis:', idJenis);
+            console.log('  - Qty:', qty);
+            console.log('  - Parfum:', parfum);
+            console.log('  - Mode:', mode);
+            console.log('  - ID Riwayat:', idRiwayat);
+
+            if (mode === "riwayat" && !idRiwayat) {
+                alert("ID transaksi tidak ditemukan");
+                return;
+            }
+
+            // Disable button
+            btnSave.disabled = true;
+            btnSave.textContent = "Menyimpan...";
+
+            // Build URL
+            let url = addJenisTransaksiUrl.replace(':id', idJenis);
+            console.log('🌐 URL Request:', url);
+
+            // Send request
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({ qty, parfum })
+            })
+            .then(res => {
+                console.log('📡 Response Status:', res.status);
+                console.log('📡 Response OK:', res.ok);
+                
+                return res.text().then(text => {
+                    console.log('📄 Response Text:', text);
+                    
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}: ${text}`);
+                    }
+                    
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Response bukan JSON: ' + text);
+                    }
+                });
+            })
+            .then(data => {
+                console.log('✅ Parsed Data:', data);
+                
+                if (data.success) {
+                    console.log('🎉 Sukses! Redirecting...');
+                    
+                    const redirectUrl = mode === "transaksi"
+                        ? "{{ route('transaksi.create') }}"
+                        : `/admin/riwayat/${idRiwayat}/edit`;
+                    
+                    console.log('🔀 Redirect ke:', redirectUrl);
+                    window.location.href = redirectUrl;
+                } else {
+                    throw new Error(data.message || 'Gagal menyimpan');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Error:', err);
+                alert("Gagal menyimpan layanan: " + err.message);
+                
+                // Re-enable button
+                btnSave.disabled = false;
+                btnSave.textContent = "Simpan";
+            });
+        });
+        
+        btnSave.disabled = false;
+    }
+
+    // ================= SEARCH =================
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.layanan-item').forEach(item => {
+                const name = item.dataset.name.toLowerCase();
+                item.style.display = name.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+    }
+
+    console.log('✅ Script loaded successfully!');
 });
 </script>
+
 @endsection

@@ -9,34 +9,33 @@
     $totalTagihan = $subtotal - $diskon;
 
     // Ambil total bayar / DP terbaru
-    $dp = $transaksi->total_bayar ?? 0;
-    $sisaBayar = $totalTagihan - $dp;
+    $totalBayar = $transaksi->total_bayar ?? 0;
+    $sisaBayar = $totalTagihan - $totalBayar;
+    $sisaBayar = max(0, $sisaBayar); // untuk tampil di UI, jangan negatif
 
-    // Tentukan status pembayaran
-    if($sisaBayar <= 0){
-        $statusBayar = 'lunas';
-    } elseif($dp > 0){
-        $statusBayar = 'DP';
-    } else {
-        $statusBayar = 'belum bayar';
-    }
+    $statusBayar = strtolower($transaksi->status_bayar ?? 'belum bayar');
+
+    // Mapping class untuk status
+   $statusClass = [
+        'lunas' => 'bg-green-600 text-white',
+        'dp' => 'bg-yellow-400 text-gray-900',
+        'belum bayar' => 'bg-red-500 text-white'
+    ][$statusBayar] ?? 'bg-gray-400 text-white';
 @endphp
+
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     @php
-        // kalau URL punya ?from=dashboard → back ke dashboard
         $backUrl = request()->from == 'dashboard'
-            ? route('admin.dashboard')
-            : route('riwayat.index');
+            ? route('kasir.dashboard')
+            : route('kasir.riwayat.index');
     @endphp
 
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ $backUrl }}" 
-            class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+        <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
         </a>
-
         <span class="text-2xl font-bold">Detail Transaksi</span>
     </div>
 
@@ -52,7 +51,6 @@
                             <i class="bi bi-person-fill text-4xl"></i>
                         </div>
                     @endif
-
                     <div>
                         <p class="text-xl font-bold capitalize text-gray-800">
                             {{ $pelanggan->nama ?? $pelanggan->nama_pelanggan ?? 'Pelanggan Umum' }}
@@ -72,62 +70,54 @@
             </div>
         </div>
 
+        {{-- KIRI --}}
         <div class="grid grid-cols-12 gap-6">
-            {{-- LEFT COLUMN --}}
             <div class="col-span-12 lg:col-span-8 space-y-6">
-               {{-- DETAIL ORDER --}}
-<div class="bg-white shadow-lg rounded-2xl p-6">
-    
-    {{-- HEADER --}}
-    <div class="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
-        <h2 class="font-bold text-xl flex items-center gap-3 text-gray-800">
-            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <i class="bi bi-basket-fill text-xl text-red-600"></i>
-            </div>
-            Detail Order
-        </h2>
-
-        {{-- BUTTON EDIT (KANAN) --}}
-        @if($transaksi->status_transaksi == 'antrian')
-            <a href="{{ route('riwayat.edit', $transaksi->id_transaksi) }}"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
-                <i class="bi bi-pencil-fill"></i>
-                Edit Layanan
-            </a>
-        @endif
-    </div>
-    
-    {{-- LIST LAYANAN --}}
-    <div class="space-y-4">
-        @foreach($detail as $item)
-            <div class="flex justify-between items-center gap-4 p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200">
-                <div class="flex-1 space-y-2">
-                    <p class="font-bold text-lg text-gray-800">
-                        {{ $item->nama_jenis }} 
-                        <span class="text-gray-500 font-normal">({{ $item->nama_layanan }})</span>
-                    </p>
-                    <p class="text-gray-600 text-sm flex items-center gap-2">
-                        <i class="bi bi-tag-fill text-yellow-500"></i>
-                        Rp {{ number_format($item->harga_jenis,0,',','.') }} / {{ $item->satuan }}
-                    </p>
-                    <div class="bg-green-50 px-3 py-2 rounded-lg inline-block">
-                        <p class="font-semibold text-green-700">
-                            SubTotal: Rp {{ number_format($item->total_harga,0,',','.') }}
-                        </p>
+                {{-- DETAIL ORDER --}}
+                <div class="bg-white shadow-lg rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
+                        <h2 class="font-bold text-xl flex items-center gap-3 text-gray-800">
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-basket-fill text-xl text-red-600"></i>
+                            </div>
+                            Detail Order
+                        </h2>
+                        @if($transaksi->status_transaksi == 'antrian')
+                        <a href="{{ route('kasir.riwayat.edit', $transaksi->id_transaksi) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
+                            <i class="bi bi-pencil-fill"></i> Edit Layanan
+                        </a>
+                        @endif
+                    </div>
+                    <div class="space-y-4">
+                        @foreach($detail as $item)
+                            @php
+                                $namaJenis = $item->nama_jenis ?? '-';
+                                $namaLayanan = $item->nama_layanan ?? '-';
+                                $satuan = $item->satuan ?? '-';
+                                $harga = $item->harga ?? 0;
+                                $subtotalItem = $item->total_harga ?? ($item->qty * $harga);
+                            @endphp
+                            <div class="flex justify-between items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-200">
+                                <div class="flex-1 space-y-2">
+                                    <p class="font-bold text-lg text-gray-800">{{ $namaJenis }} <span class="text-gray-500 font-normal">({{ $namaLayanan }})</span></p>
+                                    <p class="text-gray-600 text-sm flex items-center gap-2">
+                                        <i class="bi bi-tag-fill text-yellow-500"></i> Rp {{ number_format($harga,0,',','.') }} / {{ $satuan }}
+                                    </p>
+                                    <div class="bg-green-50 px-3 py-2 rounded-lg inline-block">
+                                        <p class="font-semibold text-green-700">SubTotal: Rp {{ number_format($subtotalItem,0,',','.') }}</p>
+                                    </div>
+                                </div>
+                                <div class="bg-blue-500 px-6 py-4 rounded-xl font-bold text-white text-center">
+                                    {{ $item->qty }} {{ $satuan }}
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
 
-                <div class="bg-blue-500 px-6 py-4 rounded-xl font-bold text-white text-center whitespace-nowrap">
-                    {{ $item->qty }} {{ $item->satuan }}
-                </div>
-            </div>
-        @endforeach
-    </div>
-</div>
-
-                {{-- INFORMASI TRANSAKSI & STATUS --}}
+                {{-- INFORMASI & STATUS --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {{-- INFORMASI TRANSAKSI --}}
+                    {{-- INFO --}}
                     <div class="bg-white shadow-lg rounded-2xl p-6">
                         <h3 class="font-bold text-xl mb-5 text-gray-800 flex items-center gap-3 pb-4 border-b-2 border-gray-100">
                             <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -169,15 +159,11 @@
                         <div class="space-y-4">
                             <div class="p-4 bg-gray-50 rounded-xl">
                                 <span class="font-semibold text-gray-600 block mb-3 text-sm">Status Transaksi</span>
-                                <span class="inline-block px-5 py-3 rounded-xl bg-blue-500 text-white capitalize font-bold shadow-sm w-full text-center">
-                                    {{ $transaksi->status_transaksi }}
-                                </span>
+                                <span class="inline-block px-5 py-3 rounded-xl bg-blue-500 text-white capitalize font-bold shadow-sm w-full text-center">{{ $transaksi->status_transaksi }}</span>
                             </div>
                             <div class="p-4 bg-gray-50 rounded-xl">
                                 <span class="font-semibold text-gray-600 block mb-3 text-sm">Status Pembayaran</span>
-                                <span class="inline-block px-5 py-3 rounded-xl 
-                                    {{ $statusBayar == 'lunas' ? 'bg-green-600 text-white' : ($statusBayar == 'DP' ? 'bg-yellow-400 text-gray-900' : 'bg-red-500 text-white') }} 
-                                    capitalize font-bold shadow-sm w-full text-center">
+                                <span class="inline-block px-5 py-3 rounded-xl capitalize font-bold shadow-sm w-full text-center {{ $statusClass }}">
                                     {{ $statusBayar }}
                                 </span>
                             </div>
@@ -186,7 +172,7 @@
                 </div>
             </div>
 
-            {{-- RIGHT COLUMN --}}
+            {{-- KANAN --}}
             <div class="col-span-12 lg:col-span-4 space-y-6">
                 {{-- RINCIAN HARGA --}}
                 <div class="bg-white shadow-lg rounded-2xl p-6 border-2 border-yellow-200">
@@ -196,7 +182,6 @@
                         </div>
                         Rincian Pembayaran
                     </h3>
-
                     <div class="space-y-3">
                         <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl">
                             <span class="text-gray-600 font-semibold text-sm">Metode Bayar</span>
@@ -212,10 +197,12 @@
                             <span class="font-bold text-yellow-600">Rp {{ number_format($dp,0,',','.') }}</span>
                         </div>
                         @endif
+                        @if($diskon > 0)
                         <div class="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-200">
                             <span class="text-gray-600 font-semibold text-sm">Diskon</span>
                             <span class="font-bold text-red-600">- Rp {{ number_format($diskon,0,',','.') }}</span>
                         </div>
+                        @endif
                         <div class="flex justify-between items-center p-5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-xl shadow-md mt-4">
                             <span class="font-bold text-lg text-gray-900">Total Harga</span>
                             <span class="font-bold text-xl text-gray-900">Rp {{ number_format($totalTagihan,0,',','.') }}</span>
@@ -223,59 +210,48 @@
                     </div>
                 </div>
 
-    {{-- BUTTON AKSI --}}
-     <div class="space-y-3">
-    {{-- Tombol Proses --}}
-    @if($transaksi->status_transaksi == 'antrian')
-        <a href="{{ route('riwayat.proses', $transaksi->id_transaksi) }}" 
-        class="bg-blue-600 hover:bg-blue-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-play-fill text-xl"></i> Proses Order
-        </a>
-    @endif
+                {{-- BUTTON AKSI --}}
+                <div class="space-y-3">
+                    @if($transaksi->status_transaksi == 'antrian')
+                    <a href="{{ route('kasir.riwayat.proses', $transaksi->id_transaksi) }}" class="bg-blue-600 hover:bg-blue-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                        <i class="bi bi-play-fill text-xl"></i> Proses Order
+                    </a>
+                    @endif
 
-    {{-- Tombol Selesaikan --}}
-    @if($transaksi->status_transaksi == 'proses')
-        <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
-        class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
-        </a>
-    @endif
+                    @if($transaksi->status_transaksi == 'proses')
+                    <a href="{{ route('kasir.riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                        <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
+                    </a>
+                    @endif
 
-    {{-- Tombol Siap Diambil --}}
-    @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
-        <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
-        class="bg-yellow-400 hover:bg-yellow-500 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-box-arrow-in-down text-xl"></i> Order Selesai
-        </a>
-    @endif
+                    @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
+                    <a href="{{ route('kasir.riwayat.selesai', $transaksi->id_transaksi) }}" class="bg-yellow-400 hover:bg-yellow-500 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                        <i class="bi bi-box-arrow-in-down text-xl"></i> Order Selesai
+                    </a>
+                    @endif
 
-    {{-- Tombol Bayar --}}
-    @if($sisaBayar > 0)
-        <button onclick="openModalBayar()"
-            class="bg-green-600 hover:bg-green-700 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
-        </button>
-    @endif
+                    @if($statusBayar !== 'lunas')
+                        <button
+                            onclick="openModalBayar()"
+                            class="bg-green-600 hover:bg-green-700 w-full text-gray-900 text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                            <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
+                        </button>
+                    @endif
 
-    {{-- Batalkan --}}
-    @if($transaksi->status_transaksi != 'selesai' && $transaksi->status_transaksi != 'siap_di_ambil')
-        <a href="{{ route('riwayat.batal', $transaksi->id_transaksi) }}"
-        class="bg-gray-500 hover:bg-gray-600 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-x-lg text-lg"></i> Batalkan Transaksi
-        </a>
-    @endif
+                    @if($transaksi->status_transaksi != 'selesai' && $transaksi->status_transaksi != 'siap_di_ambil')
+                    <a href="{{ route('riwayat.batal', $transaksi->id_transaksi) }}" class="bg-gray-500 hover:bg-gray-600 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                        <i class="bi bi-x-lg text-lg"></i> Batalkan Transaksi
+                    </a>
+                    @endif
 
-    {{-- Hapus --}}
-    <form action="{{ route('riwayat.destroy', $transaksi->id_transaksi) }}" method="POST"
-        onsubmit="return confirm('Yakin mau hapus transaksi ini?')">
-        @csrf
-        @method('DELETE')
-        <button type="submit"
-                class="bg-red-600 hover:bg-red-700 w-full text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
-            <i class="bi bi-trash-fill text-lg"></i> Hapus Transaksi
-        </button>
-    </form>
-</div>
+                    <form action="{{ route('kasir.riwayat.destroy', $transaksi->id_transaksi) }}" method="POST" onsubmit="return confirm('Yakin mau hapus transaksi ini?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 w-full text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
+                            <i class="bi bi-trash-fill text-lg"></i> Hapus Transaksi
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -300,37 +276,40 @@
                     <span class="font-bold text-yellow-700">Rp {{ number_format($dp,0,',','.') }}</span>
                 </div>
                 @endif
+                @if($diskon > 0)
                 <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
                     <span class="font-semibold text-red-600">Diskon:</span>
                     <span class="font-bold text-red-600">- Rp {{ number_format($diskon,0,',','.') }}</span>
                 </div>
+                @endif
                 <div class="flex justify-between items-center p-4 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md">
                     <span class="font-bold text-white text-lg">Sisa Bayar:</span>
                     <span class="font-bold text-white text-xl">Rp {{ number_format($sisaBayar,0,',','.') }}</span>
                 </div>
             </div>
 
-            <form action="{{ route('riwayat.bayar.submit', $transaksi->id_transaksi) }}" method="POST" class="space-y-4">
+            <form action="{{ route('kasir.riwayat.bayar.submit', $transaksi->id_transaksi) }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="font-bold text-gray-700 block mb-2">Masukkan Nominal Pelunasan</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 transform -translate-y-1/2 font-bold text-gray-500">Rp</span>
-                        <input type="number" name="jumlah_bayar"
+                        <input
+                            type="text"
+                            name="jumlah_bayar"
+                            id="jumlahBayar"
+                            inputmode="numeric"
                             class="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
-                            placeholder="Masukkan nominal..." required min="1" max="{{ $sisaBayar }}">
+                            placeholder="Masukkan nominal..."
+                            required
+                            value="{{ $sisaBayar }}"
+                        >
                     </div>
                 </div>
 
                 <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeModalBayar()"
-                        class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-xl font-bold transition-all">
-                        Batal
-                    </button>
-                    <button type="submit"
-                        class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all">
-                        Konfirmasi
-                    </button>
+                    <button type="button" onclick="closeModalBayar()" class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-xl font-bold transition-all">Batal</button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-md hover:shadow-lg transition-all">Konfirmasi</button>
                 </div>
             </form>
         </div>
@@ -339,11 +318,25 @@
 
 <script>
 function openModalBayar() {
+    const statusBayar = "{{ $statusBayar }}";
+
+    if(statusBayar === 'lunas'){
+        alert("Pembayaran sudah lunas!");
+        return;
+    }
+
     document.getElementById('modalBayar').classList.remove('hidden');
 }
 function closeModalBayar() {
     document.getElementById('modalBayar').classList.add('hidden');
 }
 </script>
+<script>
+const input = document.getElementById('jumlahBayar');
 
+input.addEventListener('input', function () {
+    let value = this.value.replace(/\D/g, '');
+    this.value = value;
+});
+</script>
 @endsection

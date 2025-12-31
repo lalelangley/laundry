@@ -1,6 +1,9 @@
 @extends('layouts.master')
 
 @section('content')
+@php
+    $from = request()->route('layanan');
+@endphp
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-3 shadow w-full">
@@ -71,7 +74,7 @@
 
             {{-- JENIS LAMA --}}
             @foreach ($layanan->jenis as $jenis)
-                <a href="{{ route('layanan.jenis.edit', $jenis->id_jenis_layanan) }}?from={{ $layanan->id_layanan }}"
+                <a href="{{ route('kasir.layanan.jenis.edit', $jenis->id_jenis_layanan) }}?from={{ $layanan->id_layanan }}"
                    class="flex gap-4 p-4 bg-white border rounded-2xl shadow hover:bg-gray-50 transition w-full">
 
                     <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden">
@@ -111,7 +114,7 @@
 
                     <div class="flex-1">
                         <p class="font-semibold text-lg">
-                            {{ $jb['nama'] }}
+                            {{ $jb['nama_jenis'] }}
                             <span class="text-xs text-gray-500">(baru)</span>
                         </p>
 
@@ -130,14 +133,12 @@
 
         </div>
 
-
         {{-- BUTTON TAMBAH --}}
-        <a href="{{ route('session.create', ['from' => $layanan->id_layanan]) }}?mode=edit"
-           class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-white 
-                  text-center py-3 rounded-xl font-semibold text-lg">
+       <a href="{{ route('kasir.layanan.jenis.tambah', $layanan->id_layanan) }}"
+        class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-white 
+                text-center py-3 rounded-xl font-semibold text-lg">
             <i class="bi bi-plus-circle text-lg"></i> Tambah Jenis
         </a>
-
 
         {{-- SUBMIT --}}
         <div class="flex justify-end mt-8">

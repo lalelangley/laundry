@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => \Illuminate\Auth\Middleware\Authenticate::class, // ← untuk auth:sanctum
             'role' => \App\Http\Middleware\CheckRole::class,           // ← middleware role buatan sendiri
+            'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })
 

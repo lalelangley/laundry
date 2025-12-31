@@ -4,7 +4,7 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('layanan.create') }}" class="text-black text-3xl font-bold">←</a>
+    <a href="{{ route('kasir.layanan.create') }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Tambah Jenis Layanan</span>
 </div>
 

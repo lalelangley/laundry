@@ -200,7 +200,7 @@ public function storeKasir(Request $request)
         'nama_kasir' => $request->nama_kasir,
         'no_hp'      => $request->no_hp,
         'password'   => Hash::make($request->password),
-        'role_id'    => 3, // otomatis Kasir
+       'role_id' => 2, // KASIR // otomatis Kasir
     ]);
 
     return redirect()
@@ -233,24 +233,49 @@ public function updateStatus(Request $request)
     return back()->with('success', 'Status berhasil diubah');
 }
 
-
 public function hakRole()
 {
+    $admin = auth('admin')->user();
+    if (!$admin || $admin->role_id != 1) abort(403);
+
     $selectedRoleId = request('role_id') ?? 1;
 
-    $adminLogin = auth('admin')->user();
-    if (!$adminLogin || $adminLogin->role_id != 1) abort(403);
-
     $roles = Role::orderBy('id')->get();
-    $menus = Menu::orderBy('urutan')->get();
 
-    // Ambil permissions hanya yang ada di DB
+    $menus = Menu::where('role_id', $selectedRoleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->with(['children' => function ($q) use ($selectedRoleId) {
+            $q->where('status', 1)
+              ->where('role_id', $selectedRoleId)
+              ->orderBy('urutan');
+        }])
+        ->orderBy('urutan')
+        ->get();
+
     $permissions = MenuRole::where('role_id', $selectedRoleId)
         ->get()
-        ->keyBy('menu_id'); // <-- key by menu_id
+        ->keyBy('menu_id');
+
+    // 🔥 TAMBAH DI SINI
+    $menuActions = [
+        'layanan'       => ['view','add','edit','delete'],
+        'satuan'        => ['view','add','edit','delete'],
+        'parfum'        => ['view','add','edit','delete'],
+        'pelanggan'     => ['view','add','edit','delete'],
+        'pengeluaran'   => ['view','add','edit','delete'],
+        'transaksi'     => ['view','edit','delete'],
+        'metode-bayar'  => ['view','add','edit','delete'],
+        'laporan'       => ['view'],
+        'data'          => ['view','edit','delete'],
+    ];
 
     return view('manager.menu-role.hak', compact(
-        'roles', 'menus', 'permissions', 'selectedRoleId'
+        'roles',
+        'menus',
+        'permissions',
+        'selectedRoleId',
+        'menuActions' // ⬅️ JANGAN LUPA
     ));
 }
 
@@ -268,17 +293,22 @@ public function saveHakRole(Request $request)
         'permissions' => 'array',
     ]);
 
-    $roleId = $request->role_id;
-    $menusChecked = $request->menus ?? [];
-    $permissionsInput = $request->permissions ?? [];
+    // hapus dulu
+    MenuRole::where('role_id', $request->role_id)->delete();
 
-    // Hapus semua dulu
-    MenuRole::where('role_id', $roleId)->delete();
+    foreach ($request->menus ?? [] as $menuId) {
 
-    foreach ($menusChecked as $menuId) {
-        $perms = $permissionsInput[$menuId] ?? [];
+        // 🔒 pastikan menu milik role tsb
+        $menu = Menu::where('id', $menuId)
+            ->where('role_id', $request->role_id)
+            ->first();
+
+        if (!$menu) continue;
+
+        $perms = $request->permissions[$menuId] ?? [];
+
         MenuRole::create([
-            'role_id'    => $roleId,
+            'role_id'    => $request->role_id,
             'menu_id'    => $menuId,
             'can_view'   => in_array('view', $perms),
             'can_add'    => in_array('add', $perms),
@@ -286,9 +316,9 @@ public function saveHakRole(Request $request)
             'can_delete' => in_array('delete', $perms),
         ]);
     }
+
     return back()->with('success', 'Hak akses role berhasil disimpan');
 }
-
 // =======================
 // AKSES USER
 // =======================
@@ -301,12 +331,14 @@ public function aksesUser($type, $id)
         ? Admin::findOrFail($id)
         : Kasir::findOrFail($id);
 
-    // pastikan role_id ada
-    $roleId = $user->role_id ?? ($type === 'kasir' ? 3 : null);
-    $role = Role::findOrFail($roleId);
+    $roleId = $user->role_id;
+    $role   = Role::findOrFail($roleId);
 
-    $menus = Menu::orderBy('urutan')->get();
-    $permissions = MenuRole::where('role_id', $role->id)
+    $menus = Menu::where('role_id', $roleId)
+        ->orderBy('urutan')
+        ->get();
+
+    $permissions = MenuRole::where('role_id', $roleId)
         ->get()
         ->keyBy('menu_id');
 
@@ -314,5 +346,4 @@ public function aksesUser($type, $id)
         'user', 'role', 'menus', 'permissions'
     ));
 }
-
 }
