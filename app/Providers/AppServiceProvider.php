@@ -20,28 +20,39 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-  public function boot(): void
-{
-    View::composer('layouts.sidebar', function ($view) {
+    public function boot(): void
+    {
+        View::composer('layouts.sidebar', function ($view) {
+            $menus = collect();
 
-    if (auth('admin')->check()) {
-        $roleId = auth('admin')->user()->role_id;
-    } elseif (auth('kasir')->check()) {
-        $roleId = auth('kasir')->user()->role_id;
-    } else {
-        $view->with('menus', collect());
-        return;
+            // Cek guard admin
+            if (Auth::guard('admin')->check()) {
+                $roleId = Auth::guard('admin')->user()->role_id;
+                
+                $menus = Menu::where('role_id', $roleId)
+                             ->where('status', 1)
+                             ->orderBy('urutan')
+                             ->get();
+            }
+            // Cek guard admin2
+            elseif (Auth::guard('admin2')->check()) {
+                $roleId = Auth::guard('admin2')->user()->role_id;
+                
+                $menus = Menu::where('role_id', $roleId)
+                             ->where('status', 1)
+                             ->orderBy('urutan')
+                             ->get();
+            }
+            // Cek guard kasir
+            elseif (Auth::guard('kasir')->check()) {
+                // Kasir selalu role_id = 3
+                $menus = Menu::where('role_id', 3)
+                             ->where('status', 1)
+                             ->orderBy('urutan')
+                             ->get();
+            }
+
+            $view->with('menus', $menus);
+        });
     }
-
-    $menus = Menu::whereHas('roles', function ($q) use ($roleId) {
-            $q->where('role_id', $roleId)
-              ->where('can_view', 1);
-        })
-        ->where('status', 1)
-        ->orderBy('urutan')
-        ->get();
-
-    $view->with('menus', $menus);
-});
-}
 }

@@ -4,32 +4,83 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\MenuRole;
+use Symfony\Component\HttpFoundation\Response;
 
 class CheckPermission
 {
-    public function handle(Request $request, Closure $next, $menuRoute, $action = 'view')
+    /**
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     */
+    public function handle(Request $request, Closure $next, string $permission): Response
     {
-        // ambil user admin / kasir
-        if (Auth::guard('admin')->check()) {
-            $user = Auth::guard('admin')->user();
-        } elseif (Auth::guard('kasir')->check()) {
-            $user = Auth::guard('kasir')->user();
-        } else {
-            abort(401);
+        // Get authenticated user (support both admin and kasir guard)
+        $user = auth('admin')->user() ?? auth('kasir')->user();
+        
+        if (!$user) {
+            abort(403, 'Unauthorized access');
         }
 
-        $permission = MenuRole::where('role_id', $user->role_id)
-            ->whereHas('menu', function ($q) use ($menuRoute) {
-                $q->where('route', $menuRoute);
-            })
-            ->first();
+        // Super admin (role_id = 1) has all permissions
+        if ($user->role_id == 1) {
+            return $next($request);
+        }
 
-        if (!$permission || !($permission->{'can_'.$action} ?? false)) {
-            abort(403, 'Anda tidak memiliki hak akses');
+        // Get current route name
+        $routeName = $request->route()->getName();
+        
+        // Extract menu identifier from route (e.g., 'kasir.layanan.create' -> 'layanan')
+        $menuIdentifier = $this->extractMenuFromRoute($routeName);
+        
+        if (!$menuIdentifier) {
+            return $next($request); // No specific menu found, allow access
+        }
+
+        // Check permission in menu_role table
+        $hasPermission = MenuRole::whereHas('menu', function($query) use ($menuIdentifier) {
+                $query->where('route', 'like', "%{$menuIdentifier}%");
+            })
+            ->where('role_id', $user->role_id)
+            ->where("can_{$permission}", true)
+            ->exists();
+
+        if (!$hasPermission) {
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Anda tidak memiliki akses untuk melakukan aksi ini'], 403);
+            }
+            
+            abort(403, 'Anda tidak memiliki hak akses untuk melakukan aksi ini');
         }
 
         return $next($request);
+    }
+
+    /**
+     * Extract menu identifier from route name
+     */
+    private function extractMenuFromRoute(string $routeName): ?string
+    {
+        // Map of route patterns to menu identifiers
+        $menuMap = [
+            'layanan'      => 'layanan',
+            'satuan'       => 'satuan',
+            'parfum'       => 'parfum',
+            'pelanggan'    => 'pelanggan',
+            'pengeluaran'  => 'pengeluaran',
+            'transaksi'    => 'transaksi',
+            'riwayat'      => 'riwayat',
+            'laporan'      => 'laporan',
+            'manager'      => 'manager',
+        ];
+
+        foreach ($menuMap as $pattern => $menu) {
+            if (str_contains($routeName, $pattern)) {
+                return $menu;
+            }
+        }
+
+        return null;
     }
 }

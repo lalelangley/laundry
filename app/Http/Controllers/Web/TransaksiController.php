@@ -224,6 +224,7 @@ public function addLayanan(Request $request, $id)
         // ================================
         // Simpan transaksi
         // ================================
+        // Di method bayar() dan bayarKasir(), tambahkan ini:
         $trans = Transaksi::create([
             'id_pelanggan'     => $pelanggan['id_pelanggan'],
             'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
@@ -235,6 +236,7 @@ public function addLayanan(Request $request, $id)
             'tipe_diskon'      => $tipeDiskon,
             'status_bayar'     => $statusBayar,
             'status_transaksi' => 'antrian',
+            'jenis_transaksi'  => 'offline',  // 🔥 TAMBAHKAN INI
             'keterangan'       => $keterangan,
             'tgl_transaksi'    => now(),
             'tgl_estimasi'     => $tglEstimasi,

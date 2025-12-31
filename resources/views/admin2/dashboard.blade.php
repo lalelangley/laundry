@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Dashboard Admin')
+@section('title', 'Dashboard Admin2')
 
 @section('content')
 

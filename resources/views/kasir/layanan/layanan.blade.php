@@ -6,26 +6,22 @@
 
     <div class="min-h-screen bg-gray-50 pb-24">
         {{-- HEADER --}}
-        <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-            @php
-            $from = request('from');
-            $idTransaksi = request('id_transaksi'); // FIX UTAMA
+            <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
+                @php
+                    $from = request('from');
+                    $idTransaksi = request('id_transaksi');
 
-            $backUrl = match ($from) {
-                'transaksi' => route('kasir.transaksi.create'),
-                'riwayat'   => route('kasir.riwayat.detail', ['id' => $idTransaksi]),
-                default     => route('kasir.dashboard'),
-            };
-            @endphp
-
-
-            <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <span class="text-2xl font-bold">Kelola Layanan</span>
-        </div>
-
-        <div class="px-8 py-6 space-y-6">
+                    if ($from === 'transaksi') {
+                        $backUrl = route('kasir.transaksi.create');
+                    } else {
+                        $backUrl = route('kasir.dashboard');
+                    }
+                @endphp
+                <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                   </span span class="text-2xl font-bold">Kelola Layanan</span>
+            </div>    <div class="px-8 py-6 space-y-6">
             {{-- SEARCH + SORT --}}
             <div class="flex items-center gap-3">
                 <div class="relative flex-1">
