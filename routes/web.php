@@ -620,53 +620,57 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             ->name('jenis.add.edit');
     });
 
-    // ================= PESANAN ONLINE (With Permission) =================
-    Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
-        Route::get('/', [PesananOnlineController::class, 'index'])
-            ->middleware('permission:view')
-            ->name('index');
-        
-        Route::get('/{id}/detail', [PesananOnlineController::class, 'detail'])
-            ->middleware('permission:view')
-            ->name('detail');
-        
-        Route::post('/{id}/terima', [PesananOnlineController::class, 'terima'])
-            ->middleware('permission:edit')
-            ->name('terima');
-        
-        Route::post('/{id}/tolak', [PesananOnlineController::class, 'tolak'])
-            ->middleware('permission:edit')
-            ->name('tolak');
-        
-        Route::post('/{id}/proses', [PesananOnlineController::class, 'proses'])
-            ->middleware('permission:edit')
-            ->name('proses');
-        
-        Route::post('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbil'])
-            ->middleware('permission:edit')
-            ->name('siap_di_ambil');
-        
-        Route::post('/{id}/selesai', [PesananOnlineController::class, 'selesai'])
-            ->middleware('permission:edit')
-            ->name('selesai');
-        
-        Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayar'])
-            ->middleware('permission:edit')
-            ->name('bayar');
-        
-        Route::delete('/{id}', [PesananOnlineController::class, 'destroy'])
-            ->middleware('permission:delete')
-            ->name('destroy');
-              Route::get(
-            '/delivery',
-            [PesananOnlineController::class, 'listDeliveryOnline']
-        )->name('pesanan.online.delivery');
-
-        Route::post(
-            '/delivery/{id}/assign-driver',
-            [PesananOnlineController::class, 'assignDriver']
-        )->name('pesanan.online.assignDriver');
-    });
+  // ================= PESANAN ONLINE (With Permission) =================
+Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
+    
+    // Index & Detail
+    Route::get('/', [PesananOnlineController::class, 'index'])
+        ->middleware('permission:view')
+        ->name('index');
+    
+    Route::get('/{id}/detail', [PesananOnlineController::class, 'detail'])
+        ->middleware('permission:view')
+        ->name('detail');
+    
+    // 🔥 UPDATE DATA PESANAN (ISI DATA)
+    Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateData'])
+        ->middleware('permission:edit')
+        ->name('updateData');
+    
+    // 🔥 KONFIRMASI PESANAN (KIRIM WA/SMS)
+    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiPesanan'])
+        ->middleware('permission:edit')
+        ->name('konfirmasi');
+    
+    // Status Management - PAKAI GET (karena pakai <a href> di view)
+    Route::get('/{id}/proses', [PesananOnlineController::class, 'proses'])
+        ->middleware('permission:edit')
+        ->name('proses');
+    
+    Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesai'])
+        ->middleware('permission:edit')
+        ->name('selesai');
+    
+    Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbil'])
+        ->middleware('permission:edit')
+        ->name('siap_di_ambil');
+    
+    // Payment & Delete
+    Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayar'])
+        ->middleware('permission:edit')
+        ->name('bayar');
+    
+    Route::delete('/{id}', [PesananOnlineController::class, 'destroy'])
+        ->middleware('permission:delete')
+        ->name('destroy');
+    
+    // Delivery
+    Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
+        ->name('delivery');
+    
+    Route::post('/delivery/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
+        ->name('assignDriver');
+});
 
     // ================= RIWAYAT (With Permission) =================
     Route::prefix('riwayat')->name('riwayat.')->group(function () {

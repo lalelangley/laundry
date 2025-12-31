@@ -36,9 +36,11 @@ class RiwayatController extends Controller
     }
 
     $riwayat = Transaksi::with('pelanggan')
+        ->where('jenis_transaksi', 'offline')
         ->where('status_transaksi', $tab)
         ->orderBy('id_transaksi', 'DESC')
         ->get();
+
 
     return view('riwayat.index', compact('riwayat', 'tab'));
 }
@@ -429,13 +431,12 @@ public function indexKasir(Request $request)
     // tab default antrian
     $tab = $request->tab ?? 'antrian';
 
-    // ambil transaksi khusus kasir (misal semua yang bisa diakses kasir)
     $riwayat = Transaksi::with('pelanggan')
+        ->where('jenis_transaksi', 'offline')
         ->orderBy('id_transaksi', 'DESC')
         ->get();
 
-    // bisa difilter berdasarkan status transaksi
-    if (in_array($tab, ['antrian','proses','siap_di_ambil','selesai'])) {
+    if (in_array($tab, ['antrian','proses','siap_di_ambil','selesai','batal'])) {
         $riwayat = $riwayat->where('status_transaksi', $tab);
     }
 
