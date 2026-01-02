@@ -251,6 +251,8 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         Route::delete('/{id}', [PesananOnlineController::class, 'destroyKasir'])
             ->middleware('permission:delete')
             ->name('kasir.pesanan.online.destroy');
+
+        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
     });
 
     // ================= RIWAYAT (With Permission) =================
@@ -668,8 +670,9 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
     Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
         ->name('delivery');
     
-    Route::post('/delivery/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
-        ->name('assignDriver');
+    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
+    
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])->name('list-driver'); // ✅ TAMBAH INI
 });
 
     // ================= RIWAYAT (With Permission) =================
@@ -747,6 +750,8 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
         Route::delete('/detail/{id}', [RiwayatController::class, 'deleteDetail'])
             ->middleware('permission:delete')
             ->name('delete_detail');
+
+        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
     });
 
     // ================= SATUAN (With Permission) =================
@@ -968,6 +973,8 @@ Route::prefix('admin2')->middleware('auth:admin2')->group(function () {
         Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiAdmin2'])->name('admin2.pesanan.online.selesai');
         Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayarAdmin2'])->name('admin2.pesanan.online.bayar');
         Route::delete('/{id}', [PesananOnlineController::class, 'destroyAdmin2'])->name('admin2.pesanan.online.destroy');
+        Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])->name('list-driver'); // ✅ TAMBAH INI
+                Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
     });
 
     Route::prefix('riwayat')->group(function () {

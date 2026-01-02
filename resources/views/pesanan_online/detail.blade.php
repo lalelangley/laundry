@@ -484,26 +484,38 @@
             Pesanan akan dikirim ke alamat pelanggan. Pastikan alamat sudah benar.
         </p>
 
-        <div class="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
-            <p class="font-semibold text-gray-700">Alamat Pengiriman:</p>
-            <p class="text-gray-600 mt-1">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
+        {{-- ALAMAT PENGIRIMAN --}}
+        <div class="bg-gray-50 p-3 rounded-lg mb-4 text-sm border border-gray-200">
+            <p class="font-semibold text-gray-700 flex items-center gap-2">
+                <i class="bi bi-geo-alt-fill text-orange-500"></i>
+                Alamat Pengiriman:
+            </p>
+            <p class="text-gray-600 mt-1 ml-6">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
         </div>
 
-        <form action="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}" method="GET">
-            <input type="hidden" name="mode" value="delivery">
-            
-            <div class="flex gap-3">
-                <button type="button" 
-                        onclick="closeDeliveryModal()"
-                        class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Batal
-                </button>
-                <button type="submit" 
-                        class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold">
-                    <i class="bi bi-check-circle"></i> Konfirmasi Delivery
-                </button>
+        {{-- INFO TAMBAHAN --}}
+        <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-blue-600 mt-0.5"></i>
+                <div class="text-sm text-blue-800">
+                    <p class="font-semibold">Langkah Selanjutnya</p>
+                    <p class="text-xs mt-1">Anda akan diarahkan untuk memilih driver yang akan mengantar pesanan ini.</p>
+                </div>
             </div>
-        </form>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="button" 
+                    onclick="closeDeliveryModal()"
+                    class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
+                Batal
+            </button>
+            <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}"
+               class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-center flex items-center justify-center gap-2 shadow-md">
+                <i class="bi bi-person-check"></i>
+                Tentukan Driver
+            </a>
+        </div>
     </div>
 </div>
 

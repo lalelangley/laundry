@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
+use App\Models\DetailTransaksi;
 use Illuminate\Support\Facades\DB;
 use App\Models\Delivery;
 use App\Models\Driver;
@@ -31,7 +32,7 @@ class PesananOnlineController extends Controller
     public function detailKasir($id)
     {
         $pesanan = Transaksi::with([
-            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat
+            'pelanggan',
             'detail_transaksi',
             'detail_transaksi.layanan',
             'detail_transaksi.jenis',
@@ -129,7 +130,7 @@ class PesananOnlineController extends Controller
     public function detail($id)
     {
         $pesanan = Transaksi::with([
-            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat, email, jk, dll
+            'pelanggan',
             'detail_transaksi',
             'detail_transaksi.layanan',
             'detail_transaksi.jenis',
@@ -226,7 +227,7 @@ class PesananOnlineController extends Controller
     public function detailAdmin2($id)
     {
         $pesanan = Transaksi::with([
-            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat
+            'pelanggan',
             'detail_transaksi',
             'detail_transaksi.layanan',
             'detail_transaksi.jenis',
@@ -307,29 +308,63 @@ class PesananOnlineController extends Controller
     
     // ==================== DELIVERY ONLINE ====================
 
+    /**
+     * TAMPILKAN LIST DRIVER UNTUK DELIVERY
+     */
+    public function listDriver($id)
+    {
+        $pesanan = Transaksi::with('pelanggan')
+            ->where('jenis_transaksi', 'online')
+            ->findOrFail($id);
+        
+        // Ambil semua driver yang aktif
+        $drivers = Driver::where('status', 'aktif')->get();
+        
+        return view('pesanan_online.listonlinedriver', compact('pesanan', 'drivers'));
+    }
+
+    /**
+     * ASSIGN DRIVER UNTUK DELIVERY
+     */
+    /**
+ * ASSIGN DRIVER UNTUK DELIVERY
+ */
+public function assignDriver(Request $request, $id)
+{
+    $request->validate([
+        'id_driver' => 'required|exists:driver,id_driver',
+        'catatan_driver' => 'nullable|string'
+    ]);
+
+    $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+    
+    // Update status transaksi ke siap_di_antar
+    $pesanan->update([
+        'status_transaksi' => 'siap_di_antar'
+    ]);
+
+    // Buat record di tabel delivery
+    Delivery::create([
+        'id_transaksi' => $pesanan->id_transaksi,
+        'id_driver' => $request->id_driver,
+        'jenis' => 'antar', // ✅ Tambahkan jenis delivery
+        'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-', // ✅ Ganti dari alamat_pengiriman
+        'status' => 'pending', // ✅ Nilai ENUM yang valid: pending, accepted, on_the_way_to_pickup, dll
+        'waktu' => now() // ✅ Ganti dari tgl_delivery
+    ]);
+
+    return redirect()
+        ->route('pesanan.online.detail', $id)
+        ->with('success', 'Driver berhasil ditentukan! Pesanan siap untuk diantar.');
+}
+
     public function listDeliveryOnline()
     {
-        $deliveries = Delivery::with('transaksi.pelanggan') // ✅ Eager load pelanggan untuk ambil alamat
+        $deliveries = Delivery::with('transaksi.pelanggan')
             ->whereNull('id_driver')
             ->get();
 
         return view('pesanan_online.delivery.index', compact('deliveries'));
-    }
-    
-    public function assignDriver(Request $request, $id)
-    {
-        $request->validate([
-            'id_driver' => 'required|exists:driver,id_driver'
-        ]);
-
-        Delivery::where('id_delivery', $id)->update([
-            'id_driver' => $request->id_driver,
-            'status'    => 'accepted'
-        ]);
-
-        return redirect()
-            ->route('pesanan.online.delivery')
-            ->with('success', 'Driver berhasil ditugaskan');
     }
 
     private function statusMap()
@@ -347,35 +382,35 @@ class PesananOnlineController extends Controller
     
     /**
      * UPDATE DATA PESANAN (ISI DATA PESANAN)
-     * ✅ DIPERBAIKI - Sesuai dengan struktur DB
+     * ✅ UPDATE QTY & SATUAN PER ITEM DI DETAIL_TRANSAKSI
      */
     public function updateData(Request $request, $id)
     {
         $request->validate([
-            'total_qty'   => 'nullable|numeric|min:0.01',
-            'id_satuan'   => 'nullable|exists:satuan,id_satuan',
+            'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
+            'qty.*' => 'required|numeric|min:0.01',
+            'id_satuan.*' => 'required|exists:satuan,id_satuan',
             'total_harga' => 'required|numeric|min:0',
-            'keterangan'  => 'nullable|string',
+            'keterangan' => 'nullable|string',
         ]);
 
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')
-            ->findOrFail($id);
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
 
-        // ✅ Update sesuai field yang ada di DB
-        $updateData = [
+        // ✅ Update qty dan satuan untuk setiap detail_transaksi
+        if ($request->has('id_detail')) {
+            foreach ($request->id_detail as $index => $idDetail) {
+                DetailTransaksi::where('id_detail_transaksi', $idDetail)->update([
+                    'qty' => $request->qty[$index],
+                    'id_satuan' => $request->id_satuan[$index],
+                ]);
+            }
+        }
+
+        // ✅ Update total harga dan keterangan di transaksi
+        $pesanan->update([
             'total_harga' => $request->total_harga,
-            'keterangan'  => $request->keterangan,
-        ];
-
-        // Tambahkan total_qty dan id_satuan jika field sudah ada di DB
-        if ($request->has('total_qty')) {
-            $updateData['total_qty'] = $request->total_qty;
-        }
-        if ($request->has('id_satuan')) {
-            $updateData['id_satuan'] = $request->id_satuan;
-        }
-
-        $pesanan->update($updateData);
+            'keterangan' => $request->keterangan,
+        ]);
 
         return redirect()
             ->route('pesanan.online.detail', $id)
@@ -392,7 +427,7 @@ class PesananOnlineController extends Controller
             'metode_kirim' => 'required|in:whatsapp,sms'
         ]);
 
-        $pesanan = Transaksi::with('pelanggan') // ✅ Load relasi pelanggan
+        $pesanan = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
 
@@ -401,14 +436,11 @@ class PesananOnlineController extends Controller
             'status_transaksi' => 'dikonfirmasi'
         ]);
 
-        // ✅ Ambil data dari tabel transaksi DAN pelanggan
+        // Ambil data dari tabel transaksi DAN pelanggan
         $namaPelanggan = $pesanan->nama_pelanggan ?? 'Pelanggan';
         $noHp = $pesanan->no_hp ?? '';
         $totalHarga = number_format($pesanan->total_harga, 0, ',', '.');
-        
-        // ✅ Data tambahan dari tabel pelanggan (jika diperlukan)
         $alamat = $pesanan->pelanggan->alamat ?? '';
-        $email = $pesanan->pelanggan->email ?? '';
 
         $pesan = "Halo *{$namaPelanggan}*,%0A%0A";
         $pesan .= "Pesanan Anda sudah dikonfirmasi! 🎉%0A%0A";
@@ -416,7 +448,6 @@ class PesananOnlineController extends Controller
         $pesan .= "📦 Order ID: {$pesanan->id_transaksi}%0A";
         $pesan .= "💰 Total Harga: Rp {$totalHarga}%0A";
         
-        // ✅ Tambahkan alamat jika ada
         if ($alamat) {
             $pesan .= "📍 Alamat: {$alamat}%0A";
         }
@@ -425,14 +456,12 @@ class PesananOnlineController extends Controller
 
         // Redirect berdasarkan metode
         if ($request->metode_kirim === 'whatsapp' && $noHp) {
-            // Format nomor WA (hapus 0 di depan, tambah 62)
             $waNumber = preg_replace('/^0/', '62', $noHp);
             $waUrl = "https://wa.me/{$waNumber}?text={$pesan}";
             
             return redirect()->away($waUrl);
         } 
         elseif ($request->metode_kirim === 'sms' && $noHp) {
-            // SMS URL (untuk Android/iOS)
             $smsUrl = "sms:{$noHp}?body=" . urlencode(strip_tags(str_replace(['%0A', '*'], ["\n", ''], $pesan)));
             
             return redirect()->away($smsUrl);

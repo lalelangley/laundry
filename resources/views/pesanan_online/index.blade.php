@@ -41,10 +41,6 @@
                             'label' => 'Menunggu', 
                             'icon' => 'hourglass-split'
                         ],
-                        'dikonfirmasi' => [
-                            'label' => 'Dikonfirmasi', 
-                            'icon' => 'check-square'
-                        ],
                         'proses' => [
                             'label' => 'Proses', 
                             'icon' => 'arrow-repeat'

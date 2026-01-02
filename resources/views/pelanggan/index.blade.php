@@ -27,35 +27,6 @@
 </div>
 
 {{-- LIST PELANGGAN --}}
-<<<<<<< HEAD
-<div class="px-5 mt-5 space-y-4 mb-24"> 
-    @foreach ($pelanggan as $item)
-        <div class="bg-white rounded-2xl px-4 py-4 flex gap-3 items-center shadow cursor-pointer">
-            
-            {{-- Foto --}}
-            @if ($item->gambar)
-                <img src="{{ asset('storage/'.$item->gambar) }}"
-                     class="w-16 h-16 rounded-xl object-cover">
-            @else
-                <div class="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center">
-                    <i class="bi bi-camera text-3xl text-gray-400"></i>
-                </div>
-            @endif
-
-            {{-- Detail --}}
-            <div>
-                <div class="text-xl font-semibold">{{ $item->nama_pelanggan }}</div>
-
-                <div class="flex items-center text-gray-600 text-base">
-                    <i class="bi bi-envelope me-2"></i>{{ $item->email }}
-                </div>
-
-                <div class="flex items-center text-gray-600 text-base">
-                    <i class="bi bi-telephone me-2"></i>{{ $item->no_hp }}
-                </div>
-            </div>
-
-=======
 <div class="px-5 mt-5 space-y-4 mb-24">
     @foreach ($pelanggan as $item)
         <div class="bg-white rounded-2xl px-4 py-4 flex gap-3 items-center shadow justify-between relative group cursor-pointer"
@@ -99,7 +70,6 @@
                 </form>
             </div>
 
->>>>>>> c842378ffa117087b054c4c9d4728216779bf064
         </div>
     @endforeach
 </div>
