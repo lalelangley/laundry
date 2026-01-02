@@ -1,17 +1,29 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
 @php
-    if (Auth::guard('kasir')->check()) {
-        $user = Auth::guard('kasir')->user();
-        $nama = $user->nama_kasir;
-        $role = 'Kasir';
-    } elseif (Auth::guard('admin')->check()) {
-        $user = Auth::guard('admin')->user();
-        $nama = $user->nama_admin ?? 'Admin';
-        $role = $user->role->nama_role ?? 'Admin';
-    } else {
-        return;
-    }
+use Illuminate\Support\Facades\Auth;
+
+// Ambil user dan role
+if (Auth::guard('kasir')->check()) {
+    $user = Auth::guard('kasir')->user();
+    $nama = $user->nama_kasir;
+    $role = 'Kasir';
+} elseif (Auth::guard('admin')->check()) {
+    $user = Auth::guard('admin')->user();
+    $nama = $user->nama_admin ?? 'Admin';
+    $role = $user->role->nama_role ?? 'Admin';
+} elseif (Auth::guard('admin2')->check()) {
+    $user = Auth::guard('admin2')->user();
+    $nama = $user->nama_admin ?? 'Admin2';
+    $role = $user->role->nama_role ?? 'Admin';
+} else {
+    $user = null;
+    $nama = '';
+    $role = '';
+}
+
+// ✅ Gunakan $menus dari AppServiceProvider
+// Variabel $menus sudah tersedia dari View Composer
 @endphp
 
 <!-- OVERLAY -->
@@ -45,10 +57,16 @@
         </div>
     </div>
 
+
     <!-- MENU -->
     <div class="p-4 overflow-y-auto h-[calc(100vh-250px)]">
-        @foreach($menus as $menu)
+        @forelse($menus as $menu)
             @if($menu->route && Route::has($menu->route))
+                @php
+                    // Ambil permission dari pivot
+                    $pivot = $menu->roles->first()?->pivot;
+                @endphp
+                
                 <a href="{{ route($menu->route) }}"
                    class="flex items-center gap-3 p-3 rounded-xl mb-2 transition-all
                           {{ request()->routeIs($menu->route) 
@@ -58,7 +76,12 @@
                     <span class="font-semibold">{{ $menu->nama_menu }}</span>
                 </a>
             @endif
-        @endforeach
+        @empty
+            <div class="text-center py-8 text-gray-700">
+                <i class="bi bi-inbox text-4xl mb-2"></i>
+                <p class="text-sm">Tidak ada menu tersedia</p>
+            </div>
+        @endforelse
     </div>
 
     <!-- LOGOUT -->
@@ -73,7 +96,7 @@
                     <span>Logout</span>
                 </button>
             </form>
-        @elseif(Auth::guard('admin')->check())
+        @elseif(Auth::guard('admin')->check() || Auth::guard('admin2')->check())
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit"

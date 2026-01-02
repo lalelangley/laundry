@@ -5,7 +5,7 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+        <a href="{{ route('admin2.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold">Riwayat Transaksi</span>
@@ -52,7 +52,7 @@
         {{-- LIST TRANSAKSI --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             @forelse ($riwayat as $t)
-                <a href="{{ route('riwayat.detail', $t->id_transaksi) }}" class="block group">
+                <a href="{{ route('admin2.riwayat.detail', $t->id_transaksi) }}" class="block group">
                     <div class="relative bg-white shadow-lg rounded-2xl p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-l-4
                         @if($t->status_transaksi=='antrian') border-gray-500
                         @elseif($t->status_transaksi=='proses') border-blue-500
@@ -74,7 +74,7 @@
                             </div>
                             
                             {{-- DELETE BUTTON --}}
-                            <form action="{{ route('riwayat.destroy', $t->id_transaksi) }}"
+                            <form action="{{ route('admin2.riwayat.destroy', $t->id_transaksi) }}"
                                   method="POST"
                                   onclick="event.stopPropagation();"
                                   class="opacity-0 group-hover:opacity-100 transition-opacity duration-200">

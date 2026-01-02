@@ -166,18 +166,24 @@ public function indexAdmin2(Request $request)
             'proses' => json_encode(array_values(array_filter($prosesToStore))),
         ]);
 
-        foreach ($jenisBaru as $jb) {
+       foreach ($jenisBaru as $jb) {
+
+            if (empty($jb['nama_jenis'])) {
+                continue; // ⛔ skip data rusak
+            }
+
             \App\Models\JenisLayanan::create([
-                'id_layanan'  => $layanan->id_layanan,
-                'nama_jenis'  => $jb['nama_jenis'] ?? $jb['nama'] ?? null,
-                'harga'       => $jb['harga'] ?? 0,
-                'id_satuan'   => $jb['id_satuan'] ?? null,
-                'lama'        => $jb['lama'] ?? null,
-                'lama_satuan' => $jb['lama_satuan'] ?? null,
-                'keterangan'  => $jb['keterangan'] ?? null,
-                'gambar'      => $jb['gambar'] ?? null,
+                'id_layanan' => $layanan->id_layanan,
+                'nama_jenis' => $jb['nama_jenis'],
+                'harga'      => $jb['harga'] ?? 0,
+                'id_satuan'  => $jb['id_satuan'] ?? null,
+                'lama'       => $jb['lama'] ?? null,
+                'lama_satuan'=> $jb['lama_satuan'] ?? null,
+                'keterangan' => $jb['keterangan'] ?? null,
+                'gambar'     => $jb['gambar'] ?? null,
             ]);
         }
+
 
         if (!empty($jenisLamaDipilih)) {
             foreach ($jenisLamaDipilih as $idJenis) {
@@ -688,23 +694,17 @@ public function storeJenisAdmin2(Request $request, $id_layanan)
     session()->put("jenis_baru_{$id_layanan}", $jenis_baru);
 
     // FIX: Gunakan route yang benar
-    return redirect()->route('admin2.layanan_create')
+    return redirect()->route('admin2.layanan.create')
         ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
 }
 
-    // =========================
-    // EDIT JENIS - ADMIN
-    // =========================
-    public function editJenis($id)
-    {
-        $jenis = JenisLayanan::findOrFail($id);
-        $satuan = Satuan::all();
+public function editJenis($id_jenis)
+{
+    $jenis  = \App\Models\JenisLayanan::findOrFail($id_jenis);
+    $satuan = \App\Models\Satuan::all();
 
-        return view('admin.edit_jenis_layanan', [
-            'jenis' => $jenis,
-            'satuan' => $satuan,
-        ]);
-    }
+    return view('admin.edit_jenis_layanan', compact('jenis', 'satuan'));
+}
 
     // =========================
     // EDIT JENIS - KASIR
@@ -714,31 +714,22 @@ public function storeJenisAdmin2(Request $request, $id_layanan)
         $jenis = JenisLayanan::findOrFail($id);
         $satuan = Satuan::all();
 
-        return view('kasir.layanan.tambah_jenis_layanan_edit', [
+        return view('kasir.layanan.edit_jenis_layanan', [
             'jenis' => $jenis,
             'satuan' => $satuan,
             'from' => request('from')
         ]);
     }
 
-    // =========================
-    // EDIT JENIS - ADMIN2
-    // =========================
-    public function editJenisAdmin2($id)
+    // ✅ METHOD BARU (BENAR)
+public function editJenisAdmin2($id)
 {
-    $admin2 = Auth::guard('admin2')->user();
-    if (!$admin2) {
-        abort(403);
-    }
-
     $jenis = JenisLayanan::findOrFail($id);
     $satuan = Satuan::all();
-
-    return view('admin2.layanan.tambah_jenis_layanan_edit', [
+    
+    return view('admin2.layanan.edit_jenis_layanan', [  // ✅ BENAR: admin2.layanan.edit_jenis_layanan
         'jenis' => $jenis,
         'satuan' => $satuan,
-        'from' => request('from'),
-        'id_layanan' => $jenis->id_layanan,
     ]);
 }
 
@@ -939,23 +930,28 @@ public function storeJenisAdmin2(Request $request, $id_layanan)
         return back();
     }
 
-    public function sessionCreateJenis($from, Request $request)
-    {
-        $mode = $request->query('mode', 'create');
-        $satuan = Satuan::all();
+    // SESSION CREATE JENIS - ADMIN2
+// =========================
+public function sessionCreateJenis(Request $request, $id)
+{
+    $admin = Auth::guard('admin')->user();
+    if (!$admin) abort(403);
 
-        if ($mode === 'edit') {
-            return view('admin.tambah_jenis_layanan_edit', [
-                'from' => $from,
-                'satuan' => $satuan
-            ]);
-        } else {
-            return view('admin.tambah_jenis_layanan_create', [
-                'from' => $from,
-                'satuan' => $satuan
-            ]);
-        }
-    }
+    $jenisBaru = session()->get("jenis_baru_{$id}", []);
+    
+    $jenisBaru[] = [
+        'nama_jenis' => $request->nama_jenis ?? null,
+        'harga'      => $request->harga ?? 0,
+        'id_satuan'  => $request->id_satuan ?? null,
+        'lama'       => $request->lama ?? null,
+        'lama_satuan'=> $request->lama_satuan ?? null,
+        'keterangan' => $request->keterangan ?? null,
+    ];
+
+    session()->put("jenis_baru_{$id}", $jenisBaru);
+
+    return redirect()->back()->with('success', 'Jenis layanan berhasil ditambahkan ke session');
+}
 
     public function sessionStoreJenis(Request $request, $from)
     {

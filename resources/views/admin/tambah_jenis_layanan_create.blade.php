@@ -22,7 +22,7 @@
     @endif
 
     {{-- FORM TAMBAH --}}
-    <form action="{{ route('session.store', $from) }}" method="POST" enctype="multipart/form-data"
+    <form action="{{ route('layanan.session.store', $from) }}" method="POST" enctype="multipart/form-data"
         class="bg-white p-5 rounded-2xl shadow space-y-6">
 
         @csrf

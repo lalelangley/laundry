@@ -166,7 +166,7 @@ class SatuanParfumController extends Controller
         return redirect()->route('parfum.index')->with('success', 'Parfum berhasil dihapus.');
     }
 
-    // ================================
+// ================================
 // SATUAN (KASIR)
 // ================================
 
@@ -304,6 +304,147 @@ public function parfumDestroyKasir($id)
 
     return redirect()->route('kasir.parfum.index')
         ->with('success', 'Parfum berhasil dihapus.');
+}
+
+// ================================
+// PARFUM (ADMIN2)
+// ================================
+
+public function IndexAdmin2(Request $request)
+{
+    $query = Parfum::query();
+
+    if ($request->search) {
+        $query->where('nama_parfum', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->sort == 'desc') {
+        $query->orderBy('nama_parfum', 'desc');
+    } else {
+        $query->orderBy('nama_parfum', 'asc');
+    }
+
+    $parfum = $query->get();
+
+    return view('admin2.parfum.index', compact('parfum'));
+}
+
+public function parfumCreateAdmin2()
+{
+    return view('admin2.parfum.create');
+}
+
+public function parfumStoreAdmin2(Request $request)
+{
+    $request->validate([
+        'nama_parfum' => 'required|max:100'
+    ]);
+
+    Parfum::create([
+        'nama_parfum' => $request->nama_parfum
+    ]);
+
+    return redirect()->route('admin2.parfum.index')
+        ->with('success', 'Parfum berhasil ditambahkan.');
+}
+
+public function parfumEditAdmin2($id)
+{
+    $parfum = Parfum::where('id_parfum', $id)->firstOrFail();
+    return view('admin2.parfum.edit', compact('parfum'));
+}
+
+public function parfumUpdateAdmin2(Request $request, $id)
+{
+    $request->validate([
+        'nama_parfum' => 'required|max:100'
+    ]);
+
+    Parfum::where('id_parfum', $id)->update([
+        'nama_parfum' => $request->nama_parfum
+    ]);
+
+    return redirect()->route('admin2.parfum.index')
+        ->with('success', 'Parfum berhasil diupdate.');
+}
+
+public function parfumDestroyAdmin2($id)
+{
+    Parfum::where('id_parfum', $id)->delete();
+
+    return redirect()->route('admin2.parfum.index')
+        ->with('success', 'Parfum berhasil dihapus.');
+}
+
+
+// ================================
+// SATUAN (KASIR)
+// ================================
+
+public function satuanIndexAdmin2(Request $request)
+{
+    $query = Satuan::query();
+
+    if ($request->search) {
+        $query->where('nama_satuan', 'like', '%' . $request->search . '%');
+    }
+
+    if ($request->sort == 'desc') {
+        $query->orderBy('nama_satuan', 'desc');
+    } else {
+        $query->orderBy('nama_satuan', 'asc');
+    }
+
+    $satuan = $query->get();
+
+    return view('admin2.satuan.index', compact('satuan'));
+}
+
+public function satuanCreateAdmin2()
+{
+    return view('admin2.satuan.create');
+}
+
+public function satuanStoreAdmin2(Request $request)
+{
+    $request->validate([
+        'nama_satuan' => 'required|max:50'
+    ]);
+
+    Satuan::create([
+        'nama_satuan' => $request->nama_satuan
+    ]);
+
+    return redirect()->route('admin2.satuan.index')
+        ->with('success', 'Satuan berhasil ditambahkan.');
+}
+
+public function satuanEditAdmin2($id)
+{
+    $satuan = Satuan::where('id_satuan', $id)->firstOrFail();
+    return view('admin2.satuan.edit', compact('satuan'));
+}
+
+public function satuanUpdateAdmin2(Request $request, $id)
+{
+    $request->validate([
+        'nama_satuan' => 'required|max:50'
+    ]);
+
+    Satuan::where('id_satuan', $id)->update([
+        'nama_satuan' => $request->nama_satuan
+    ]);
+
+    return redirect()->route('admin2.satuan.index')
+        ->with('success', 'Satuan berhasil diupdate.');
+}
+
+public function satuanDestroyAdmin2($id)
+{
+    Satuan::where('id_satuan', $id)->delete();
+
+    return redirect()->route('admin2.satuan.index')
+        ->with('success', 'Satuan berhasil dihapus.');
 }
 
 }

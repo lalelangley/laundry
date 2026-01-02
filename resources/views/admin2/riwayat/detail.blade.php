@@ -27,8 +27,8 @@
     @php
         // kalau URL punya ?from=dashboard → back ke dashboard
         $backUrl = request()->from == 'dashboard'
-            ? route('admin.dashboard')
-            : route('riwayat.index');
+            ? route('admin2.dashboard')
+            : route('admin2.riwayat.index');
     @endphp
 
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
@@ -89,7 +89,7 @@
 
         {{-- BUTTON EDIT (KANAN) --}}
         @if($transaksi->status_transaksi == 'antrian')
-            <a href="{{ route('riwayat.edit', $transaksi->id_transaksi) }}"
+            <a href="{{ route('admin2.riwayat.edit', $transaksi->id_transaksi) }}"
             class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all">
                 <i class="bi bi-pencil-fill"></i>
                 Edit Layanan
@@ -227,7 +227,7 @@
      <div class="space-y-3">
     {{-- Tombol Proses --}}
     @if($transaksi->status_transaksi == 'antrian')
-        <a href="{{ route('riwayat.proses', $transaksi->id_transaksi) }}" 
+        <a href="{{ route('admin2.riwayat.proses', $transaksi->id_transaksi) }}" 
         class="bg-blue-600 hover:bg-blue-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-play-fill text-xl"></i> Proses Order
         </a>
@@ -235,7 +235,7 @@
 
     {{-- Tombol Selesaikan --}}
     @if($transaksi->status_transaksi == 'proses')
-        <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
+        <a href="{{ route('admin2.riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
         class="bg-teal-600 hover:bg-teal-700 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
         </a>
@@ -243,7 +243,7 @@
 
     {{-- Tombol Siap Diambil --}}
     @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
-        <a href="{{ route('riwayat.selesai', $transaksi->id_transaksi) }}" 
+        <a href="{{ route('admin2.riwayat.selesai', $transaksi->id_transaksi) }}" 
         class="bg-yellow-400 hover:bg-yellow-500 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-box-arrow-in-down text-xl"></i> Order Selesai
         </a>
@@ -259,14 +259,14 @@
 
     {{-- Batalkan --}}
     @if($transaksi->status_transaksi != 'selesai' && $transaksi->status_transaksi != 'siap_di_ambil')
-        <a href="{{ route('riwayat.batal', $transaksi->id_transaksi) }}"
+        <a href="{{ route('admin2.riwayat.batal', $transaksi->id_transaksi) }}"
         class="bg-gray-500 hover:bg-gray-600 text-white text-center py-4 px-5 font-bold shadow-lg rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all">
             <i class="bi bi-x-lg text-lg"></i> Batalkan Transaksi
         </a>
     @endif
 
     {{-- Hapus --}}
-    <form action="{{ route('riwayat.destroy', $transaksi->id_transaksi) }}" method="POST"
+    <form action="{{ route('admin2.riwayat.destroy', $transaksi->id_transaksi) }}" method="POST"
         onsubmit="return confirm('Yakin mau hapus transaksi ini?')">
         @csrf
         @method('DELETE')
@@ -310,7 +310,7 @@
                 </div>
             </div>
 
-            <form action="{{ route('riwayat.bayar.submit', $transaksi->id_transaksi) }}" method="POST" class="space-y-4">
+            <form action="{{ route('admin2.riwayat.bayar.submit', $transaksi->id_transaksi) }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="font-bold text-gray-700 block mb-2">Masukkan Nominal Pelunasan</label>

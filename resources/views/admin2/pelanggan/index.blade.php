@@ -33,15 +33,18 @@
              onclick="window.location='{{ route('pelanggan.edit', $item->id_pelanggan) }}'">
 
             <div class="flex gap-3 items-center">
-                {{-- Foto --}}
-                @if ($item->gambar)
-                    <img src="{{ asset('storage/'.$item->gambar) }}"
-                         class="w-16 h-16 rounded-xl object-cover">
-                @else
-                    <div class="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-camera text-3xl text-gray-400"></i>
-                    </div>
-                @endif
+               <div class="w-16 h-16 rounded-xl overflow-hidden border border-gray-300 shadow-sm hover:scale-110 transition-transform flex-shrink-0">
+                    @if ($item->gambar)
+                        <img src="{{ asset('images/' . $item->gambar) }}"
+                            alt="{{ $item->nama_pelanggan }}"
+                            class="w-full h-full object-cover"
+                            onerror="this.onerror=null; this.src='{{ asset('images/default-user.png') }}';">
+                    @else
+                        <img src="{{ asset('images/default-user.png') }}"
+                            alt="Default"
+                            class="w-full h-full object-cover">
+                    @endif
+                </div>
 
                 {{-- Detail --}}
                 <div>

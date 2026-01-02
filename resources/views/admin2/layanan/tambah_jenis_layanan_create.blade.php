@@ -4,7 +4,7 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('admin2.layanan_create') }}" class="text-black text-3xl font-bold">←</a>
+    <a href="{{ route('admin2.layanan.create') }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Tambah Jenis Layanan</span>
 </div>
 
@@ -26,7 +26,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin2.jenis.store', ['id_layanan' => $id_layanan ?? 0]) }}" 
+    <form action="{{ route('admin2.layanan.jenis.store', ['id_layanan' => $id_layanan ?? 0]) }}" 
           method="POST" 
           enctype="multipart/form-data"
           class="bg-white p-6 rounded-2xl shadow-lg">
@@ -134,7 +134,7 @@
 
         {{-- Buttons --}}
         <div class="flex justify-between items-center mt-6">
-            <a href="{{ route('admin2.layanan_create') }}"
+            <a href="{{ route('admin2.layanan.create') }}"
                class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                 <i class="bi bi-x-circle"></i>
                 <span>Batal</span>

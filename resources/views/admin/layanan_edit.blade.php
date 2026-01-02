@@ -1,11 +1,14 @@
 @extends('layouts.master')
 
 @section('content')
+@php
+    $from = request()->route('layanan');
+@endphp
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-3 shadow w-full">
-    <a href="{{ route('layanan.index') }}" 
-       class="text-black text-2xl font-bold leading-none hover:scale-110 transition-transform">
+    <a href="{{ route('layanan.index') }}"
+    class="text-black text-2xl font-bold leading-none hover:scale-110 transition-transform">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-xl font-semibold">Edit Layanan</span>
@@ -24,10 +27,16 @@
         </div>
     @endif
 
+    {{-- SUCCESS --}}
+    @if(session('success'))
+        <div class="bg-green-500 text-white p-3 rounded-xl mb-5 text-base">
+            {{ session('success') }}
+        </div>
+    @endif
 
     <form action="{{ route('layanan.update', $layanan->id_layanan) }}" method="POST">
-        @csrf
-        @method('PUT')
+    @csrf
+    @method('PUT')
 
         {{-- NAMA LAYANAN --}}
         <label class="block font-semibold text-lg mb-2">Nama Layanan</label>
@@ -46,7 +55,7 @@
 
         <label class="block font-semibold text-lg mb-3">Proses</label>
 
-        <div class="grid grid-cols-3 gap-4 w-full">
+        <div class="grid grid-cols-3 gap-4 w-full mb-8">
             @foreach ($prosesList as $p)
                 <label class="flex items-center gap-2 px-4 py-3 border rounded-xl cursor-pointer text-base
                                {{ in_array($p, $selectedProses) ? 'bg-yellow-100 border-yellow-500' : '' }}">
@@ -72,12 +81,21 @@
 
             {{-- JENIS LAMA --}}
             @foreach ($layanan->jenis as $jenis)
+                {{-- FIX: Ganti route ke admin2.layanan.jenis.edit --}}
                 <a href="{{ route('layanan.jenis.edit', $jenis->id_jenis_layanan) }}?from={{ $layanan->id_layanan }}"
-                   class="flex gap-4 p-4 bg-white border rounded-2xl shadow hover:bg-gray-50 transition w-full">
+                   class="flex gap-4 p-4 bg-white border-2 border-gray-200 rounded-2xl shadow hover:bg-gray-50 hover:border-yellow-400 transition w-full">
 
-                    <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden">
-                        <img src="{{ asset('images/' . ($jenis->gambar ?? 'default.png')) }}"
-                             class="w-full h-full object-cover">
+                    <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
+                        @if(!empty($jenis->gambar))
+                            <img src="{{ asset('images/jenis/' . $jenis->gambar) }}"
+                                 alt="{{ $jenis->nama_jenis }}"
+                                 class="w-full h-full object-cover"
+                                 onerror="this.src='{{ asset('images/default.png') }}'">
+                        @else
+                            <img src="{{ asset('images/default.png') }}"
+                                 alt="Default"
+                                 class="w-full h-full object-cover">
+                        @endif
                     </div>
 
                     <div class="flex-1">
@@ -95,57 +113,78 @@
                     </div>
 
                     <div class="flex items-center">
-                        <i class="bi bi-pencil-square text-xl text-gray-400"></i>
+                        <i class="bi bi-pencil-square text-xl text-yellow-500"></i>
                     </div>
                 </a>
             @endforeach
 
 
             {{-- JENIS BARU (SESSION) --}}
-            @foreach ($jenisBaru as $jb)
-                <div class="flex gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
+            @if(count($jenisBaru) > 0)
+                @foreach ($jenisBaru as $index => $jb)
+                    <div class="flex gap-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-2xl shadow">
 
-                    <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden">
-                        <img src="{{ asset('images/' . ($jb['gambar'] ?? 'default.png')) }}"
-                             class="w-full h-full object-cover">
+                        <div class="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
+                            @if(!empty($jb['gambar']))
+                                <img src="{{ asset('images/jenis/' . $jb['gambar']) }}"
+                                     alt="{{ $jb['nama_jenis'] ?? 'Jenis' }}"
+                                     class="w-full h-full object-cover"
+                                     onerror="this.src='{{ asset('images/default.png') }}'">
+                            @else
+                                <img src="{{ asset('images/default.png') }}"
+                                     alt="Default"
+                                     class="w-full h-full object-cover">
+                            @endif
+                        </div>
+
+                        <div class="flex-1">
+                            <p class="font-semibold text-lg">
+                                {{ $jb['nama_jenis'] ?? '-' }}
+                                <span class="text-xs text-yellow-700 font-normal">(baru - belum disimpan)</span>
+                            </p>
+
+                            <p class="text-gray-700 text-base">
+                                Rp{{ number_format($jb['harga'] ?? 0, 0, ',', '.') }} /
+                                @php
+                                    $satuanName = '-';
+                                    if(!empty($jb['id_satuan'])){
+                                        $s = \App\Models\Satuan::find($jb['id_satuan']);
+                                        if($s) $satuanName = $s->nama_satuan;
+                                    }
+                                @endphp
+                                {{ $satuanName }}
+                            </p>
+
+                            <p class="text-gray-500 text-sm flex items-center gap-1">
+                                <i class="bi bi-clock text-base"></i>
+                                {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '' }}
+                            </p>
+                        </div>
+
+                        <div class="flex items-center">
+                            <span class="text-xs bg-yellow-500 text-white px-2 py-1 rounded">BARU</span>
+                        </div>
                     </div>
-
-                    <div class="flex-1">
-                        <p class="font-semibold text-lg">
-                            {{ $jb['nama'] }}
-                            <span class="text-xs text-gray-500">(baru)</span>
-                        </p>
-
-                        <p class="text-gray-700 text-base">
-                            Rp{{ number_format($jb['harga'] ?? 0, 0, ',', '.') }} /
-                            {{ $jb['satuan'] ?? '-' }}
-                        </p>
-
-                        <p class="text-gray-500 text-sm flex items-center gap-1">
-                            <i class="bi bi-clock text-base"></i>
-                            {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '' }}
-                        </p>
-                    </div>
-                </div>
-            @endforeach
+                @endforeach
+            @endif
 
         </div>
 
-
         {{-- BUTTON TAMBAH --}}
-        <a href="{{ route('session.create', ['from' => $layanan->id_layanan]) }}?mode=edit"
-           class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-white 
-                  text-center py-3 rounded-xl font-semibold text-lg">
-            <i class="bi bi-plus-circle text-lg"></i> Tambah Jenis
+       <a href="{{ route('layanan.jenis.tambah', $layanan->id_layanan) }}"
+        class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-black 
+                text-center py-3 rounded-xl font-semibold text-lg inline-flex items-center justify-center gap-2">
+            <i class="bi bi-plus-circle text-xl"></i> 
+            <span>Tambah Jenis Layanan</span>
         </a>
-
 
         {{-- SUBMIT --}}
         <div class="flex justify-end mt-8">
             <button type="submit"
                     class="bg-yellow-500 hover:bg-yellow-600 transition px-8 py-3 rounded-xl 
-                           font-semibold text-white text-lg shadow">
-                Update Layanan
+                           font-semibold text-white text-lg shadow inline-flex items-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Update Layanan</span>
             </button>
         </div>
 

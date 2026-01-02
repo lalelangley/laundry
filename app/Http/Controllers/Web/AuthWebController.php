@@ -222,6 +222,11 @@ public function kasirDashboard()
         return view('pelanggan.index', compact('pelanggan'));
     }
 
+    public function pelangganIndexAdmin2()
+    {
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+        return view('admin2.pelanggan.index', compact('pelanggan'));
+    }
     // =============================
     // CREATE PELANGGAN
     // =============================
@@ -234,41 +239,54 @@ public function kasirDashboard()
     // STORE PELANGGAN
     // =============================
     public function store(Request $request)
-    {
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'no_hp'          => 'required|string|max:20',
-            'email'          => 'nullable|email',
-            'jk'             => 'required',
-            'alamat'         => 'required|string',
-            'gambar'         => 'nullable|image|max:2048'
-        ]);
+{
+    $request->validate([
+        'nama_pelanggan' => 'required|string|max:255',
+        'no_hp'          => 'required|string|max:20',
+        'email'          => 'nullable|email',
+        'jk'             => 'required',
+        'alamat'         => 'required|string',
+        'gambar'         => 'nullable|image|max:2048'
+    ]);
 
-        $path = $request->hasFile('gambar') 
-            ? $request->file('gambar')->store('pelanggan', 'public') 
-            : null;
-
-        Pelanggan::create([
-            'nama_pelanggan' => $request->nama_pelanggan,
-            'no_hp'          => $request->no_hp,
-            'alamat'         => $request->alamat,
-            'gambar'         => $path,
-            'password'       => bcrypt('123456'),
-            'jk'             => $request->jk,
-            'email'          => $request->email,
-        ]);
-
-        if ($request->from === 'transaksi') {
-            return redirect()
-                ->route('transaksi.pelanggan')
-                ->with('success', 'Pelanggan berhasil ditambahkan!');
+    // ✅ FIX: Simpan ke public/images/pelanggan
+    $gambarPath = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        
+        // Buat folder kalau belum ada
+        if (!file_exists(public_path('images/pelanggan'))) {
+            mkdir(public_path('images/pelanggan'), 0755, true);
         }
+        
+        // Simpan ke public/images/pelanggan
+        $file->move(public_path('images/pelanggan'), $filename);
+        
+        // Simpan path relatif ke database
+        $gambarPath = 'pelanggan/' . $filename;
+    }
 
+    Pelanggan::create([
+        'nama_pelanggan' => $request->nama_pelanggan,
+        'no_hp'          => $request->no_hp,
+        'alamat'         => $request->alamat,
+        'gambar'         => $gambarPath,  // ✅ Path relatif
+        'password'       => bcrypt('123456'),
+        'jk'             => $request->jk,
+        'email'          => $request->email,
+    ]);
+
+    if ($request->from === 'transaksi') {
         return redirect()
-            ->route('pelanggan.index')
+            ->route('transaksi.pelanggan')
             ->with('success', 'Pelanggan berhasil ditambahkan!');
     }
 
+    return redirect()
+        ->route('pelanggan.index')
+        ->with('success', 'Pelanggan berhasil ditambahkan!');
+}
     // =============================
     // EDIT PELANGGAN
     // =============================
@@ -282,32 +300,50 @@ public function kasirDashboard()
     // UPDATE PELANGGAN
     // =============================
     public function pelangganUpdate(Request $request, $id)
-    {
-        $pelanggan = Pelanggan::findOrFail($id);
+{
+    $pelanggan = Pelanggan::findOrFail($id);
 
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'no_hp'          => 'required|string|max:20',
-            'email'          => 'nullable|email',
-            'jk'             => 'required',
-            'alamat'         => 'required|string',
-            'gambar'         => 'nullable|image|max:2048'
-        ]);
+    $request->validate([
+        'nama_pelanggan' => 'required|string|max:255',
+        'no_hp'          => 'required|string|max:20',
+        'email'          => 'nullable|email',
+        'jk'             => 'required',
+        'alamat'         => 'required|string',
+        'gambar'         => 'nullable|image|max:2048'
+    ]);
 
-        if ($request->hasFile('gambar')) {
-            $pelanggan->gambar = $request->file('gambar')->store('pelanggan', 'public');
+    // ✅ FIX: Update foto kalau ada upload baru
+    if ($request->hasFile('gambar')) {
+        // Hapus foto lama kalau ada
+        if ($pelanggan->gambar && file_exists(public_path('images/' . $pelanggan->gambar))) {
+            unlink(public_path('images/' . $pelanggan->gambar));
         }
-
-        $pelanggan->update([
-            'nama_pelanggan' => $request->nama_pelanggan,
-            'no_hp'          => $request->no_hp,
-            'alamat'         => $request->alamat,
-            'email'          => $request->email,
-            'jk'             => $request->jk,
-        ]);
-
-        return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
+        
+        $file = $request->file('gambar');
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        
+        // Buat folder kalau belum ada
+        if (!file_exists(public_path('images/pelanggan'))) {
+            mkdir(public_path('images/pelanggan'), 0755, true);
+        }
+        
+        // Simpan foto baru
+        $file->move(public_path('images/pelanggan'), $filename);
+        
+        // Update path di database
+        $pelanggan->gambar = 'pelanggan/' . $filename;
     }
+
+    $pelanggan->update([
+        'nama_pelanggan' => $request->nama_pelanggan,
+        'no_hp'          => $request->no_hp,
+        'alamat'         => $request->alamat,
+        'email'          => $request->email,
+        'jk'             => $request->jk,
+    ]);
+
+    return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
+}
 
     // =============================
     // DELETE PELANGGAN
@@ -392,7 +428,22 @@ public function storePelanggan(Request $request)
         'email'          => 'nullable|email|unique:pelanggan,email',
         'jk'             => 'required',
         'alamat'         => 'required|string',
+        'gambar'         => 'nullable|image|max:2048'  // ✅ Tambah ini
     ]);
+
+    // ✅ FIX: Simpan foto ke public/images/pelanggan
+    $gambarPath = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        
+        if (!file_exists(public_path('images/pelanggan'))) {
+            mkdir(public_path('images/pelanggan'), 0755, true);
+        }
+        
+        $file->move(public_path('images/pelanggan'), $filename);
+        $gambarPath = 'pelanggan/' . $filename;
+    }
 
     Pelanggan::create([
         'nama_pelanggan' => $request->nama_pelanggan,
@@ -400,13 +451,12 @@ public function storePelanggan(Request $request)
         'alamat'         => $request->alamat,
         'email'          => $request->email,
         'jk'             => $request->jk,
+        'gambar'         => $gambarPath,  // ✅ Tambah ini
         'password'       => bcrypt($request->password ?? '123456'),
     ]);
 
     return back()->with('success', 'Pelanggan berhasil ditambahkan');
 }
-
-
 // =============================
 // UPDATE PRIVILEGE ROLE
 // =============================

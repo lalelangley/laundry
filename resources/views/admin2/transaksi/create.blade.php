@@ -11,7 +11,7 @@ $keterangan = session('keterangan_transaksi', '');
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
-   <a href="{{ route('transaksi.reset') }}" class="text-black text-3xl font-bold">
+   <a href="{{ route('admin2.dashboard') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-2xl font-bold">Transaksi</span>
@@ -36,7 +36,7 @@ $keterangan = session('keterangan_transaksi', '');
             </div>
         </div>
 
-        <a href="{{ route('transaksi.pelanggan') }}"
+        <a href="{{ route('admin2.transaksi.pelanggan') }}"
             class="bg-yellow-400 px-4 py-3 rounded-2xl text-black font-bold shadow hover:bg-yellow-500 transition">
             {{ $pelanggan ? 'Ganti' : 'Cari' }}
         </a>
@@ -51,7 +51,7 @@ $keterangan = session('keterangan_transaksi', '');
                 <span class="text-xl font-semibold">Detail Order</span>
             </div>
 
-            <a href="{{ route('layanan.index', ['from' => 'transaksi']) }}"
+            <a href="{{ route('admin2.layanan.index', ['from' => 'transaksi']) }}"
                 class="bg-yellow-400 px-4 py-3 rounded-2xl text-black font-bold shadow hover:bg-yellow-500 transition">
                 Tambah Layanan
             </a>
@@ -74,10 +74,19 @@ $keterangan = session('keterangan_transaksi', '');
 
                     <div class="flex gap-4">
 
-                        {{-- GAMBAR --}}
-                        <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                            <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
-                        </div>
+                      {{-- ✅ GAMBAR DENGAN PATH DINAMIS --}}
+                    <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+                        @if(!empty($d['gambar']))
+                            <img src="{{ asset('images/jenis/' . $d['gambar']) }}"
+                                alt="{{ $d['nama_layanan'] }}"
+                                class="w-full h-full object-cover"
+                                onerror="this.src='{{ asset('images/default.png') }}'">
+                        @else
+                            <img src="{{ asset('images/default.png') }}"
+                                alt="Default"
+                                class="w-full h-full object-cover">
+                        @endif
+                    </div>
 
                         {{-- DETAIL --}}
                         <div class="flex-1">
@@ -110,7 +119,7 @@ $keterangan = session('keterangan_transaksi', '');
                             </div>
 
                             <form 
-                                action="{{ route('transaksi.remove', $d['id_layanan']) }}" 
+                                action="{{ route('admin2.transaksi.remove', $d['id_layanan']) }}" 
                                 method="POST"
                                 class="mt-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto"
                             >
@@ -129,7 +138,7 @@ $keterangan = session('keterangan_transaksi', '');
 
 
         {{-- KETERANGAN TRANSAKSI --}}
-        <form id="checkoutForm" action="{{ route('transaksi.checkout') }}" method="POST">
+        <form id="checkoutForm" action="{{ route('admin2.transaksi.checkout') }}" method="POST">
             @csrf
             <div class="bg-white rounded-3xl p-5 shadow-xl mt-6">
                 <p class="font-semibold mb-2">Keterangan</p>
@@ -140,7 +149,7 @@ $keterangan = session('keterangan_transaksi', '');
 
                 <script>
                     document.getElementById('keteranganTransaksi').addEventListener('input', function () {
-                        fetch("{{ route('transaksi.updateKeterangan') }}", {
+                        fetch("{{ route('admin2.transaksi.updateKeterangan') }}", {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
@@ -153,12 +162,8 @@ $keterangan = session('keterangan_transaksi', '');
 
             </div>
         </form>
-
     </div>
-
 </div>
-
-
 {{-- FOOTER FIXED --}}
 @php
     $totalHarga = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
@@ -170,50 +175,193 @@ $keterangan = session('keterangan_transaksi', '');
         <p class="text-2xl font-bold">Rp. {{ number_format($totalHarga, 0, ',', '.') }}</p>
     </div>
 
-    <button type="submit" form="checkoutForm"
-        class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow">
+    {{-- Button trigger modal --}}
+    <button type="button" id="btnCheckout"
+            class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow">
         Checkout
     </button>
 </div>
 
+{{-- ✅✅✅ MODAL KONFIRMASI CHECKOUT ✅✅✅ --}}
+<div id="modalCheckout" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
+    <div class="bg-white w-full max-w-2xl mx-auto rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        
+        {{-- Header Modal --}}
+        <div class="bg-yellow-400 p-6 sticky top-0">
+            <h2 class="text-2xl font-bold text-black text-center flex items-center justify-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                Konfirmasi Checkout
+            </h2>
+        </div>
+
+        {{-- Body Modal --}}
+        <div class="p-6 space-y-5">
+            
+            {{-- Info Pelanggan --}}
+            <div class="bg-gray-50 p-4 rounded-xl">
+                <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+                    <i class="bi bi-person-fill text-xl"></i>
+                    Informasi Pelanggan
+                </h3>
+                @if($pelanggan)
+                <div class="space-y-1 text-sm">
+                    <p><span class="font-semibold">Nama:</span> {{ $pelanggan['nama_pelanggan'] }}</p>
+                    <p><span class="font-semibold">No. HP:</span> {{ $pelanggan['no_hp'] }}</p>
+                </div>
+                @endif
+            </div>
+
+            {{-- Detail Order --}}
+            <div class="bg-gray-50 p-4 rounded-xl">
+                <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
+                    <i class="bi bi-basket-fill text-xl text-red-500"></i>
+                    Detail Order
+                </h3>
+                
+                <div class="space-y-3 max-h-60 overflow-y-auto">
+                    @foreach($detail as $d)
+                    <div class="flex gap-3 bg-white p-3 rounded-lg">
+                        {{-- Gambar --}}
+                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            @if(!empty($d['gambar']))
+                                <img src="{{ asset('images/jenis/' . $d['gambar']) }}"
+                                     alt="{{ $d['nama_layanan'] }}"
+                                     class="w-full h-full object-cover"
+                                     onerror="this.src='{{ asset('images/default.png') }}'">
+                            @else
+                                <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
+                            @endif
+                        </div>
+                        
+                        {{-- Detail --}}
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm truncate">{{ $d['nama_layanan'] }} ({{ $d['jenis'] }})</p>
+                            <p class="text-xs text-gray-600">
+                                {{ $d['qty'] }} x Rp{{ number_format($d['harga'], 0, ',', '.') }}
+                            </p>
+                            <p class="text-xs text-gray-600">
+                                <i class="bi bi-bag-heart-fill text-red-500"></i>
+                                {{ $d['parfum_nama'] ?? 'Tanpa parfum' }}
+                            </p>
+                        </div>
+                        
+                        {{-- Subtotal --}}
+                        <div class="text-right">
+                            <p class="font-bold">Rp{{ number_format($d['harga'] * $d['qty'], 0, ',', '.') }}</p>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Keterangan --}}
+            @if($keterangan)
+            <div class="bg-gray-50 p-4 rounded-xl">
+                <p class="font-semibold text-sm mb-1">Keterangan:</p>
+                <p class="text-sm text-gray-700">{{ $keterangan }}</p>
+            </div>
+            @endif
+
+            {{-- Total --}}
+            <div class="bg-yellow-100 border-2 border-yellow-400 p-4 rounded-xl">
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold">Total Pembayaran:</span>
+                    <span class="text-2xl font-bold text-green-600">
+                        Rp{{ number_format($totalHarga, 0, ',', '.') }}
+                    </span>
+                </div>
+            </div>
+
+        </div>
+
+      {{-- Footer Modal --}}
+<div class="p-6 bg-gray-50 flex gap-3">
+    <button type="button" onclick="closeCheckoutModal()"
+            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition">
+        Batal
+    </button>
+    
+    {{-- ✅ GANTI FORM JADI LINK --}}
+    <a href="{{ route('admin2.transaksi.confirm') }}"
+       class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-lg transition text-center inline-flex items-center justify-center gap-2">
+        <i class="bi bi-check-circle-fill"></i>
+        Lanjutkan
+    </a>
+</div>
+    </div>
+</div>
+
+@endsection
+
 @section('scripts')
 <script>
-    document.querySelector("[form='checkoutForm']").addEventListener("click", function(e) {
-        const pelanggan = @json($pelanggan);
-        const detail = @json($detail);
+const modal = document.getElementById('modalCheckout');
+const btnCheckout = document.getElementById('btnCheckout');
 
-        // CEK PELANGGAN
-        if (!pelanggan) {
-            e.preventDefault();
 
-            Swal.fire({
-                title: "Pelanggan belum dipilih",
-                text: "Silahkan pilih pelanggan terlebih dahulu.",
-                icon: "warning",
-                confirmButtonColor: "#facc15",
-                confirmButtonText: "Mengerti"
-            });
+// Function buka modal
+function openCheckoutModal() {
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent scroll
+}
 
-            return;
-        }
+// Function tutup modal
+function closeCheckoutModal() {
+    modal.classList.add('hidden');
+    document.body.style.overflow = ''; // Restore scroll
+}
 
-        // CEK LAYANAN
-        if (!detail || detail.length === 0) {
-            e.preventDefault();
+// Click button checkout
+btnCheckout.addEventListener('click', function() {
+    const pelanggan = @json($pelanggan);
+    const detail = @json($detail);
 
-            Swal.fire({
-                title: "Layanan kosong",
-                text: "Tambahkan layanan sebelum checkout.",
-                icon: "warning",
-                confirmButtonColor: "#facc15",
-                confirmButtonText: "Oke"
-            });
+    // ✅ VALIDASI PELANGGAN
+    if (!pelanggan) {
+        Swal.fire({
+            title: "Pelanggan belum dipilih",
+            text: "Silahkan pilih pelanggan terlebih dahulu.",
+            icon: "warning",
+            confirmButtonColor: "#facc15",
+            confirmButtonText: "Mengerti"
+        });
+        return;
+    }
 
-            return;
-        }
-    });
+    // ✅ VALIDASI LAYANAN
+    if (!detail || detail.length === 0) {
+        Swal.fire({
+            title: "Layanan kosong",
+            text: "Tambahkan layanan sebelum checkout.",
+            icon: "warning",
+            confirmButtonColor: "#facc15",
+            confirmButtonText: "Oke"
+        });
+        return;
+    }
+
+    // ✅ BUKA MODAL kalau validasi OK
+    openCheckoutModal();
+});
+
+// Click di luar modal untuk tutup
+modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+        closeCheckoutModal();
+    }
+});
+
+// ESC key untuk tutup modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeCheckoutModal();
+    }
+});
+
+function submitCheckout() {
+    document.getElementById('checkoutForm').submit();
+}
+
+
 </script>
-
-
-
 @endsection

@@ -346,4 +346,252 @@ public function aksesUser($type, $id)
         'user', 'role', 'menus', 'permissions'
     ));
 }
+// =============================
+// ADMIN2 - INDEX KELOLA KASIR
+// =============================
+public function indexAdmin2()
+{
+    $admin = auth('admin')->user();
+    
+    // Cek apakah Admin2
+    if (!$admin || $admin->role_id != 2) {
+        abort(403, 'Akses ditolak. Hanya Admin2 yang dapat mengakses halaman ini.');
+    }
+
+    $kasirs = Kasir::orderBy('created_at', 'desc')->get();
+
+    return view('admin2.manager.index', compact('kasirs', 'admin')); // ✅ FIX
+}
+
+// =============================
+// ADMIN2 - FORM CREATE KASIR
+// =============================
+public function createKasirAdmin2()
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    return view('admin2.manager.kasir.create'); // ✅ FIX
+}
+
+// =============================
+// ADMIN2 - STORE KASIR
+// =============================
+public function storeKasirAdmin2(Request $request)
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $request->validate([
+        'nama_kasir' => 'required|string|max:100',
+        'no_hp'      => 'nullable|string|max:20',
+        'password'   => 'required|string|min:6',
+    ]);
+
+    Kasir::create([
+        'nama_kasir' => $request->nama_kasir,
+        'no_hp'      => $request->no_hp,
+        'password'   => Hash::make($request->password),
+        'role_id'    => 3, // Role Kasir
+        'status'     => 'aktif',
+    ]);
+
+    return redirect()
+        ->route('admin2.manager.index') // ✅ FIX
+        ->with('success', 'Kasir berhasil ditambahkan');
+}
+
+// =============================
+// ADMIN2 - AKSES KASIR
+// =============================
+public function aksesKasirAdmin2($id)
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $kasir = Kasir::findOrFail($id);
+    $roleId = 3; // Role Kasir
+    $role = Role::findOrFail($roleId);
+
+    // Menu yang tersedia untuk Kasir
+    $menus = Menu::where('role_id', $roleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->with(['children' => function ($q) use ($roleId) {
+            $q->where('status', 1)
+              ->where('role_id', $roleId)
+              ->orderBy('urutan');
+        }])
+        ->orderBy('urutan')
+        ->get();
+
+    $permissions = MenuRole::where('role_id', $roleId)
+        ->get()
+        ->keyBy('menu_id');
+
+    // Menu actions untuk Kasir
+    $menuActions = [
+        'layanan'       => ['view','add','edit','delete'],
+        'satuan'        => ['view','add','edit','delete'],
+        'parfum'        => ['view','add','edit','delete'],
+        'pelanggan'     => ['view','add','edit','delete'],
+        'pengeluaran'   => ['view','add','edit','delete'],
+        'transaksi'     => ['view','edit','delete'],
+        'metode-bayar'  => ['view','add','edit','delete'],
+        'laporan'       => ['view'],
+        'data'          => ['view','edit','delete'],
+    ];
+
+    return view('admin2.manager.menu-role.hak', compact( // ✅ FIX
+        'kasir', 'role', 'menus', 'permissions', 'menuActions'
+    ));
+}
+
+// =============================
+// ADMIN2 - SAVE AKSES KASIR
+// =============================
+public function saveAksesKasirAdmin2(Request $request, $id)
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $kasir = Kasir::findOrFail($id);
+    $roleId = 3; // Role Kasir
+
+    $request->validate([
+        'menus' => 'array',
+        'permissions' => 'array',
+    ]);
+
+    // Hapus permission lama untuk role Kasir
+    MenuRole::where('role_id', $roleId)->delete();
+
+    foreach ($request->menus ?? [] as $menuId) {
+        $menu = Menu::where('id', $menuId)
+            ->where('role_id', $roleId)
+            ->first();
+
+        if (!$menu) continue;
+
+        $perms = $request->permissions[$menuId] ?? [];
+
+        MenuRole::create([
+            'role_id'    => $roleId,
+            'menu_id'    => $menuId,
+            'can_view'   => in_array('view', $perms),
+            'can_add'    => in_array('add', $perms),
+            'can_edit'   => in_array('edit', $perms),
+            'can_delete' => in_array('delete', $perms),
+        ]);
+    }
+
+    return back()->with('success', 'Hak akses kasir berhasil diperbarui');
+}
+
+// =============================
+// ADMIN2 - UPDATE STATUS KASIR
+// =============================
+public function updateStatusKasirAdmin2(Request $request, $id)
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $request->validate([
+        'status' => 'required|in:aktif,nonaktif',
+    ]);
+
+    Kasir::where('id_kasir', $id)
+        ->update(['status' => $request->status]);
+
+    return back()->with('success', 'Status kasir berhasil diubah');
+}
+// =============================
+// ADMIN2 - HAK AKSES KASIR (GENERAL)
+// =============================
+public function hakAksesKasir()
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $roleId = 3; // Role Kasir
+    $role = Role::findOrFail($roleId);
+
+    // Menu yang tersedia untuk Kasir
+    $menus = Menu::where('role_id', $roleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->orderBy('urutan')
+        ->get();
+
+    $permissions = MenuRole::where('role_id', $roleId)
+        ->get()
+        ->keyBy('menu_id');
+
+    return view('admin2.manager.menu-role.hak', compact(
+        'role', 'menus', 'permissions'
+    ));
+}
+
+// =============================
+// ADMIN2 - SAVE HAK AKSES KASIR (GENERAL)
+// =============================
+public function saveHakAksesKasir(Request $request)
+{
+    $admin = auth('admin')->user();
+    
+    if (!$admin || $admin->role_id != 2) {
+        abort(403);
+    }
+
+    $roleId = 3; // Role Kasir
+
+    $request->validate([
+        'menus' => 'array',
+        'permissions' => 'array',
+    ]);
+
+    // Hapus permission lama untuk role Kasir
+    MenuRole::where('role_id', $roleId)->delete();
+
+    foreach ($request->menus ?? [] as $menuId) {
+        $menu = Menu::where('id', $menuId)
+            ->where('role_id', $roleId)
+            ->first();
+
+        if (!$menu) continue;
+
+        $perms = $request->permissions[$menuId] ?? [];
+
+        MenuRole::create([
+            'role_id'    => $roleId,
+            'menu_id'    => $menuId,
+            'can_view'   => in_array('view', $perms),
+            'can_add'    => in_array('add', $perms),
+            'can_edit'   => in_array('edit', $perms),
+            'can_delete' => in_array('delete', $perms),
+        ]);
+    }
+
+    return redirect()
+        ->route('admin2.manager.index')
+        ->with('success', 'Hak akses kasir berhasil diperbarui');
+}
 }

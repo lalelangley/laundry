@@ -6,9 +6,9 @@
 @php
 $riwayat = $detail->first()?->transaksi;
 $backUrl = request()->from === 'dashboard'
-    ? route('admin.dashboard')
+    ? route('admin2.dashboard')
     : ($riwayat
-        ? route('riwayat.detail', ['id' => $riwayat->id_transaksi])
+        ? route('admin2.riwayat.detail', ['id' => $riwayat->id_transaksi])
         : url()->previous());
 @endphp
 
@@ -46,7 +46,7 @@ $backUrl = request()->from === 'dashboard'
         <i class="bi bi-basket-fill text-2xl"></i> Detail Order
     </div>
     @if($riwayat)
-        <a href="{{ route('riwayat.add_layanan_page', $riwayat->id_transaksi) }}"
+        <a href="{{ route('admin2.riwayat.addlayanan', $riwayat->id_transaksi) }}"
            class="bg-yellow-400 px-4 py-2 rounded-xl text-black font-semibold">
             Tambah Layanan
         </a>
@@ -54,10 +54,9 @@ $backUrl = request()->from === 'dashboard'
 </div>
 
 {{-- DETAIL LAYANAN FORM --}}
-<form action="{{ route('riwayat.update', $riwayat->id_transaksi) }}" method="POST">
+<form action="{{ route('admin2.riwayat.update', $riwayat->id_transaksi) }}" method="POST">
     @csrf
     @method('PUT')
-
 
     <div class="mx-4 mt-3 space-y-4 pb-32" id="layananList">
         @foreach ($detail as $d)
@@ -99,7 +98,7 @@ $backUrl = request()->from === 'dashboard'
                 </div>
 
                 <button type="button"
-                    data-url="{{ route('riwayat.delete_detail', $d->id_detail_transaksi) }}"
+                    data-url="{{ route('admin2.riwayat.delete_detail', $d->id_detail_transaksi) }}"
                     onclick="event.stopPropagation(); deleteLayanan(this)"
                     class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition hover:bg-red-600 shadow">
                     <i class="bi bi-trash-fill"></i>

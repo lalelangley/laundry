@@ -13,6 +13,7 @@
         <p><strong>Satuan ID:</strong> {{ isset($jenis) ? $jenis->id_satuan : '❌ NOT SET' }}</p>
         <p><strong>From:</strong> {{ request('from') ?? '❌ NOT SET' }}</p>
         <p><strong>Satuan Count:</strong> {{ isset($satuan) ? count($satuan) : '❌ Variable $satuan NOT SET' }}</p>
+        <p><strong>Gambar Existing:</strong> {{ isset($jenis) ? ($jenis->gambar ?: 'TIDAK ADA') : '❌ NOT SET' }}</p>
     </div>
 </div>
 @endif
@@ -58,6 +59,8 @@
         @csrf
         @method('PUT')
 
+        {{-- ✅✅✅ KUNCI UTAMA: Hidden input untuk preserve gambar existing ✅✅✅ --}}
+        <input type="hidden" name="gambar_existing" value="{{ $jenis->gambar ?? '' }}">
         <input type="hidden" name="from" value="{{ request('from', $jenis->id_layanan ?? 0) }}">
 
         {{-- Upload Gambar --}}
@@ -66,19 +69,28 @@
                 <i class="bi bi-image me-1"></i>Gambar Jenis Layanan
             </label>
 
-            {{-- Preview Container --}}
+            {{-- ✅✅✅ FIXED: Preview Container dengan path yang BENAR ✅✅✅ --}}
             <div class="mb-3">
                 @if(!empty($jenis->gambar))
+                    <div class="mb-2">
+                        <span class="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-1 rounded">
+                            📷 Gambar Saat Ini
+                        </span>
+                    </div>
+                    {{-- ✅ FIXED: Gambar ADA → pakai images/jenis/ --}}
                     <img id="preview" 
                          src="{{ asset('images/jenis/' . $jenis->gambar) }}"
                          alt="Preview" 
                          class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200"
                          onerror="this.src='{{ asset('images/default.png') }}'">
+                    <p class="text-xs text-gray-500 mt-1">{{ $jenis->gambar }}</p>
                 @else
+                    {{-- ✅ FIXED: Gambar KOSONG → pakai images/ untuk default --}}
                     <img id="preview" 
                          src="{{ asset('images/default.png') }}"
                          alt="Preview" 
                          class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200">
+                    <p class="text-xs text-yellow-600 mt-1">⚠️ Belum ada gambar</p>
                 @endif
             </div>
 
@@ -94,11 +106,22 @@
                 <label for="gambar" 
                        class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 rounded-xl cursor-pointer transition">
                     <i class="bi bi-camera-fill text-xl"></i>
-                    <span class="font-semibold">Ganti Gambar</span>
+                    <span class="font-semibold">{{ !empty($jenis->gambar) ? 'Ganti Gambar' : 'Pilih Gambar' }}</span>
                 </label>
                 <span id="fileName" class="ml-3 text-sm text-gray-600"></span>
             </div>
-            <p class="text-xs text-gray-500 mt-2">Format: JPG, PNG, JPEG, GIF, WEBP (Max: 2MB)</p>
+            
+            {{-- ✅ Info penting untuk user --}}
+            <div class="mt-2 space-y-1">
+                <p class="text-xs text-gray-500">
+                    <i class="bi bi-info-circle"></i> Format: JPG, PNG, JPEG, GIF, WEBP (Max: 2MB)
+                </p>
+                @if(!empty($jenis->gambar))
+                <p class="text-xs text-green-600 font-semibold">
+                    <i class="bi bi-check-circle-fill"></i> Kosongkan jika tidak ingin mengubah gambar
+                </p>
+                @endif
+            </div>
         </div>
 
         {{-- Nama Jenis --}}

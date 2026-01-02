@@ -6,27 +6,42 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
-    <a href="{{ route('transaksi.create') }}" class="text-black text-3xl font-bold">
+    <a href="{{ route('admin2.transaksi.create') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-2xl font-bold">Checkout</span>
 </div>
-
 <div class="p-4 space-y-6 pb-40">
 
-    {{-- CARD PELANGGAN --}}
-    <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
-        <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-            <img src="{{ asset('images/default-user.png') }}" class="w-full h-full object-cover">
-        </div>
-        <div>
-            <p class="text-xl font-bold leading-tight">{{ $pelanggan['nama_pelanggan'] }}</p>
-            <p class="text-sm text-gray-500 flex items-center gap-1">
-                <i class="bi bi-phone-fill text-yellow-500"></i>
-                {{ $pelanggan['no_hp'] }}
-            </p>
-        </div>
+   {{-- CARD PELANGGAN --}}
+<div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
+
+    <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+        @if(!empty($pelanggan['foto']))
+            {{-- ✅ FIX: Tambah prefix pelanggan/ kalau belum ada --}}
+            @php
+                $fotoPath = str_starts_with($pelanggan['foto'], 'pelanggan/') 
+                    ? $pelanggan['foto'] 
+                    : 'pelanggan/' . $pelanggan['foto'];
+            @endphp
+            <img src="{{ asset('images/' . $fotoPath) }}"
+                alt="{{ $pelanggan['nama_pelanggan'] }}"
+                class="w-full h-full object-cover"
+                onerror="this.src='{{ asset('images/default-user.png') }}';">
+        @else
+            <img src="{{ asset('images/default-user.png') }}"
+                alt="Default"
+                class="w-full h-full object-cover">
+        @endif
     </div>
+    <div>
+        <p class="text-xl font-bold leading-tight">{{ $pelanggan['nama_pelanggan'] }}</p>
+        <p class="text-sm text-gray-500 flex items-center gap-1">
+            <i class="bi bi-phone-fill text-yellow-500"></i>
+            {{ $pelanggan['no_hp'] }}
+        </p>
+    </div>
+</div>
 
     {{-- DETAIL ORDER --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl">
@@ -36,12 +51,22 @@
         </div>
         @foreach ($detail as $d)
         <div class="bg-gray-100 rounded-2xl p-4 flex gap-4 mb-4">
-            <div class="w-20 h-20 bg-white rounded-2xl flex justify-center items-center border">
-                <img src="{{ asset('images/teddy.png') }}" class="w-full h-full object-contain">
+            {{-- ✅ FIXED: Gambar Jenis Layanan Dinamis --}}
+            <div class="w-20 h-20 bg-white rounded-2xl flex justify-center items-center border overflow-hidden">
+                @if(!empty($d['gambar']))
+                    <img src="{{ asset('images/jenis/' . $d['gambar']) }}"
+                         alt="{{ $d['nama_layanan'] }}"
+                         class="w-full h-full object-cover"
+                         onerror="this.src='{{ asset('images/default.png') }}'">
+                @else
+                    <img src="{{ asset('images/default.png') }}"
+                         alt="Default"
+                         class="w-full h-full object-cover">
+                @endif
             </div>
             <div class="flex-1">
                 <p class="font-bold text-lg leading-tight">
-                    {{ $d['nama_layanan'] }}{{ isset($d['jenis']) ? ' '.$d['jenis'] : '' }}
+                    {{ $d['nama_layanan'] }}{{ isset($d['jenis']) ? ' ('.$d['jenis'].')' : '' }}
                 </p>
                 <p class="text-sm text-gray-600">
                     Rp{{ number_format($d['harga'],0,',','.') }} / {{ $d['satuan'] ?? '' }}
@@ -175,7 +200,7 @@
             </div>
         </div>
 
-        <a href="{{ route('transaksi.pelanggan') }}" class="block w-full py-3 bg-green-600 text-white text-lg font-bold rounded-2xl text-center">
+        <a href="{{ route('admin2.transaksi.pelanggan') }}" class="block w-full py-3 bg-green-600 text-white text-lg font-bold rounded-2xl text-center">
             Buat Transaksi Baru
         </a>
     </div>
@@ -303,7 +328,67 @@ document.getElementById("btnSimpanPembayaran").addEventListener("click", async (
         const tgl_estimasi = formatDateTime(document.getElementById("tgl_estimasi").value);
         const langsung = parseInt(hiddenBayar.value);
 
-        const res = await fetch("{{ route('transaksi.bayar') }}", {
+        // ✅ VALIDASI 1: Kalau DP = 0 dan pilih "Tidak Bayar"
+        if (langsung === 0 && bayar === 0) {
+            Swal.fire({
+                title: "Jumlah bayar tidak valid",
+                text: "Masukkan jumlah DP atau aktifkan 'Langsung Bayar'",
+                icon: "warning",
+                confirmButtonColor: "#facc15",
+                confirmButtonText: "Mengerti"
+            });
+            return;
+        }
+
+        // ✅ VALIDASI 2: Kalau pilih "Tidak Bayar" tapi DP = Total
+        if (langsung === 0 && bayar >= total) {
+            const result = await Swal.fire({
+                title: "Jumlah bayar penuh terdeteksi",
+                text: "DP sama dengan total harga. Aktifkan 'Langsung Bayar' untuk melanjutkan?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#16a34a",
+                cancelButtonColor: "#ef4444",
+                confirmButtonText: "Ya, Aktifkan",
+                cancelButtonText: "Batal"
+            });
+            
+            if (result.isConfirmed) {
+                // Auto-aktifkan langsung bayar
+                hiddenBayar.value = "1";
+                statusBayar.textContent = "Aktif";
+                toggleBayar.textContent = "✔ Langsung Bayar";
+                toggleBayar.classList.replace("bg-red-400", "bg-yellow-400");
+                inputBayar.value = total;
+                inputBayar.readOnly = true;
+                
+                Swal.fire({
+                    title: "Berhasil!",
+                    text: "Mode pembayaran diubah ke 'Langsung Bayar'",
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                return; // Stop, biar user klik Simpan lagi
+            } else {
+                return; // User cancel
+            }
+        }
+
+        // ✅ VALIDASI 3: Kalau pilih "Langsung Bayar" tapi input DP kurang dari total
+        if (langsung === 1 && bayar < total) {
+            Swal.fire({
+                title: "Jumlah bayar kurang",
+                text: "Mode 'Langsung Bayar' harus membayar penuh. Ubah ke 'Tidak Bayar' untuk DP?",
+                icon: "warning",
+                confirmButtonColor: "#facc15",
+                confirmButtonText: "Oke"
+            });
+            return;
+        }
+
+        // ✅ PROSES SIMPAN
+        const res = await fetch("{{ route('admin2.transaksi.bayar') }}", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -323,7 +408,11 @@ document.getElementById("btnSimpanPembayaran").addEventListener("click", async (
             })
         });
 
-        if(!res.ok){ alert("Gagal menyimpan"); return; }
+        if (!res.ok) { 
+            alert("Gagal menyimpan"); 
+            return; 
+        }
+
         const data = await res.json();
         popupBayar.classList.add("hidden");
 
@@ -335,24 +424,30 @@ document.getElementById("btnSimpanPembayaran").addEventListener("click", async (
 
         // Hapus label status lama
         const oldLabel = document.getElementById("labelStatusBayar");
-        if(oldLabel) oldLabel.remove();
+        if (oldLabel) oldLabel.remove();
 
-        if(data.status_bayar && data.status_bayar != "lunas"){
+        if (data.status_bayar && data.status_bayar != "lunas") {
             let label = document.createElement("p");
             label.id = "labelStatusBayar";
-            label.classList.add(data.status_bayar.toLowerCase()=="dp" ? "text-orange-500" : "text-red-500","font-bold","mt-2");
+            label.classList.add(
+                data.status_bayar.toLowerCase() == "dp" ? "text-orange-500" : "text-red-500",
+                "font-bold",
+                "mt-2"
+            );
             label.textContent = "Status: " + data.status_bayar.toUpperCase();
             popupSuccess.querySelector(".bg-white")?.appendChild(label);
         }
 
         popupSuccess.classList.remove("hidden");
 
-    } catch(err){ console.error(err); alert("Terjadi kesalahan."); }
+    } catch (err) { 
+        console.error(err); 
+        alert("Terjadi kesalahan."); 
+    }
 });
 
-
     // ===== BUTTON SUCCESS =====
-    document.getElementById("btnSelesai").addEventListener("click", ()=>window.location.href="{{ route('admin.dashboard') }}");
+    document.getElementById("btnSelesai").addEventListener("click", ()=>window.location.href="{{ route('admin2.dashboard') }}");
     document.getElementById("btnCetak").addEventListener("click", ()=>window.print());
     document.getElementById("btnBagikan").addEventListener("click", async ()=>{
         const shareText = `Transaksi Berhasil!\nTotal: ${succTotal.textContent}\nBayar: ${succBayar.textContent}`;
