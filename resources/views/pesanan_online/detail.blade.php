@@ -80,11 +80,11 @@
                 <div class="grid md:grid-cols-2 gap-4 text-sm">
                     <div>
                         <p class="text-gray-500">Nama</p>
-                        <p class="font-semibold">{{ $pesanan->pelanggan->nama_pelanggan ?? '-' }}</p>
+                        <p class="font-semibold">{{ $pesanan->nama_pelanggan ?? '-' }}</p>
                     </div>
                     <div>
                         <p class="text-gray-500">No HP</p>
-                        <p class="font-semibold">{{ $pesanan->pelanggan->no_hp ?? '-' }}</p>
+                        <p class="font-semibold">{{ $pesanan->no_hp ?? '-' }}</p>
                     </div>
                     <div class="md:col-span-2">
                         <p class="text-gray-500">Alamat</p>
@@ -118,7 +118,13 @@
                     <div>
                         <p class="text-gray-500">Pembayaran</p>
                         <span class="font-semibold">
-                            {{ $pesanan->status_bayar == 'lunas' ? 'Lunas' : 'Belum Bayar' }}
+                            @if($pesanan->status_bayar == 'lunas')
+                                <span class="text-green-600">Lunas</span>
+                            @elseif($pesanan->status_bayar == 'DP')
+                                <span class="text-blue-600">DP</span>
+                            @else
+                                <span class="text-red-600">Belum Bayar</span>
+                            @endif
                         </span>
                     </div>
                 </div>
@@ -131,21 +137,32 @@
                 <div class="space-y-2 text-sm">
                     @php
                         $subtotalAll = 0;
+                        $totalQtyAll = 0;
+                        
                         if($pesanan->detail_transaksi) {
                             foreach($pesanan->detail_transaksi as $d) {
                                 $subtotalAll += ($d->harga * $d->qty);
+                                $totalQtyAll += $d->qty;
                             }
                         }
                     @endphp
+                    
                     <div class="flex justify-between">
                         <span>Subtotal</span>
                         <b>Rp {{ number_format($subtotalAll,0,',','.') }}</b>
                     </div>
                     
-                    @if($pesanan->total_qty && $pesanan->id_satuan)
+                    @if($pesanan->diskon > 0)
+                    <div class="flex justify-between text-red-600">
+                        <span>Diskon</span>
+                        <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
+                    </div>
+                    @endif
+                    
+                    @if($totalQtyAll > 0)
                     <div class="flex justify-between text-sm text-gray-600">
-                        <span>Total Qty</span>
-                        <b>{{ $pesanan->total_qty }} {{ $pesanan->satuan->nama_satuan ?? '' }}</b>
+                        <span>Total Item</span>
+                        <b>{{ $totalQtyAll }} item</b>
                     </div>
                     @endif
                     
@@ -154,6 +171,35 @@
                         <span>Total</span>
                         <span>Rp {{ number_format($pesanan->total_harga,0,',','.') }}</span>
                     </div>
+
+                    @if($pesanan->dp > 0)
+                    <div class="flex justify-between bg-blue-50 -mx-2 px-2 py-2 rounded">
+                        <span class="text-blue-600">DP Dibayar</span>
+                        <b class="text-blue-600">Rp {{ number_format($pesanan->dp,0,',','.') }}</b>
+                    </div>
+                    @endif
+
+                    @if($pesanan->total_bayar > 0)
+                    <div class="flex justify-between bg-green-50 -mx-2 px-2 py-2 rounded">
+                        <span class="text-green-600">Total Dibayar</span>
+                        <b class="text-green-600">Rp {{ number_format($pesanan->total_bayar,0,',','.') }}</b>
+                    </div>
+                    @endif
+
+                    @php
+                        $sisa = $pesanan->total_harga - $pesanan->total_bayar;
+                    @endphp
+                    @if($sisa > 0)
+                    <div class="flex justify-between bg-red-50 -mx-2 px-2 py-2 rounded">
+                        <span class="text-red-600 font-semibold">Sisa Pembayaran</span>
+                        <b class="text-red-600">Rp {{ number_format($sisa,0,',','.') }}</b>
+                    </div>
+                    @elseif($sisa < 0)
+                    <div class="flex justify-between bg-yellow-50 -mx-2 px-2 py-2 rounded">
+                        <span class="text-yellow-600 font-semibold">Kembalian</span>
+                        <b class="text-yellow-600">Rp {{ number_format(abs($sisa),0,',','.') }}</b>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -162,11 +208,10 @@
                 <h2 class="font-bold mb-2">Aksi</h2>
 
                 @php
-                    // Cek apakah data pesanan sudah diisi
-                    $dataLengkap = $pesanan->total_qty && $pesanan->id_satuan;
+                    $dataLengkap = $pesanan->detail_transaksi->count() > 0 && $pesanan->total_harga > 0;
                 @endphp
 
-                {{-- 🔥 BUTTON ISI DATA PESANAN --}}
+                {{-- BUTTON ISI DATA PESANAN --}}
                 @if(!in_array($pesanan->status_transaksi, ['selesai', 'ditolak']))
                 <button onclick="openIsiDataModal()" 
                         class="w-full py-2 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center gap-2">
@@ -175,7 +220,7 @@
                 </button>
                 @endif
 
-                {{-- ⚠️ WARNING JIKA BELUM ISI DATA --}}
+                {{-- WARNING JIKA BELUM ISI DATA --}}
                 @if(!$dataLengkap && !in_array($pesanan->status_transaksi, ['selesai', 'ditolak']))
                 <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
                     <div class="flex items-start gap-2">
@@ -188,7 +233,7 @@
                 </div>
                 @endif
 
-                {{-- 🔥 BUTTON KONFIRMASI PESANAN - HANYA MUNCUL JIKA DATA LENGKAP --}}
+                {{-- BUTTON KONFIRMASI PESANAN --}}
                 @if($dataLengkap && !in_array($pesanan->status_transaksi, ['selesai', 'ditolak']))
                 <button onclick="openKonfirmasiModal()" 
                         class="w-full py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 flex items-center justify-center gap-2">
@@ -197,7 +242,7 @@
                 </button>
                 @endif
 
-                {{-- PROSES - HANYA MUNCUL JIKA DATA LENGKAP --}}
+                {{-- PROSES --}}
                 @if($dataLengkap && in_array($pesanan->status_transaksi, ['antrian', 'menunggu_konfirmasi', 'dikonfirmasi']))
                 <a href="{{ route('pesanan.online.proses',$pesanan->id_transaksi) }}"
                    class="block text-center py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2">
@@ -206,7 +251,7 @@
                 </a>
                 @endif
 
-                {{-- 🔥 DECISION: PICKUP / DELIVERY - MUNCUL SAAT STATUS PROSES --}}
+                {{-- PICKUP / DELIVERY --}}
                 @if($pesanan->status_transaksi == 'proses')
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg">
                     <p class="text-sm font-semibold text-blue-800 mb-2">
@@ -225,7 +270,7 @@
                 </div>
                 @endif
 
-                {{-- SELESAI - MUNCUL SAAT SUDAH SIAP DI AMBIL --}}
+                {{-- SELESAI --}}
                 @if(in_array($pesanan->status_transaksi, ['siap_di_ambil', 'siap_di_antar']))
                 <a href="{{ route('pesanan.online.selesai',$pesanan->id_transaksi) }}"
                    class="block text-center py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
@@ -245,12 +290,10 @@
     </div>
 </div>
 
-{{-- ========================================
-     MODAL ISI DATA PESANAN
-======================================== --}}
+{{-- MODAL ISI DATA PESANAN --}}
 <div id="isiDataModal" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4 sticky top-0 bg-white pb-3 border-b">
             <h3 class="text-xl font-bold text-gray-800">
                 <i class="bi bi-pencil-square text-purple-600"></i> Isi Data Pesanan
             </h3>
@@ -264,35 +307,61 @@
             @method('PUT')
 
             <div class="space-y-4">
-                {{-- TOTAL QTY + SATUAN --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Total Qty + Satuan <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex gap-2">
-                        <input type="number" 
-                               name="total_qty" 
-                               step="0.01"
-                               value="{{ $pesanan->total_qty ?? '' }}"
-                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                               placeholder="Contoh: 5" 
-                               required>
+                {{-- ✅ ISI QTY PER ITEM DARI DETAIL_TRANSAKSI --}}
+                @if($pesanan->detail_transaksi && $pesanan->detail_transaksi->count() > 0)
+                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                        <p class="text-sm font-semibold text-blue-800 mb-3">
+                            <i class="bi bi-basket"></i> Isi Qty untuk Setiap Item:
+                        </p>
                         
-                        {{-- ✅ DROPDOWN SATUAN DARI DATABASE --}}
-                        <select name="id_satuan" 
-                                class="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                required>
-                            <option value="">Pilih</option>
-                            @foreach(\App\Models\Satuan::all() as $satuan)
-                                <option value="{{ $satuan->id_satuan }}" 
-                                        {{ ($pesanan->id_satuan ?? '') == $satuan->id_satuan ? 'selected' : '' }}>
-                                    {{ $satuan->nama_satuan }}
-                                </option>
-                            @endforeach
-                        </select>
+                        @foreach($pesanan->detail_transaksi as $i => $d)
+                            <div class="bg-white p-3 rounded-lg mb-2 shadow-sm">
+                                <p class="font-semibold text-sm mb-2">{{ $d->layanan->nama_layanan ?? 'Layanan' }}</p>
+                                
+                                <div class="grid grid-cols-2 gap-2">
+                                    {{-- QTY --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">
+                                            Qty <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="number" 
+                                               name="qty[]" 
+                                               step="0.01"
+                                               value="{{ $d->qty ?? '' }}"
+                                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                               placeholder="5" 
+                                               required>
+                                    </div>
+                                    
+                                    {{-- SATUAN --}}
+                                    <div>
+                                        <label class="block text-xs font-semibold text-gray-600 mb-1">
+                                            Satuan <span class="text-red-500">*</span>
+                                        </label>
+                                        <select name="id_satuan[]" 
+                                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                required>
+                                            <option value="">Pilih</option>
+                                            @foreach(\App\Models\Satuan::all() as $satuan)
+                                                <option value="{{ $satuan->id_satuan }}" 
+                                                        {{ ($d->id_satuan ?? '') == $satuan->id_satuan ? 'selected' : '' }}>
+                                                    {{ $satuan->nama_satuan }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                {{-- Hidden ID Detail --}}
+                                <input type="hidden" name="id_detail[]" value="{{ $d->id_detail_transaksi }}">
+                            </div>
+                        @endforeach
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Contoh: 5 Kg atau 10 Item</p>
-                </div>
+                @else
+                    <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-center">
+                        <p class="text-sm text-yellow-800">⚠️ Tidak ada item pesanan</p>
+                    </div>
+                @endif
 
                 {{-- TOTAL HARGA --}}
                 <div>
@@ -308,6 +377,7 @@
                                placeholder="100000" 
                                required>
                     </div>
+                    <p class="text-xs text-gray-500 mt-1">Total harga keseluruhan pesanan</p>
                 </div>
 
                 {{-- KETERANGAN (OPTIONAL) --}}
@@ -317,15 +387,15 @@
                     </label>
                     <textarea name="keterangan" 
                               rows="3"
-                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                               placeholder="Tambahkan catatan jika ada...">{{ $pesanan->keterangan ?? '' }}</textarea>
                 </div>
             </div>
 
-            <div class="flex gap-3 mt-6">
+            <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-3 border-t">
                 <button type="button" 
                         onclick="closeIsiDataModal()"
-                        class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                        class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
                     Batal
                 </button>
                 <button type="submit" 
@@ -337,9 +407,7 @@
     </div>
 </div>
 
-{{-- ========================================
-     MODAL KONFIRMASI PESANAN
-======================================== --}}
+{{-- MODAL KONFIRMASI PESANAN --}}
 <div id="konfirmasiModal" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl">
         <div class="flex items-center justify-between mb-4">
@@ -351,16 +419,17 @@
             </button>
         </div>
 
-        {{-- PREVIEW PESAN --}}
         <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
             <p class="text-sm font-semibold text-gray-700 mb-2">Preview Pesan:</p>
-            <div class="text-sm text-gray-600 space-y-1" id="pesanPreview">
-                <p><strong>Halo {{ $pesanan->pelanggan->nama_pelanggan ?? 'Pelanggan' }}</strong>,</p>
+            <div class="text-sm text-gray-600 space-y-1">
+                <p><strong>Halo {{ $pesanan->nama_pelanggan ?? 'Pelanggan' }}</strong>,</p>
                 <p>Pesanan Anda sudah dikonfirmasi! 🎉</p>
                 <p class="mt-2"><strong>Detail Pesanan:</strong></p>
                 <p>📦 Order ID: {{ $pesanan->id_transaksi }}</p>
-                <p>📋 Total Item: {{ $pesanan->total_qty ?? '-' }} {{ $pesanan->satuan->nama_satuan ?? 'item' }}</p>
                 <p>💰 Total Harga: Rp {{ number_format($pesanan->total_harga, 0, ',', '.') }}</p>
+                @if($pesanan->pelanggan && $pesanan->pelanggan->alamat)
+                <p>📍 Alamat: {{ $pesanan->pelanggan->alamat }}</p>
+                @endif
                 <p class="mt-2 text-xs">Terima kasih telah mempercayai layanan kami! 😊</p>
             </div>
         </div>
@@ -368,11 +437,8 @@
         <form action="{{ route('pesanan.online.konfirmasi', $pesanan->id_transaksi) }}" method="POST">
             @csrf
 
-            {{-- PILIHAN METODE KIRIM --}}
             <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Kirim Via
-                </label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Kirim Via</label>
                 <div class="space-y-2">
                     <label class="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
                         <input type="radio" name="metode_kirim" value="whatsapp" checked class="mr-3">
@@ -402,9 +468,7 @@
     </div>
 </div>
 
-{{-- ========================================
-     MODAL DELIVERY
-======================================== --}}
+{{-- MODAL DELIVERY --}}
 <div id="deliveryModal" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
         <div class="flex items-center justify-between mb-4">
@@ -420,33 +484,41 @@
             Pesanan akan dikirim ke alamat pelanggan. Pastikan alamat sudah benar.
         </p>
 
-        <div class="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
-            <p class="font-semibold text-gray-700">Alamat Pengiriman:</p>
-            <p class="text-gray-600 mt-1">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
+        {{-- ALAMAT PENGIRIMAN --}}
+        <div class="bg-gray-50 p-3 rounded-lg mb-4 text-sm border border-gray-200">
+            <p class="font-semibold text-gray-700 flex items-center gap-2">
+                <i class="bi bi-geo-alt-fill text-orange-500"></i>
+                Alamat Pengiriman:
+            </p>
+            <p class="text-gray-600 mt-1 ml-6">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
         </div>
 
-        <form action="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}" method="GET">
-            {{-- Hidden field untuk menandai ini delivery --}}
-            <input type="hidden" name="mode" value="delivery">
-            
-            <div class="flex gap-3">
-                <button type="button" 
-                        onclick="closeDeliveryModal()"
-                        class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Batal
-                </button>
-                <button type="submit" 
-                        class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold">
-                    <i class="bi bi-check-circle"></i> Konfirmasi Delivery
-                </button>
+        {{-- INFO TAMBAHAN --}}
+        <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-blue-600 mt-0.5"></i>
+                <div class="text-sm text-blue-800">
+                    <p class="font-semibold">Langkah Selanjutnya</p>
+                    <p class="text-xs mt-1">Anda akan diarahkan untuk memilih driver yang akan mengantar pesanan ini.</p>
+                </div>
             </div>
-        </form>
+        </div>
+
+        <div class="flex gap-3">
+            <button type="button" 
+                    onclick="closeDeliveryModal()"
+                    class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
+                Batal
+            </button>
+            <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}"
+               class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-center flex items-center justify-center gap-2 shadow-md">
+                <i class="bi bi-person-check"></i>
+                Tentukan Driver
+            </a>
+        </div>
     </div>
 </div>
 
-{{-- ========================================
-     PRINT STYLES
-======================================== --}}
 <style>
 @media print {
     .sticky, button, a[href*="route"] {
@@ -461,11 +533,7 @@
 }
 </style>
 
-{{-- ========================================
-     MODAL JAVASCRIPT
-======================================== --}}
 <script>
-// MODAL ISI DATA
 function openIsiDataModal() {
     document.getElementById('isiDataModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -476,7 +544,6 @@ function closeIsiDataModal() {
     document.body.style.overflow = 'auto';
 }
 
-// MODAL KONFIRMASI
 function openKonfirmasiModal() {
     document.getElementById('konfirmasiModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -487,7 +554,6 @@ function closeKonfirmasiModal() {
     document.body.style.overflow = 'auto';
 }
 
-// MODAL DELIVERY
 function openDeliveryModal() {
     document.getElementById('deliveryModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -498,26 +564,18 @@ function closeDeliveryModal() {
     document.body.style.overflow = 'auto';
 }
 
-// Close modal when clicking outside
 document.getElementById('isiDataModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeIsiDataModal();
-    }
+    if (e.target === this) closeIsiDataModal();
 });
 
 document.getElementById('konfirmasiModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeKonfirmasiModal();
-    }
+    if (e.target === this) closeKonfirmasiModal();
 });
 
 document.getElementById('deliveryModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeDeliveryModal();
-    }
+    if (e.target === this) closeDeliveryModal();
 });
 
-// Close modal with Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeIsiDataModal();

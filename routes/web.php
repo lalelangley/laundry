@@ -214,6 +214,8 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         Route::delete('/{id}', [PesananOnlineController::class, 'destroyKasir'])
             ->middleware('permission:delete')
             ->name('kasir.pesanan.online.destroy');
+
+        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
     });
 
     // ================= RIWAYAT (With Permission) =================
@@ -632,7 +634,7 @@ Route::prefix('transaksi')->name('transaksi.')->group(function () {
             ]);
         })->name('layanan.jenis.tambah');
 
-  // ================= PESANAN ONLINE (With Permission) =================
+ // ================= PESANAN ONLINE (With Permission) =================
 Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
     
     // Index & Detail
@@ -676,12 +678,18 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
         ->middleware('permission:delete')
         ->name('destroy');
     
-    // Delivery
-    Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
-        ->name('delivery');
+    // ✅ DELIVERY - TAMBAHKAN DISINI
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])
+        ->middleware('permission:edit')
+        ->name('list-driver');
     
-    Route::post('/delivery/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
-        ->name('assignDriver');
+    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
+        ->middleware('permission:edit')
+        ->name('assign-driver');
+    
+    Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
+        ->middleware('permission:view')
+        ->name('delivery');
 });
 
     // ================= RIWAYAT (With Permission) =================
@@ -759,6 +767,8 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
         Route::delete('/detail/{id}', [RiwayatController::class, 'deleteDetail'])
             ->middleware('permission:delete')
             ->name('delete_detail');
+
+        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
     });
 
     // ================= SATUAN (With Permission) =================
