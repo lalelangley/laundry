@@ -31,12 +31,12 @@ class PesananOnlineController extends Controller
     public function detailKasir($id)
     {
         $pesanan = Transaksi::with([
-            'pelanggan',
+            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat
             'detail_transaksi',
             'detail_transaksi.layanan',
-            'detail_transaksi.jenis',  // ✅ sesuai model
+            'detail_transaksi.jenis',
             'detail_transaksi.parfum',
-            'detail_transaksi.satuan'
+            'detail_transaksi.satuan',
         ])
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
@@ -94,7 +94,7 @@ class PesananOnlineController extends Controller
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
         $pesanan->update([
             'status_bayar' => 'lunas',
-            'jumlah_bayar' => $request->jumlah_bayar
+            'total_bayar' => $request->jumlah_bayar
         ]);
         
         return redirect()->route('kasir.pesanan.online.detail', $id)
@@ -128,15 +128,13 @@ class PesananOnlineController extends Controller
 
     public function detail($id)
     {
-        // Show detail page
-        // ✅ PERBAIKAN: eager loading lengkap dengan relasi yang benar
         $pesanan = Transaksi::with([
+            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat, email, jk, dll
             'detail_transaksi',
             'detail_transaksi.layanan',
-            'detail_transaksi.jenis',  // ✅ pakai 'jenis' bukan 'jenisLayanan'
+            'detail_transaksi.jenis',
             'detail_transaksi.parfum',
             'detail_transaksi.satuan',
-            'pelanggan'
         ])->findOrFail($id);
         
         return view('pesanan_online.detail', compact('pesanan'));
@@ -192,7 +190,7 @@ class PesananOnlineController extends Controller
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
         $pesanan->update([
             'status_bayar' => 'lunas',
-            'jumlah_bayar' => $request->jumlah_bayar
+            'total_bayar' => $request->jumlah_bayar
         ]);
         
         return redirect()->route('pesanan.online.detail', $id)
@@ -228,12 +226,12 @@ class PesananOnlineController extends Controller
     public function detailAdmin2($id)
     {
         $pesanan = Transaksi::with([
-            'pelanggan',
+            'pelanggan', // ✅ Relasi ke tabel pelanggan untuk ambil alamat
             'detail_transaksi',
             'detail_transaksi.layanan',
-            'detail_transaksi.jenis',  // ✅ sesuai model
+            'detail_transaksi.jenis',
             'detail_transaksi.parfum',
-            'detail_transaksi.satuan'
+            'detail_transaksi.satuan',
         ])
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
@@ -291,7 +289,7 @@ class PesananOnlineController extends Controller
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
         $pesanan->update([
             'status_bayar' => 'lunas',
-            'jumlah_bayar' => $request->jumlah_bayar
+            'total_bayar' => $request->jumlah_bayar
         ]);
         
         return redirect()->route('admin2.pesanan.online.detail', $id)
@@ -311,7 +309,7 @@ class PesananOnlineController extends Controller
 
     public function listDeliveryOnline()
     {
-        $deliveries = Delivery::with('transaksi')
+        $deliveries = Delivery::with('transaksi.pelanggan') // ✅ Eager load pelanggan untuk ambil alamat
             ->whereNull('id_driver')
             ->get();
 
@@ -349,25 +347,35 @@ class PesananOnlineController extends Controller
     
     /**
      * UPDATE DATA PESANAN (ISI DATA PESANAN)
+     * ✅ DIPERBAIKI - Sesuai dengan struktur DB
      */
     public function updateData(Request $request, $id)
     {
         $request->validate([
-            'total_qty'   => 'required|numeric|min:0.01',
+            'total_qty'   => 'nullable|numeric|min:0.01',
+            'id_satuan'   => 'nullable|exists:satuan,id_satuan',
             'total_harga' => 'required|numeric|min:0',
-            'satuan_text' => 'nullable|string|max:50',
             'keterangan'  => 'nullable|string',
         ]);
 
         $pesanan = Transaksi::where('jenis_transaksi', 'online')
             ->findOrFail($id);
 
-        $pesanan->update([
-            'total_qty'   => $request->total_qty,
+        // ✅ Update sesuai field yang ada di DB
+        $updateData = [
             'total_harga' => $request->total_harga,
-            'satuan_text' => $request->satuan_text ?? 'Kg',
             'keterangan'  => $request->keterangan,
-        ]);
+        ];
+
+        // Tambahkan total_qty dan id_satuan jika field sudah ada di DB
+        if ($request->has('total_qty')) {
+            $updateData['total_qty'] = $request->total_qty;
+        }
+        if ($request->has('id_satuan')) {
+            $updateData['id_satuan'] = $request->id_satuan;
+        }
+
+        $pesanan->update($updateData);
 
         return redirect()
             ->route('pesanan.online.detail', $id)
@@ -384,7 +392,7 @@ class PesananOnlineController extends Controller
             'metode_kirim' => 'required|in:whatsapp,sms'
         ]);
 
-        $pesanan = Transaksi::with('pelanggan')
+        $pesanan = Transaksi::with('pelanggan') // ✅ Load relasi pelanggan
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
 
@@ -393,20 +401,27 @@ class PesananOnlineController extends Controller
             'status_transaksi' => 'dikonfirmasi'
         ]);
 
-        // Siapkan pesan
-        $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Pelanggan';
-        $noHp = $pesanan->pelanggan->no_hp ?? '';
-        $totalQty = $pesanan->total_qty ?? '-';
-        $satuan = $pesanan->satuan_text ?? 'item';
+        // ✅ Ambil data dari tabel transaksi DAN pelanggan
+        $namaPelanggan = $pesanan->nama_pelanggan ?? 'Pelanggan';
+        $noHp = $pesanan->no_hp ?? '';
         $totalHarga = number_format($pesanan->total_harga, 0, ',', '.');
+        
+        // ✅ Data tambahan dari tabel pelanggan (jika diperlukan)
+        $alamat = $pesanan->pelanggan->alamat ?? '';
+        $email = $pesanan->pelanggan->email ?? '';
 
         $pesan = "Halo *{$namaPelanggan}*,%0A%0A";
         $pesan .= "Pesanan Anda sudah dikonfirmasi! 🎉%0A%0A";
         $pesan .= "*Detail Pesanan:*%0A";
         $pesan .= "📦 Order ID: {$pesanan->id_transaksi}%0A";
-        $pesan .= "📋 Total Item: {$totalQty} {$satuan}%0A";
-        $pesan .= "💰 Total Harga: Rp {$totalHarga}%0A%0A";
-        $pesan .= "Terima kasih telah mempercayai layanan kami! 😊";
+        $pesan .= "💰 Total Harga: Rp {$totalHarga}%0A";
+        
+        // ✅ Tambahkan alamat jika ada
+        if ($alamat) {
+            $pesan .= "📍 Alamat: {$alamat}%0A";
+        }
+        
+        $pesan .= "%0ATerima kasih telah mempercayai layanan kami! 😊";
 
         // Redirect berdasarkan metode
         if ($request->metode_kirim === 'whatsapp' && $noHp) {
