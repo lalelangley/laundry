@@ -248,7 +248,7 @@ public function addLayanan(Request $request, $id)
         \Log::error($e);
 
         return redirect()
-            ->route('confirm')
+            ->route('transaksi.confirm')
             ->with('error', 'Gagal menyimpan transaksi');
     }
 }

@@ -31,16 +31,19 @@
        class="block bg-white rounded-2xl px-4 py-4 flex gap-3 items-center shadow 
               hover:shadow-xl hover:bg-yellow-50 hover:scale-[1.01] transition-all duration-300">
 
-        {{-- Foto --}}
-        @if ($item->gambar)
-            <img src="{{ asset('storage/'.$item->gambar) }}"
-                 class="w-16 h-16 rounded-xl object-cover border border-gray-300 shadow-sm 
-                        hover:scale-110 transition-transform">
-        @else
-            <div class="w-16 h-16 bg-gray-200 rounded-xl flex items-center justify-center">
-                <i class="bi bi-person text-3xl text-gray-500"></i>
-            </div>
-        @endif
+        {{-- ✅ FIXED: Foto Pelanggan --}}
+        <div class="w-16 h-16 rounded-xl overflow-hidden border border-gray-300 shadow-sm hover:scale-110 transition-transform flex-shrink-0">
+            @if ($item->gambar)
+                <img src="{{ asset('images/' . $item->gambar) }}"
+                     alt="{{ $item->nama_pelanggan }}"
+                     class="w-full h-full object-cover"
+                     onerror="this.onerror=null; this.src='{{ asset('images/default-user.png') }}';">
+            @else
+                <img src="{{ asset('images/default-user.png') }}"
+                     alt="Default"
+                     class="w-full h-full object-cover">
+            @endif
+        </div>
 
         {{-- Detail --}}
         <div>

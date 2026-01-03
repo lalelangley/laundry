@@ -6,7 +6,7 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
-    <a href="{{ route('pengeluaran.index') }}" class="text-black text-3xl font-bold">
+    <a href="{{ route('admin2.pengeluaran.index') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-2xl font-bold">Edit Pengeluaran</span>
@@ -15,7 +15,7 @@
 {{-- WRAPPER --}}
 <div class="p-5 pb-[160px] space-y-6">
 
-    <form action="{{ route('pengeluaran.update', $item->id_pengeluaran) }}" method="POST">
+    <form action="{{ route('admin2.pengeluaran.update', $item->id_pengeluaran) }}" method="POST">
         @csrf
         @method('PUT')
 

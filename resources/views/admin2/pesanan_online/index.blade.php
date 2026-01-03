@@ -41,10 +41,6 @@
                             'label' => 'Menunggu', 
                             'icon' => 'hourglass-split'
                         ],
-                        'dikonfirmasi' => [
-                            'label' => 'Dikonfirmasi', 
-                            'icon' => 'check-square'
-                        ],
                         'proses' => [
                             'label' => 'Proses', 
                             'icon' => 'arrow-repeat'
@@ -222,12 +218,13 @@
                                 {{-- Menunggu Konfirmasi Actions --}}
                                 @if($p->status_transaksi == 'menunggu_konfirmasi')
                                     <form action="{{ route('admin2.pesanan.online.terima', $p->id_transaksi) }}" method="POST" class="flex-1">
-                                        @csrf
-                                        <button type="submit"
-                                            class="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
-                                            <i class="bi bi-check-lg"></i> Terima
-                                        </button>
-                                    </form>
+                                    @csrf
+                                    <button type="submit"
+                                        class="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
+                                        <i class="bi bi-check-lg"></i> Terima
+                                    </button>
+                                </form>
+
                                     <a href="{{ route('admin2.pesanan.online.tolak', $p->id_transaksi) }}"
                                        onclick="event.preventDefault(); event.stopPropagation(); if(confirm('Tolak pesanan ini?')) window.location.href=this.href;"
                                        class="flex-1 text-center px-4 py-2 bg-red-500 text-white rounded-lg shadow 
@@ -249,7 +246,7 @@
 
                                 {{-- Button: Siap Diambil --}}
                                 @if($p->status_transaksi == 'proses')
-                                    <a href="{{ route('pesanan.online.siap_di_ambil', $p->id_transaksi) }}"
+                                    <a href="{{ route('admin2.pesanan.online.siap_di_ambil', $p->id_transaksi) }}"
                                        onclick="event.preventDefault(); event.stopPropagation(); window.location.href=this.href;"
                                        class="flex-1 text-center px-4 py-2 bg-teal-500 text-white rounded-lg shadow 
                                               hover:bg-teal-600 transition-all font-semibold">

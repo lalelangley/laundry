@@ -106,17 +106,21 @@ $routePrefix = 'admin2';
                                     data-id-jenis="{{ $jenis->id_jenis_layanan }}"
                                     data-nama="{{ $jenis->nama_jenis }}">
 
-                                  <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0">
-                                        @if(!empty($jenis->gambar))
-                                            <img src="{{ asset('images/jenis/' . $jenis->gambar) }}"
-                                                alt="{{ $jenis->nama_jenis }}"
-                                                class="w-full h-full object-cover"
-                                                onerror="this.src='{{ asset('images/default.png') }}'">
-                                        @else
-                                            <img src="{{ asset('images/default.png') }}"
-                                                alt="Default"
-                                                class="w-full h-full object-cover">
-                                        @endif
+                                   {{-- FIXED IMAGE SECTION --}}
+                                    <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0 shadow-sm">
+                                        {{-- ✅ FIXED IMAGE SECTION --}}
+                                        <div class="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden flex-shrink-0 border-2 border-gray-200 group-hover:border-yellow-300 transition-all">
+                                            @if(!empty($jenis->gambar))
+                                                <img src="{{ asset('storage/' . $jenis->gambar) }}"
+                                                    alt="{{ $jenis->nama_jenis }}"
+                                                    class="w-full h-full object-cover"
+                                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-100 to-yellow-200\'><i class=\'bi bi-image text-3xl text-yellow-400\'></i></div>';">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center">
+                                                    <i class="bi bi-image text-3xl text-gray-300"></i>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
 
                                     <div class="flex-1 min-w-0">

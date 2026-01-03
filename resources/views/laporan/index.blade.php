@@ -115,6 +115,19 @@
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </a>
                     
+                    {{-- ✅ TAMBAH LAPORAN DRIVER --}}
+                    <a href="{{ route('laporan.driver.index') }}" 
+                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-truck text-white text-4xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Driver</h4>
+                            <p class="text-gray-600">Pantau performa driver dan pengiriman</p>
+                        </div>
+                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                    </a>
+                    
                     <a href="{{ route('laporan.satuan.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">

@@ -71,6 +71,23 @@ public function indexAdmin2(Request $request)
     ]);
 }
 
+// =========================
+// INDEX PENGELUARAN - KASIR
+// =========================
+public function indexKasir()
+{
+    $kasir = auth('kasir')->user();
+    
+    if (!$kasir) {
+        abort(403, 'Silakan login terlebih dahulu');
+    }
+
+    $pengeluaran = \App\Models\Pengeluaran::orderBy('tanggal', 'desc')
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return view('kasir.pengeluaran.index', compact('pengeluaran'));
+}
     // =========================
     // CREATE LAYANAN - ADMIN
     // =========================
@@ -79,10 +96,12 @@ public function indexAdmin2(Request $request)
         $layanan_id = 0;
         $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
 
-        $jenisLama = JenisLayanan::selectRaw('MIN(id_jenis_layanan) as id_jenis_layanan, nama_jenis, harga, id_satuan, lama, lama_satuan, keterangan')
-            ->groupBy('nama_jenis', 'harga', 'id_satuan', 'lama', 'lama_satuan', 'keterangan')
-            ->orderBy('nama_jenis')
-            ->get();
+        $jenisLama = \App\Models\JenisLayanan::with('satuan')
+        ->orderBy('nama_jenis')
+        ->get()
+        ->unique(function ($item) {
+            return $item->nama_jenis.'-'.$item->harga.'-'.$item->id_satuan.'-'.$item->lama.'-'.$item->lama_satuan;
+        });
 
         $satuan = Satuan::all();
         $parfum = \App\Models\Parfum::all();
@@ -133,87 +152,86 @@ public function indexAdmin2(Request $request)
     }
 
     
-    // =========================
-    // STORE LAYANAN - ADMIN
-    // =========================
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nama_layanan' => 'required|string|max:255',
-        ]);
+   // =========================
+// STORE LAYANAN - ADMIN (FIXED - Pastikan gambar ikut tersimpan)
+// =========================
+public function store(Request $request)
+{
+    $request->validate([
+        'nama_layanan' => 'required|string|max:255',
+    ]);
 
-        $from = $request->input('from');
-        $layanan_id = 0;
-        $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
-        $jenisLamaDipilih = $request->input('jenis_lama', []);
+    $from = $request->input('from');
+    $layanan_id = 0;
+    $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
+    $jenisLamaDipilih = $request->input('jenis_lama', []);
 
-        if (count($jenisBaru) == 0 && count($jenisLamaDipilih) == 0) {
-            return back()
-                ->withErrors(['jenis_kosong' => 'Pilih minimal 1 jenis layanan.'])
-                ->withInput();
-        }
-
-        $prosesInput = $request->input('proses', []);
-        $prosesToStore = [];
-        if (is_array($prosesInput)) {
-            $prosesToStore = array_map('trim', $prosesInput);
-        } elseif (!empty($prosesInput)) {
-            $prosesToStore = array_map('trim', explode(',', $prosesInput));
-        }
-
-        $layanan = \App\Models\Layanan::create([
-            'nama_layanan' => $request->nama_layanan,
-            'proses' => json_encode(array_values(array_filter($prosesToStore))),
-        ]);
-
-       foreach ($jenisBaru as $jb) {
-
-            if (empty($jb['nama_jenis'])) {
-                continue; // ⛔ skip data rusak
-            }
-
-            \App\Models\JenisLayanan::create([
-                'id_layanan' => $layanan->id_layanan,
-                'nama_jenis' => $jb['nama_jenis'],
-                'harga'      => $jb['harga'] ?? 0,
-                'id_satuan'  => $jb['id_satuan'] ?? null,
-                'lama'       => $jb['lama'] ?? null,
-                'lama_satuan'=> $jb['lama_satuan'] ?? null,
-                'keterangan' => $jb['keterangan'] ?? null,
-                'gambar'     => $jb['gambar'] ?? null,
-            ]);
-        }
-
-
-        if (!empty($jenisLamaDipilih)) {
-            foreach ($jenisLamaDipilih as $idJenis) {
-                $jenis = \App\Models\JenisLayanan::find($idJenis);
-                if ($jenis) {
-                    \App\Models\JenisLayanan::create([
-                        'id_layanan'  => $layanan->id_layanan,
-                        'nama_jenis'  => $jenis->nama_jenis,
-                        'harga'       => $jenis->harga,
-                        'id_satuan'   => $jenis->id_satuan,
-                        'lama'        => $jenis->lama,
-                        'lama_satuan' => $jenis->lama_satuan,
-                        'keterangan'  => $jenis->keterangan,
-                        'gambar'      => $jenis->gambar,
-                    ]);
-                }
-            }
-        }
-
-        session()->forget("jenis_baru_{$layanan_id}");
-
-        if ($from === 'transaksi') {
-            return redirect()->route('transaksi.fromLayanan', [
-                'layanan_id' => $layanan->id_layanan
-            ]);
-        }
-
-        return redirect()->route('layanan.index')
-            ->with('success', 'Layanan berhasil ditambahkan');
+    if (count($jenisBaru) == 0 && count($jenisLamaDipilih) == 0) {
+        return back()
+            ->withErrors(['jenis_kosong' => 'Pilih minimal 1 jenis layanan.'])
+            ->withInput();
     }
+
+    $prosesInput = $request->input('proses', []);
+    $prosesToStore = [];
+    if (is_array($prosesInput)) {
+        $prosesToStore = array_map('trim', $prosesInput);
+    } elseif (!empty($prosesInput)) {
+        $prosesToStore = array_map('trim', explode(',', $prosesInput));
+    }
+
+    $layanan = \App\Models\Layanan::create([
+        'nama_layanan' => $request->nama_layanan,
+        'proses' => json_encode(array_values(array_filter($prosesToStore))),
+    ]);
+
+    // ✅ FIXED: Pastikan gambar ikut disimpan
+    foreach ($jenisBaru as $jb) {
+        if (empty($jb['nama_jenis'])) {
+            continue;
+        }
+
+        \App\Models\JenisLayanan::create([
+            'id_layanan' => $layanan->id_layanan,
+            'nama_jenis' => $jb['nama_jenis'],
+            'harga'      => $jb['harga'] ?? 0,
+            'id_satuan'  => $jb['id_satuan'] ?? null,
+            'lama'       => $jb['lama'] ?? null,
+            'lama_satuan'=> $jb['lama_satuan'] ?? null,
+            'keterangan' => $jb['keterangan'] ?? null,
+            'gambar'     => $jb['gambar'] ?? null, // ✅ Gambar sudah dalam format path yang benar
+        ]);
+    }
+
+    if (!empty($jenisLamaDipilih)) {
+        foreach ($jenisLamaDipilih as $idJenis) {
+            $jenis = \App\Models\JenisLayanan::find($idJenis);
+            if ($jenis) {
+                \App\Models\JenisLayanan::create([
+                    'id_layanan'  => $layanan->id_layanan,
+                    'nama_jenis'  => $jenis->nama_jenis,
+                    'harga'       => $jenis->harga,
+                    'id_satuan'   => $jenis->id_satuan,
+                    'lama'        => $jenis->lama,
+                    'lama_satuan' => $jenis->lama_satuan,
+                    'keterangan'  => $jenis->keterangan,
+                    'gambar'      => $jenis->gambar,
+                ]);
+            }
+        }
+    }
+
+    session()->forget("jenis_baru_{$layanan_id}");
+
+    if ($from === 'transaksi') {
+        return redirect()->route('transaksi.fromLayanan', [
+            'layanan_id' => $layanan->id_layanan
+        ]);
+    }
+
+    return redirect()->route('layanan.index')
+        ->with('success', 'Layanan berhasil ditambahkan');
+}
 
     // =========================
     // STORE LAYANAN - KASIR
@@ -345,6 +363,7 @@ public function storeAdmin2(Request $request)
         return redirect()->route('layanan.create');
     }
 
+    $satuan    = Satuan::all(); // ✅ WAJIB
     $layanan   = Layanan::with('jenis')->findOrFail($id);
     $jenisBaru = session()->get("jenis_baru_{$id}", []);
 
@@ -356,11 +375,13 @@ public function storeAdmin2(Request $request)
     }
 
 
-    // =====================
-    // ADMIN (SUPER / BIASA)
-    // =====================
-    if (Auth::guard('admin')->check()) {
-        return view('admin.layanan_edit', compact('layanan', 'jenisBaru'));
+   if (Auth::guard('admin')->check()) {
+        return view('admin.layanan_edit', [
+            'layanan'     => $layanan,
+            'jenisBaru'   => $jenisBaru,
+            'id_layanan'  => $layanan->id_layanan,
+            'satuan'      => $satuan, // ✅ INI YANG BENAR
+        ]);
     }
 
     abort(403);
@@ -536,19 +557,32 @@ public function editAdmin2($id)
     // =========================
     // CREATE JENIS LAYANAN - ADMIN
     // =========================
-    public function createJenis($id_layanan, Request $request)
-    {
-        $mode = $request->query('mode', 'create');
-        $from = $request->query('from', $id_layanan);
-        $satuan = Satuan::all();
-        $id_jenis = $request->query('id_jenis');
+    // Ganti method createJenis di LayananController.php (line 723-735)
 
-        if ($mode === 'edit') {
-            return view('admin.tambah_jenis_layanan_edit', compact('id_layanan', 'mode', 'from', 'satuan', 'id_jenis'));
-        } else {
-            return view('admin.tambah_jenis_layanan_create', compact('id_layanan', 'mode', 'from', 'satuan'));
-        }
-    }
+public function createJenis($id_layanan, Request $request)
+{
+    $mode = $request->query('mode', 'create');
+    $from = $request->query('from', $id_layanan);
+    $satuan = Satuan::all();
+    $id_jenis = $request->query('id_jenis');
+
+    // ✅ TAMBAHKAN $id_layanan di compact
+    return view('admin.tambah_jenis_layanan_create', compact('id_layanan', 'mode', 'from', 'satuan'));
+}
+
+// Dan pastikan ada method editJenis yang sudah ada di line 1040-1046
+public function editJenis($id_jenis)
+{
+    $jenis  = \App\Models\JenisLayanan::findOrFail($id_jenis);
+    $satuan = \App\Models\Satuan::all(); // ✅ WAJIB
+    $id_layanan = $jenis->id_layanan;
+
+    return view('admin.edit_jenis_layanan', compact(
+        'jenis',
+        'satuan',
+        'id_layanan'
+    ));
+}
 
     // =========================
     // CREATE JENIS LAYANAN - KASIR
@@ -591,34 +625,49 @@ public function createJenisAdmin2($id_layanan, Request $request)
     ));
 }
 
-    // =========================
-    // STORE JENIS - ADMIN
-    // =========================
-    public function storeJenis(Request $request)
-    {
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan' => 'required|integer',
-            'harga' => 'required|numeric',
-            'lama' => 'required|numeric',
-            'lama_satuan' => 'required|string',
-        ]);
+// =========================
+// STORE JENIS - ADMIN (FIXED)
+// =========================
+public function storeJenis(Request $request)
+{
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|integer',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string',
+        'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        $jenis_baru = session()->get('jenis_baru', []);
+    $key = 'jenis_baru_0';
+    $jenis_baru = session()->get($key, []);
 
-        $jenis_baru[] = [
-            'nama_jenis' => $request->nama_jenis,
-            'id_satuan' => $request->id_satuan,
-            'harga' => $request->harga,
-            'lama' => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan' => $request->keterangan,
-        ];
-
-        session()->put('jenis_baru', $jenis_baru);
-
-        return redirect()->route('layanan.create', ['from' => $request->from ?? 'transaksi'])->with('success', 'Jenis layanan berhasil ditambahkan.');
+    // ✅ Handle image upload
+    $gambarPath = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        
+        // Store to storage/app/public/jenis
+        $path = $file->storeAs('jenis', $filename, 'public');
+        $gambarPath = $path; // Save as: jenis/filename.jpg
     }
+
+    $jenis_baru[] = [
+        'nama_jenis'  => $request->nama_jenis,
+        'id_satuan'   => $request->id_satuan,
+        'harga'       => $request->harga,
+        'lama'        => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan'  => $request->keterangan,
+        'gambar'      => $gambarPath, // ✅ Save path
+    ];
+
+    session()->put($key, $jenis_baru);
+
+    return redirect()->route('layanan.create', ['from' => $request->from ?? 'transaksi'])
+        ->with('success', 'Jenis layanan berhasil ditambahkan.');
+}
 
     // =========================
     // STORE JENIS - KASIR
@@ -631,8 +680,22 @@ public function createJenisAdmin2($id_layanan, Request $request)
             'harga' => 'required|numeric',
             'lama' => 'required|numeric',
             'lama_satuan' => 'required|string',
+            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
         ]);
 
+         // Handle image upload
+        $gambarName = null;
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
+            $gambarName = time() . '_' . $file->getClientOriginalName();
+            
+            // Pastikan folder ada
+            if (!file_exists(public_path('images/jenis'))) {
+                mkdir(public_path('images/jenis'), 0755, true);
+            }
+            
+            $file->move(public_path('images/jenis'), $gambarName);
+        }
         $jenis_baru = session()->get("jenis_baru_{$id_layanan}", []);
 
         $jenis_baru[] = [
@@ -696,14 +759,6 @@ public function storeJenisAdmin2(Request $request, $id_layanan)
     // FIX: Gunakan route yang benar
     return redirect()->route('admin2.layanan.create')
         ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
-}
-
-public function editJenis($id_jenis)
-{
-    $jenis  = \App\Models\JenisLayanan::findOrFail($id_jenis);
-    $satuan = \App\Models\Satuan::all();
-
-    return view('admin.edit_jenis_layanan', compact('jenis', 'satuan'));
 }
 
     // =========================
@@ -783,42 +838,50 @@ public function editJenisAdmin2($id)
     }
 
     // =========================
-    // UPDATE JENIS - ADMIN
-    // =========================
-    public function updateJenis(Request $request, $id)
-    {
-        $jenis = JenisLayanan::findOrFail($id);
+// UPDATE JENIS - ADMIN (FIXED)
+// =========================
+public function updateJenis(Request $request, $id)
+{
+    $jenis = JenisLayanan::findOrFail($id);
 
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan' => 'required|exists:satuan,id_satuan',
-            'harga' => 'required|numeric',
-            'lama' => 'required|numeric',
-            'lama_satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp',
-        ]);
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|exists:satuan,id_satuan',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string|max:50',
+        'keterangan' => 'nullable|string',
+        'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        $jenis->update([
-            'nama_jenis' => $request->nama_jenis,
-            'id_satuan' => $request->id_satuan,
-            'harga' => $request->harga,
-            'lama' => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan' => $request->keterangan,
-        ]);
-
-        if ($request->hasFile('gambar')) {
-            $file = $request->file('gambar');
-            $filename = time() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('images'), $filename);
-            $jenis->gambar = $filename;
-            $jenis->save();
+    // ✅ Handle image upload
+    if ($request->hasFile('gambar')) {
+        // Delete old image if exists
+        if ($jenis->gambar && \Storage::disk('public')->exists($jenis->gambar)) {
+            \Storage::disk('public')->delete($jenis->gambar);
         }
 
-        return redirect()->route('layanan.edit', $request->from ?? $jenis->id_layanan)
-            ->with('success', 'Jenis layanan berhasil diperbarui.');
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        
+        // Store to storage/app/public/jenis
+        $path = $file->storeAs('jenis', $filename, 'public');
+        $jenis->gambar = $path;
     }
+
+    $jenis->update([
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+    ]);
+
+    return redirect()->route('layanan.edit', $request->from ?? $jenis->id_layanan)
+        ->with('success', 'Jenis layanan berhasil diperbarui.');
+}
+
 
     // =========================
     // DELETE LAYANAN - ADMIN
@@ -878,6 +941,8 @@ public function editJenisAdmin2($id)
 
         return redirect()->back()->with('success', 'Layanan berhasil diduplikat!');
     }
+
+    
 
     // =========================
     // DUPLICATE LAYANAN - KASIR
@@ -953,70 +1018,96 @@ public function sessionCreateJenis(Request $request, $id)
     return redirect()->back()->with('success', 'Jenis layanan berhasil ditambahkan ke session');
 }
 
-    public function sessionStoreJenis(Request $request, $from)
-    {
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan'  => 'required|exists:satuan,id_satuan',
-            'harga'      => 'required|numeric',
-            'lama'       => 'required|numeric',
-            'lama_satuan'=> 'required|string',
-            'keterangan' => 'nullable|string',
-        ]);
+   // =========================
+// SESSION STORE JENIS - ADMIN (FIXED)
+// =========================
+public function sessionStoreJenis(Request $request, $from)
+{
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan'  => 'required|exists:satuan,id_satuan',
+        'harga'      => 'required|numeric',
+        'lama'       => 'required|numeric',
+        'lama_satuan'=> 'required|string',
+        'keterangan' => 'nullable|string',
+        'gambar'     => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        $jenis_baru = session()->get("jenis_baru_{$from}", []);
+    $key = 'jenis_baru_0';
+    $jenis_baru = session()->get($key, []);
 
-        $jenis_baru[] = [
-            'nama_jenis'  => $request->nama_jenis,
-            'id_satuan'   => $request->id_satuan,
-            'harga'       => $request->harga,
-            'lama'        => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan'  => $request->keterangan,
-        ];
-
-        session()->put("jenis_baru_{$from}", $jenis_baru);
-
-        return redirect()->route('layanan.create', [
-            'from' => $from
-        ])->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+    // ✅ Handle image upload
+    $gambarPath = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        
+        // Store to storage/app/public/jenis
+        $path = $file->storeAs('jenis', $filename, 'public');
+        $gambarPath = $path;
     }
 
-    public function addJenisEdit(Request $request, $from)
-    {
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan'  => 'required|exists:satuan,id_satuan',
-            'harga'      => 'required|numeric',
-            'lama'       => 'nullable|numeric',
-            'lama_satuan'=> 'nullable|string',
-            'keterangan' => 'nullable|string',
-            'gambar'     => 'nullable|image|max:2048',
-        ]);
+    $jenis_baru[] = [
+        'nama_jenis'  => $request->nama_jenis,
+        'id_satuan'   => $request->id_satuan,
+        'harga'       => $request->harga,
+        'lama'        => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan'  => $request->keterangan,
+        'gambar'      => $gambarPath,
+    ];
 
-        $gambar = null;
-        if ($request->hasFile('gambar')) {
-            $filename = time().'_'.$request->file('gambar')->getClientOriginalName();
-            $request->file('gambar')->move(public_path('images'), $filename);
-            $gambar = $filename;
-        }
+    session()->put($key, $jenis_baru);
 
-        $jenis = session()->get("jenis_baru_{$from}", []);
-        $jenis[] = [
-            'nama_jenis'  => $request->nama_jenis,
-            'id_satuan'   => $request->id_satuan,
-            'harga'       => $request->harga,
-            'lama'        => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan'  => $request->keterangan,
-            'gambar'      => $gambar,
-        ];
+    return redirect()
+        ->route('layanan.create')
+        ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+}
 
-        session()->put("jenis_baru_{$from}", $jenis);
 
-        return redirect()->route('kasir.layanan.edit', $from)
-            ->with('success', 'Jenis layanan berhasil ditambahkan!');
+   // =========================
+// ADD JENIS EDIT - ADMIN (FIXED)
+// =========================
+public function addJenisEdit(Request $request, $from)
+{
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan'  => 'required|exists:satuan,id_satuan',
+        'harga'      => 'required|numeric',
+        'lama'       => 'nullable|numeric',
+        'lama_satuan'=> 'nullable|string',
+        'keterangan' => 'nullable|string',
+        'gambar'     => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
+
+    // ✅ Handle image upload
+    $gambarPath = null;
+    if ($request->hasFile('gambar')) {
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        
+        // Store to storage/app/public/jenis
+        $path = $file->storeAs('jenis', $filename, 'public');
+        $gambarPath = $path;
     }
+
+    $jenis = session()->get("jenis_baru_{$from}", []);
+    $jenis[] = [
+        'nama_jenis'  => $request->nama_jenis,
+        'id_satuan'   => $request->id_satuan,
+        'harga'       => $request->harga,
+        'lama'        => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan'  => $request->keterangan,
+        'gambar'      => $gambarPath,
+    ];
+
+    session()->put("jenis_baru_{$from}", $jenis);
+
+    return redirect()->route('layanan.edit', $from)
+        ->with('success', 'Jenis layanan berhasil ditambahkan!');
+}
+
      public function addJenisEditAdmin2(Request $request, $from)
     {
         $request->validate([

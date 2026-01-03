@@ -11,7 +11,7 @@ $routePrefix = 'admin';
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
         @php
-        $from = request('from');
+       $from = request('from') ?? 'dashboard';
         $idTransaksi = request('id_transaksi');
 
         $backUrl = match ($from) {
@@ -98,6 +98,7 @@ $routePrefix = 'admin';
                     </div>
 
                     {{-- JENIS --}}
+                    {{-- Ganti bagian JENIS di dalam loop layananUtama --}}
                     @if($item->jenis->count() > 0)
                         <div class="space-y-4">
                             @foreach($item->jenis as $jenis)
@@ -106,17 +107,21 @@ $routePrefix = 'admin';
                                     data-id-jenis="{{ $jenis->id_jenis_layanan }}"
                                     data-nama="{{ $jenis->nama_jenis }}">
 
-                                  <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0">
-                                        @if(!empty($jenis->gambar))
-                                            <img src="{{ asset('images/jenis/' . $jenis->gambar) }}"
-                                                alt="{{ $jenis->nama_jenis }}"
-                                                class="w-full h-full object-cover"
-                                                onerror="this.src='{{ asset('images/default.png') }}'">
-                                        @else
-                                            <img src="{{ asset('images/default.png') }}"
-                                                alt="Default"
-                                                class="w-full h-full object-cover">
-                                        @endif
+                                    {{-- FIXED IMAGE SECTION --}}
+                                    <div class="w-20 h-20 rounded-xl overflow-hidden bg-white border-2 border-gray-200 flex-shrink-0 shadow-sm">
+                                        {{-- ✅ FIXED IMAGE SECTION --}}
+                                        <div class="w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden flex-shrink-0 border-2 border-gray-200 group-hover:border-yellow-300 transition-all">
+                                            @if(!empty($jenis->gambar))
+                                                <img src="{{ asset('storage/' . $jenis->gambar) }}"
+                                                    alt="{{ $jenis->nama_jenis }}"
+                                                    class="w-full h-full object-cover"
+                                                    onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-100 to-yellow-200\'><i class=\'bi bi-image text-3xl text-yellow-400\'></i></div>';">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center">
+                                                    <i class="bi bi-image text-3xl text-gray-300"></i>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
 
                                     <div class="flex-1 min-w-0">
@@ -132,7 +137,7 @@ $routePrefix = 'admin';
                                         </div>
                                     </div>
                                 </div>
-                        @endforeach
+                            @endforeach
                         </div>
                     @else
                         <div class="text-center py-8">
@@ -152,7 +157,7 @@ $routePrefix = 'admin';
         </div>
 
         {{-- TAMBAH --}}
-        <a href="{{ route('layanan.create', ['from'=>'transaksi']) }}"
+       <a href="{{ route('layanan.create', ['from' => $from]) }}"
         class="block bg-yellow-400 hover:bg-yellow-500 py-4 rounded-2xl font-bold text-black text-center shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2">
             <i class="bi bi-plus-circle-fill text-xl"></i>
             Tambah Layanan
@@ -335,7 +340,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const from = "{{ request('from') }}";
+            const from = "{{ request('from') ?? 'dashboard' }}";
             const idLayanan = card.dataset.id; // ✅ ID Layanan Utama
 
             console.log('🔵 Layanan Card Clicked | From:', from, '| ID:', idLayanan);

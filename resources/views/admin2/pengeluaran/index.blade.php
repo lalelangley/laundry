@@ -7,7 +7,7 @@
 <!-- HEADER -->
 <div class="w-full bg-yellow-400 p-4 flex items-center justify-between rounded-b-3xl shadow-md">
     <div class="flex items-center gap-3">
-        <a href="{{ route('admin.dashboard') }}" class="text-2xl font-bold hover:opacity-70 transition">
+        <a href="{{ route('admin2.dashboard') }}" class="text-2xl font-bold hover:opacity-70 transition">
             ←
         </a>
         <h1 class="text-xl font-bold tracking-wide">List Pengeluaran</h1>
@@ -55,14 +55,14 @@
 
                         <ul class="dropdown-menu hidden absolute right-0 top-10 w-40 bg-yellow-400 rounded-2xl shadow-xl overflow-hidden py-1 z-50">
                             <li>
-                                <a href="{{ route('pengeluaran.edit', $item->id_pengeluaran) }}"
+                                <a href="{{ route('admin2.pengeluaran.edit', $item->id_pengeluaran) }}"
                                 class="flex items-center gap-2 px-4 py-3 text-black text-sm font-medium hover:bg-yellow-300">
                                     <i class="bi bi-pencil text-lg"></i> Edit
                                 </a>
                             </li>
 
                             <li>
-                                <form action="{{ route('pengeluaran.destroy', $item->id_pengeluaran) }}"
+                                <form action="{{ route('admin2.pengeluaran.destroy', $item->id_pengeluaran) }}"
                                     method="POST"
                                     onsubmit="return confirm('Yakin hapus pengeluaran ini?')">
                                     @csrf
@@ -118,7 +118,7 @@
 
 {{-- BUTTON TAMBAH --}}
 <div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5">
-    <a href="{{ route('pengeluaran.create') }}"
+    <a href="{{ route('admin2.pengeluaran.create') }}"
     class="w-full block text-center bg-yellow-400 text-black py-4 rounded-3xl text-lg font-bold shadow hover:bg-yellow-500 transition">
     Tambah Pengeluaran
     </a>

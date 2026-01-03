@@ -169,9 +169,9 @@ class ChangePasswordController extends Controller
         }
 
         // Get authenticated admin
-        $kasir = Auth::guard('kasir')->user();
+        $admin2 = Auth::guard('admin2')->user();
 
-        if (!$kasir) {
+        if (!$admin2) {
             return response()->json([
                 'status' => false,
                 'message' => 'User tidak ditemukan'
@@ -179,7 +179,7 @@ class ChangePasswordController extends Controller
         }
 
         // Check if old password is correct
-        if (!Hash::check($request->old_password, $kasir->password)) {
+        if (!Hash::check($request->old_password, $admin2->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Password lama tidak sesuai'
@@ -187,7 +187,7 @@ class ChangePasswordController extends Controller
         }
 
         // Check if new password is same as old password
-        if (Hash::check($request->new_password, $kasir->password)) {
+        if (Hash::check($request->new_password, $admin2->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Password baru tidak boleh sama dengan password lama'
@@ -195,12 +195,14 @@ class ChangePasswordController extends Controller
         }
 
         // Update password
-        $kasir->password = Hash::make($request->new_password);
-        $kasir->save();
+        $admin2->password = Hash::make($request->new_password);
+        $admin2->save();
 
         return response()->json([
             'status' => true,
             'message' => 'Password berhasil diubah'
         ]);
     }
+
+    
 }

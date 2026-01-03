@@ -7,7 +7,7 @@
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow flex items-center justify-between">
         <div class="flex items-center gap-4">
-            <a href="{{ route('kasir.laporan.index') }}" class="text-3xl font-bold">
+            <a href="{{ route('admin2.laporan.index') }}" class="text-3xl font-bold">
                 <i class="bi bi-arrow-left"></i>
             </a>
             <h1 class="text-2xl font-bold">Laporan Transaksi</h1>
@@ -19,46 +19,45 @@
         </div>
     </div>
 
- <form method="GET" action="{{ route('laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
+    <form method="GET" action="{{ route('admin2.laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
 
-    {{-- FILTER TANGGAL --}}
-    <div class="flex items-center gap-4">
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
-                   class="bg-transparent outline-none w-full">
+        {{-- FILTER TANGGAL --}}
+        <div class="flex items-center gap-4">
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
+
+            <span class="font-bold">&gt;</span>
+
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
         </div>
 
-        <span class="font-bold">&gt;</span>
+        {{-- SEARCH --}}
+        <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
+            <i class="bi bi-search text-xl text-gray-400"></i>
 
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
-                   class="bg-transparent outline-none w-full">
+            <input
+                type="text"
+                name="q"
+                value="{{ request('q') }}"
+                placeholder="Cari nama pelanggan / no nota / no HP..."
+                class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
+            >
+
+            <button type="submit"
+                    class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
+                Cari
+            </button>
         </div>
-    </div>
 
-    {{-- SEARCH --}}
-    <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
-        <i class="bi bi-search text-xl text-gray-400"></i>
+    </form>
 
-        <input
-            type="text"
-            name="q"
-            value="{{ request('q') }}"
-            placeholder="Cari nama pelanggan / no nota / no HP..."
-            class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
-        >
-
-        <button type="submit"
-                class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
-            Cari
-        </button>
-    </div>
-
-</form>
-
-</form>
     {{-- SUMMARY --}}
     <div class="px-8 mt-6">
         <div class="bg-white border-2 border-yellow-400 rounded-2xl p-6 font-semibold">
@@ -80,19 +79,19 @@
         <div class="bg-white rounded-2xl shadow p-6 flex gap-6">
 
             {{-- AVATAR --}}
-        <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 
-            flex items-center justify-center">
+            <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 
+                flex items-center justify-center flex-shrink-0">
 
-    @if($t->pelanggan && $t->pelanggan->gambar)
-        <img 
-            class="w-full h-full object-cover"
-            src="{{ asset('storage/'.$t->pelanggan->gambar) }}"
-        >
-    @else
-        <i class="bi bi-person text-5xl text-gray-500"></i>
-    @endif
+                @if($t->pelanggan && $t->pelanggan->gambar)
+                    <img 
+                        class="w-full h-full object-cover"
+                        src="{{ asset('storage/'.$t->pelanggan->gambar) }}"
+                    >
+                @else
+                    <i class="bi bi-person text-5xl text-gray-500"></i>
+                @endif
 
-</div>
+            </div>
 
             {{-- INFO --}}
             <div class="flex-1">
@@ -134,6 +133,7 @@
                         </span>
                     </div>
 
+                    @if($t->tgl_estimasi)
                     <div class="flex gap-2">
                         <i class="bi bi-check-circle-fill text-green-500"></i>
                         <span>Estimasi Selesai</span>
@@ -141,6 +141,7 @@
                             {{ \Carbon\Carbon::parse($t->tgl_estimasi)->format('d/m/Y H:i') }}
                         </span>
                     </div>
+                    @endif
 
                     <div class="flex gap-2">
                         <i class="bi bi-percent text-yellow-500"></i>
@@ -149,12 +150,34 @@
                             Rp {{ number_format($t->diskon,0,',','.') }}
                         </span>
                     </div>
+
+                    {{-- ✅ TAMBAH: Status Bayar --}}
+                    <div class="flex gap-2 items-center">
+                        <i class="bi bi-wallet2 text-purple-500"></i>
+                        <span>Status Bayar</span>
+                        <span class="ml-auto">
+                            @if($t->status_bayar === 'lunas')
+                                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                    Lunas
+                                </span>
+                            @elseif($t->status_bayar === 'DP')
+                                <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+                                    DP
+                                </span>
+                            @else
+                                <span class="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                                    Belum Lunas
+                                </span>
+                            @endif
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
         @empty
             <div class="text-center text-gray-500 py-10">
-                Tidak ada transaksi
+                <i class="bi bi-inbox text-5xl"></i>
+                <p class="mt-2 font-semibold">Tidak ada transaksi</p>
             </div>
         @endforelse
 
@@ -175,4 +198,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-

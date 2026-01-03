@@ -55,7 +55,7 @@ class SatuanParfumController extends Controller
 
         // 1. Dari TAMBAH JENIS (CREATE)
         if ($request->from === 'create-jenis') {
-            return redirect()->route('jenis.create', [
+            return redirect()->route('layanan.jenis.create', [
                 'id_layanan' => $request->id_layanan,
                 'new_satuan' => $satuan->id_satuan   // supaya auto select
             ])->with('success', 'Satuan berhasil ditambahkan.');

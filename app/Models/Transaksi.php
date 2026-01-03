@@ -28,6 +28,7 @@ class Transaksi extends Model
         'tgl_estimasi',
         'tgl_transaksi',
         'id_kasir',
+        'id_driver', // ✅ Tambahkan ini
         'id_metode_bayar',
     ];
 
@@ -60,5 +61,9 @@ class Transaksi extends Model
     public function metodeBayar()
     {
         return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar');
+    }
+        public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'id_driver', 'id_driver');
     }
 }

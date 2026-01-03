@@ -1,14 +1,14 @@
 @extends('layouts.master')
-@section('title', 'Laporan')
+@section('title', 'Kelola Pelanggan')
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('kasir.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+        <a href="{{ route('admin2.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <span class="text-2xl font-bold text-gray-900">Laporan</span>
+        <span class="text-2xl font-bold text-gray-900">Kelola Pelanggan</span>
     </div>
 
     {{-- TABS CONTAINER - FULL WIDTH --}}
@@ -46,7 +46,7 @@
                 </h3>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    <a href="{{ route('kasir.laporan.transaksi.index') }}" 
+                    <a href="{{ route('admin2.laporan.transaksi.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
                             <i class="bi bi-receipt text-white text-4xl"></i>
@@ -58,7 +58,7 @@
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </a>
                     
-                    <a href="{{ route('kasir.laporan.pengeluaran.index') }}" 
+                    <a href="{{ route('admin2.laporan.pengeluaran.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
                             <i class="bi bi-wallet2 text-white text-4xl"></i>
@@ -70,7 +70,7 @@
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </a>
                     
-                    <a href="{{ route('kasir.laporan.pelanggan.index') }}" 
+                    <a href="{{ route('admin2.laporan.pelanggan.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
                             <i class="bi bi-people text-white text-4xl"></i>
@@ -91,20 +91,19 @@
                 </h3>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {{-- ✅ GANTI: Laporan Kasir → Laporan Driver --}}
-                    <a href="{{ route('kasir.laporan.driver.index') }}" 
+                    <a href="{{ route('admin2.laporan.kasir.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-truck text-white text-4xl"></i>
+                            <i class="bi bi-person-badge text-white text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Driver</h4>
-                            <p class="text-gray-600">Pantau performa driver dan pengiriman</p>
+                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Kasir</h4>
+                            <p class="text-gray-600">Pantau performa kasir per periode</p>
                         </div>
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </a>
                     
-                    <a href="{{ route('kasir.laporan.bayar.index') }}" 
+                    <a href="{{ route('admin2.laporan.bayar.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
                             <i class="bi bi-credit-card-2-front text-white text-4xl"></i>
@@ -116,7 +115,20 @@
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </a>
                     
-                    <a href="{{ route('kasir.laporan.satuan.index') }}" 
+                    {{-- ✅ TAMBAH LAPORAN DRIVER --}}
+                    <a href="{{ route('admin2.laporan.driver.index') }}" 
+                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-truck text-white text-4xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Driver</h4>
+                            <p class="text-gray-600">Pantau performa driver dan pengiriman</p>
+                        </div>
+                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                    </a>
+                    
+                    <a href="{{ route('admin2.laporan.satuan.index') }}" 
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
                             <i class="bi bi-box-seam text-white text-4xl"></i>
