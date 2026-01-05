@@ -29,6 +29,7 @@ class Transaksi extends Model
         'tgl_transaksi',
         'id_kasir',
         'id_metode_bayar',
+        "id_driver",
     ];
 
     // Relasi
@@ -61,4 +62,16 @@ class Transaksi extends Model
     {
         return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar');
     }
+     public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'id_driver', 'id_driver');
+    }
+    // Transaksi punya satu delivery
+public function delivery()
+{
+    return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
+}
+
+
+
 }

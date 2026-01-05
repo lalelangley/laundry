@@ -15,7 +15,6 @@
     {{-- Google Font --}}
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite('resources/css/app.css')
-    <link rel="stylesheet" href="{{ asset('css/master-layout-improved.css') }}">
     <style>
         body { 
             font-family: 'Poppins', sans-serif;

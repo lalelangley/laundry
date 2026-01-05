@@ -11,16 +11,16 @@ class DriverTaskController extends Controller
     // ======================================================
     // GET TASKS FOR THIS DRIVER
     // ======================================================
- public function getPendingTasks($driverId)
-{
-    $myTasks = Delivery::with([
-        'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
-        'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-        'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis,id_parfum,qty,harga,total_harga',
-        'transaksi.detail.layanan:id_layanan,nama_layanan',
-        'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
-        'transaksi.detail.parfum:id_parfum,nama_parfum',
-    ])
+    public function getPendingTasks($driverId)
+    {
+        $myTasks = Delivery::with([
+            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
+            'transaksi.detail.layanan:id_layanan,nama_layanan',
+            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+            'transaksi.detail.parfum:id_parfum,nama_parfum',
+        ])
         ->where('id_driver', $driverId)
         ->whereIn('status', [
             'pending',
@@ -34,7 +34,7 @@ class DriverTaskController extends Controller
 
         return response()->json([
             'success' => true,
-            'tasks' => $tasks,
+            'tasks' => $myTasks,
         ]);
     }
 
@@ -84,17 +84,17 @@ class DriverTaskController extends Controller
     public function getDriverHistory($driverId)
     {
         $history = Delivery::with([
-    'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
-    'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-    'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga',
-    'transaksi.detail.layanan:id_layanan,nama_layanan',
-    'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
-    'transaksi.detail.parfum:id_parfum,nama_parfum',
-])
-->where('id_driver', $driverId)
-->whereIn('status', ['arrived_at_laundry','delivered'])
-->orderBy('updated_at', 'desc')
-->get();
+            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
+            'transaksi.detail.layanan:id_layanan,nama_layanan',
+            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+            'transaksi.detail.parfum:id_parfum,nama_parfum',
+        ])
+        ->where('id_driver', $driverId)
+        ->whereIn('status', ['arrived_at_laundry','delivered'])
+        ->orderBy('updated_at', 'desc')
+        ->get();
 
         return response()->json([
             'success' => true,

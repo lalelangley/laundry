@@ -27,4 +27,10 @@ class Driver extends Authenticatable
     protected $hidden = [
         'password',
     ];
+
+
+    public function transaksi()
+    {
+        return $this->hasMany(Transaksi::class, 'id_driver', 'id_driver');
+    }
 }

@@ -9,7 +9,7 @@ use App\Models\Layanan;
 use App\Models\Transaksi;
 use App\Models\MetodeBayar;
 use App\Models\Parfum;
-use App\Models\JenisLayanan
+use App\Models\JenisLayanan;
 
 
 class TransaksiController extends Controller

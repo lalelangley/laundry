@@ -37,8 +37,13 @@
             <div class="flex gap-2 flex-wrap justify-center">
                 @php
                     $tabs = [
+
+                    'pickup' => [
+    'label' => 'Pickup',
+    'icon'  => 'truck'
+],
                         'menunggu_konfirmasi' => [
-                            'label' => 'Menunggu', 
+                            'label' => 'Antrian', 
                             'icon' => 'hourglass-split'
                         ],
                         'proses' => [
@@ -91,14 +96,24 @@
                         <div class="relative bg-white shadow-lg rounded-2xl p-6 
                                     hover:shadow-xl transition-all duration-300 hover:-translate-y-1 
                                     border-l-4
-                                    @if($p->status_transaksi == 'menunggu_konfirmasi') border-orange-500
-                                    @elseif($p->status_transaksi == 'dikonfirmasi') border-blue-500
-                                    @elseif($p->status_transaksi == 'proses') border-purple-500
-                                    @elseif($p->status_transaksi == 'siap_di_ambil') border-teal-500
-                                    @elseif($p->status_transaksi == 'siap_di_antar') border-gray-500
-                                    @elseif($p->status_transaksi == 'selesai') border-green-500
-                                    @else border-red-500
-                                    @endif">
+@if($p->delivery && $p->delivery->jenis == 'pickup' && $p->delivery->status == 'pending')
+    <span class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
+        Pickup (Belum Ada Driver)
+    </span>
+@elseif($p->delivery && $p->delivery->jenis == 'pickup' && $p->delivery->status == 'accepted')
+    <span class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
+        Driver Dipilih
+    </span>
+@elseif($p->delivery && $p->delivery->status == 'arrive_at_laundry')
+    <span class="bg-orange-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
+        Sampai Laundry
+    </span>
+@else
+    <span class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
+        {{ ucfirst(str_replace('_', ' ', $p->status_transaksi)) }}
+    </span>
+@endif
+
 
                             {{-- Card Header --}}
                             <div class="flex justify-between items-start mb-4 pb-4 border-b-2 border-gray-100">

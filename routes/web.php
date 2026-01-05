@@ -16,6 +16,11 @@ use App\Http\Controllers\Web\ChangePasswordController;
 use App\Http\Controllers\Web\PesananOnlineController;
 use App\Models\Satuan;
 
+// Route untuk assign driver pickup
+Route::post('/pesanan-online/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
+    ->name('pesanan.online.assign-driver-pickup');
+
+
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES - Authentication
@@ -252,7 +257,12 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             ->middleware('permission:delete')
             ->name('kasir.pesanan.online.destroy');
 
-        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
+            Route::get('/{id}/pickup/driver', [PesananOnlineController::class, 'listDriverPickup'])
+    ->name('pesanan.online.pickup.driver');
+
+    Route::post('/{id}/pickup/assign-driver', [PesananOnlineController::class, 'assignDriverPickup'])
+    ->name('pesanan.online.pickup.assign');
+
     });
 
     // ================= RIWAYAT (With Permission) =================
