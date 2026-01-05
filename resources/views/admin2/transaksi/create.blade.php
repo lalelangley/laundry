@@ -74,27 +74,29 @@ $keterangan = session('keterangan_transaksi', '');
 
                     <div class="flex gap-4">
 
-                      {{-- ✅ GAMBAR DENGAN PATH DINAMIS --}}
-                    <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-                        @if(!empty($d['gambar']))
-                            <img src="{{ asset('images/jenis/' . $d['gambar']) }}"
-                                alt="{{ $d['nama_layanan'] }}"
+                        {{-- ✅ GAMBAR FIXED - PAKAI STORAGE --}}
+                        <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
+                            @php
+                                $imagePath = isset($d['gambar']) && !empty($d['gambar']) 
+                                    ? 'storage/' . $d['gambar'] 
+                                    : 'images/default.png';
+                            @endphp
+                            
+                            <img src="{{ asset($imagePath) }}"
+                                alt="{{ $d['nama_layanan'] ?? 'Layanan' }}"
                                 class="w-full h-full object-cover"
-                                onerror="this.src='{{ asset('images/default.png') }}'">
-                        @else
-                            <img src="{{ asset('images/default.png') }}"
-                                alt="Default"
-                                class="w-full h-full object-cover">
-                        @endif
-                    </div>
+                                onerror="this.onerror=null; this.src='{{ asset('images/default.png') }}';">
+                        </div>
 
                         {{-- DETAIL --}}
                         <div class="flex-1">
                             <p class="font-bold text-lg leading-tight">
-                                {{ $d['nama_layanan'] }} ({{ isset($d['jenis']) ? ' '.$d['jenis'] : '' }})
+                                {{ $d['nama_layanan'] }}
+                                @if(isset($d['jenis']))
+                                    <span class="text-gray-600">({{ $d['jenis'] }})</span>
+                                @endif
                             </p>
 
-                            {{-- tanpa satuan --}}
                             <p class="text-sm text-gray-700">
                                 Rp{{ number_format($d['harga'],0,',','.') }}
                             </p>
@@ -107,13 +109,13 @@ $keterangan = session('keterangan_transaksi', '');
                             </p>
 
                             <p class="font-semibold mt-1">
-                                SubTotal : Rp{{ number_format($d['harga'] * $d['qty'],0,',','.') }}
+                                SubTotal: Rp{{ number_format($d['harga'] * $d['qty'],0,',','.') }}
                             </p>
                         </div>
 
                         {{-- QTY + REMOVE --}}
-                        <div class="flex flex-col items-end">
-                            <div>
+                        <div class="flex flex-col items-end justify-between">
+                            <div class="text-center">
                                 <p class="text-sm font-semibold text-gray-700">Qty</p>
                                 <p class="text-lg font-bold">{{ $d['qty'] }}</p>
                             </div>
@@ -121,10 +123,12 @@ $keterangan = session('keterangan_transaksi', '');
                             <form 
                                 action="{{ route('admin2.transaksi.remove', $d['id_layanan']) }}" 
                                 method="POST"
-                                class="mt-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto"
                             >
                                 @csrf
-                                <button type="submit" class="bg-red-500 text-white p-2 rounded-full shadow">
+                                <button type="submit" 
+                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition"
+                                        onclick="return confirm('Hapus layanan ini?')">
                                     <i class="bi bi-trash-fill text-lg"></i>
                                 </button>
                             </form>
@@ -164,12 +168,13 @@ $keterangan = session('keterangan_transaksi', '');
         </form>
     </div>
 </div>
+
 {{-- FOOTER FIXED --}}
 @php
     $totalHarga = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 @endphp
 
-<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl">
+<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
     <div>
         <p class="text-sm">Total Harga</p>
         <p class="text-2xl font-bold">Rp. {{ number_format($totalHarga, 0, ',', '.') }}</p>
@@ -177,17 +182,18 @@ $keterangan = session('keterangan_transaksi', '');
 
     {{-- Button trigger modal --}}
     <button type="button" id="btnCheckout"
-            class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow">
+            class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow font-bold transition">
         Checkout
     </button>
 </div>
 
-{{-- ✅✅✅ MODAL KONFIRMASI CHECKOUT ✅✅✅ --}}
+{{-- ✅ MODAL KONFIRMASI CHECKOUT --}}
 <div id="modalCheckout" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white w-full max-w-2xl mx-auto rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div class="bg-white w-full max-w-2xl mx-auto rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+        onclick="event.stopPropagation()">
         
         {{-- Header Modal --}}
-        <div class="bg-yellow-400 p-6 sticky top-0">
+        <div class="bg-yellow-400 p-6 sticky top-0 z-10">
             <h2 class="text-2xl font-bold text-black text-center flex items-center justify-center gap-2">
                 <i class="bi bi-check-circle-fill"></i>
                 Konfirmasi Checkout
@@ -220,22 +226,29 @@ $keterangan = session('keterangan_transaksi', '');
                 
                 <div class="space-y-3 max-h-60 overflow-y-auto">
                     @foreach($detail as $d)
-                    <div class="flex gap-3 bg-white p-3 rounded-lg">
-                        {{-- Gambar --}}
-                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                            @if(!empty($d['gambar']))
-                                <img src="{{ asset('images/jenis/' . $d['gambar']) }}"
-                                     alt="{{ $d['nama_layanan'] }}"
-                                     class="w-full h-full object-cover"
-                                     onerror="this.src='{{ asset('images/default.png') }}'">
-                            @else
-                                <img src="{{ asset('images/default.png') }}" class="w-full h-full object-cover">
-                            @endif
+                    <div class="flex gap-3 bg-white p-3 rounded-lg shadow-sm">
+                        {{-- ✅ GAMBAR DI MODAL - PAKAI STORAGE --}}
+                        <div class="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            @php
+                                $imagePath = isset($d['gambar']) && !empty($d['gambar']) 
+                                    ? 'storage/' . $d['gambar'] 
+                                    : 'images/default.png';
+                            @endphp
+                            
+                            <img src="{{ asset($imagePath) }}"
+                                alt="{{ $d['nama_layanan'] ?? 'Layanan' }}"
+                                class="w-full h-full object-cover"
+                                onerror="this.onerror=null; this.src='{{ asset('images/default.png') }}';">
                         </div>
                         
                         {{-- Detail --}}
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm truncate">{{ $d['nama_layanan'] }} ({{ $d['jenis'] }})</p>
+                            <p class="font-bold text-sm truncate">
+                                {{ $d['nama_layanan'] }}
+                                @if(isset($d['jenis']))
+                                    <span class="text-gray-600">({{ $d['jenis'] }})</span>
+                                @endif
+                            </p>
                             <p class="text-xs text-gray-600">
                                 {{ $d['qty'] }} x Rp{{ number_format($d['harga'], 0, ',', '.') }}
                             </p>
@@ -247,7 +260,7 @@ $keterangan = session('keterangan_transaksi', '');
                         
                         {{-- Subtotal --}}
                         <div class="text-right">
-                            <p class="font-bold">Rp{{ number_format($d['harga'] * $d['qty'], 0, ',', '.') }}</p>
+                            <p class="font-bold text-sm">Rp{{ number_format($d['harga'] * $d['qty'], 0, ',', '.') }}</p>
                         </div>
                     </div>
                     @endforeach
@@ -257,8 +270,11 @@ $keterangan = session('keterangan_transaksi', '');
             {{-- Keterangan --}}
             @if($keterangan)
             <div class="bg-gray-50 p-4 rounded-xl">
-                <p class="font-semibold text-sm mb-1">Keterangan:</p>
-                <p class="text-sm text-gray-700">{{ $keterangan }}</p>
+                <p class="font-semibold text-sm mb-1 flex items-center gap-2">
+                    <i class="bi bi-chat-left-text-fill text-yellow-500"></i>
+                    Keterangan:
+                </p>
+                <p class="text-sm text-gray-700 whitespace-pre-line">{{ $keterangan }}</p>
             </div>
             @endif
 
@@ -274,20 +290,21 @@ $keterangan = session('keterangan_transaksi', '');
 
         </div>
 
-      {{-- Footer Modal --}}
-<div class="p-6 bg-gray-50 flex gap-3">
-    <button type="button" onclick="closeCheckoutModal()"
-            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition">
-        Batal
-    </button>
-    
-    {{-- ✅ GANTI FORM JADI LINK --}}
-    <a href="{{ route('admin2.transaksi.confirm') }}"
-       class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-lg transition text-center inline-flex items-center justify-center gap-2">
-        <i class="bi bi-check-circle-fill"></i>
-        Lanjutkan
-    </a>
-</div>
+        {{-- Footer Modal --}}
+        <div class="p-6 bg-gray-50 flex gap-3 sticky bottom-0">
+            <button type="button" onclick="closeCheckoutModal()"
+                    class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition">
+                Batal
+            </button>
+            
+            <a href="{{ route('admin2.transaksi.confirm') }}"
+               class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl
+                      font-bold shadow-lg transition text-center inline-flex
+                      items-center justify-center gap-2">
+                <i class="bi bi-check-circle-fill"></i>
+                Lanjutkan
+            </a>
+        </div>
     </div>
 </div>
 
@@ -298,17 +315,16 @@ $keterangan = session('keterangan_transaksi', '');
 const modal = document.getElementById('modalCheckout');
 const btnCheckout = document.getElementById('btnCheckout');
 
-
 // Function buka modal
 function openCheckoutModal() {
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent scroll
+    document.body.style.overflow = 'hidden';
 }
 
 // Function tutup modal
 function closeCheckoutModal() {
     modal.classList.add('hidden');
-    document.body.style.overflow = ''; // Restore scroll
+    document.body.style.overflow = '';
 }
 
 // Click button checkout
@@ -357,11 +373,5 @@ document.addEventListener('keydown', function(e) {
         closeCheckoutModal();
     }
 });
-
-function submitCheckout() {
-    document.getElementById('checkoutForm').submit();
-}
-
-
 </script>
 @endsection

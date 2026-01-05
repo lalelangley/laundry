@@ -20,22 +20,26 @@
         </div>
     </div>
 
-    {{-- FILTER --}}
-    <div class="px-5 mt-5 flex items-center gap-3">
-        <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3">
-            <p class="text-xs">Tanggal Awal</p>
-            <p class="font-bold">
-                {{ now()->subMonth()->format('d/m/Y') }}
-            </p>
+     {{-- FILTER --}}
+    <form method="GET" class="px-6 mt-6 space-y-4">
+        <div class="flex items-center gap-3">
+            <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3 flex items-center gap-2 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="dari"
+                       value="{{ request('dari') }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
+
+            <span class="font-bold">&gt;</span>
+
+            <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3 flex items-center gap-2 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="sampai"
+                       value="{{ request('sampai') }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
         </div>
-        <span class="font-bold">&gt;</span>
-        <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3">
-            <p class="text-xs">Tanggal Akhir</p>
-            <p class="font-bold">
-                {{ now()->format('d/m/Y') }}
-            </p>
-        </div>
-    </div>
+    </form>
 
     {{-- TOP PELANGGAN --}}
     @php $top = $data->first(); @endphp

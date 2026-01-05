@@ -7,7 +7,7 @@
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <a href="{{ route('admin2.laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+                <a href="{{ route('laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <div>
@@ -21,7 +21,7 @@
     {{-- FILTER SECTION --}}
     <div class="px-8 py-6">
         <div class="bg-white rounded-2xl shadow-lg p-6">
-            <form method="GET" action="{{ route('admin2.laporan.driver.index') }}" class="flex items-end gap-4">
+            <form method="GET" action="{{ route('laporan.driver.index') }}" class="flex items-end gap-4">
                 <div class="flex-1">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                         <i class="bi bi-calendar-event me-1"></i>Dari Tanggal

@@ -265,19 +265,19 @@ $routePrefix = 'admin2';
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const modal = document.getElementById("modalLayanan");
-    const modalTitle = document.getElementById("modalTitle");
-    const qtyInput = document.getElementById("qtyInput");
-    const parfumSelect = document.getElementById("parfumSelect");
-    const btnSave = document.getElementById("btnSave");
-    const addJenisTransaksiUrl = "{{ route('admin2.transaksi.addJenis', ':id') }}";
-    const modalDuplicate = document.getElementById("modalDuplicate");
-    const btnConfirmDuplicate = document.getElementById("btnConfirmDuplicate");
-    const modalDelete = document.getElementById("modalDelete");
-    const formDelete = document.getElementById("formDelete");
+const modal = document.getElementById("modalLayanan");
+const modalTitle = document.getElementById("modalTitle");
+const qtyInput = document.getElementById("qtyInput");
+const parfumSelect = document.getElementById("parfumSelect");
+const btnSave = document.getElementById("btnSave");
+const addJenisTransaksiUrl = "{{ route('admin2.transaksi.addJenis', ':id') }}";
+const modalDuplicate = document.getElementById("modalDuplicate");
+const btnConfirmDuplicate = document.getElementById("btnConfirmDuplicate");
+const modalDelete = document.getElementById("modalDelete");
+const formDelete = document.getElementById("formDelete");
 
-    // ================= MODAL UTAMA =================
-    function openModal(name, id, mode = "transaksi", riwayatId = null) {
+// ================= MODAL UTAMA =================
+function openModal(name, id, mode = "transaksi", riwayatId = null) {
         modal.classList.remove("hidden");
         modalTitle.innerText = name;
         btnSave.dataset.id = id;
@@ -289,17 +289,15 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSave.style.pointerEvents = 'auto';
     }
 
-    function closeModal() {
+function closeModal() {
         modal.classList.add("hidden");
     }
-
     window.closeModal = closeModal;
-
     modal.addEventListener("click", e => {
         if (e.target === modal) closeModal();
     });
 
-    // ================= DUPLICATE =================
+// ================= DUPLICATE =================
     window.confirmDuplicate = function(url) {
         modalDuplicate.classList.remove("hidden");
         btnConfirmDuplicate.onclick = () => {
@@ -315,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDuplicate) closeDuplicateModal();
     });
 
-    // ================= DELETE =================
+// ================= DELETE =================
     window.confirmDelete = function(url) {
         modalDelete.classList.remove("hidden");
         formDelete.action = url;
@@ -329,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDelete) closeDeleteModal();
     });
 
-    // ================= KLIK LAYANAN UTAMA =================
+// ================= KLIK LAYANAN UTAMA =================
     document.querySelectorAll('.layanan-item').forEach(card => {
         card.addEventListener('click', (e) => {
             // Jangan proses jika klik jenis, dropdown, atau button
@@ -340,11 +338,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const from = "{{ request('from') }}";
-            const idLayanan = card.dataset.id; // ✅ ID Layanan Utama
-
+            const idLayanan = card.dataset.id;
             console.log('🔵 Layanan Card Clicked | From:', from, '| ID:', idLayanan);
 
-            // Hanya non-transaksi yang boleh klik card utama
+            // Hanya redirect ke edit jika BUKAN dari transaksi/riwayat
             if (from !== "transaksi" && from !== "riwayat") {
                 console.log('➡️ Redirect to edit layanan:', idLayanan);
                 window.location.href = `/admin2/layanan/${idLayanan}/edit`;
@@ -352,7 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // ================= KLIK JENIS LAYANAN (FIXED) =================
+// ================= KLIK JENIS LAYANAN (FIXED) =================
     document.querySelectorAll('.jenis-item').forEach(item => {
         item.addEventListener('click', e => {
             e.stopPropagation();
@@ -367,27 +364,21 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log('  - ID Layanan:', idLayanan);
             console.log('  - ID Jenis:', idJenis);
 
-            // ✅ LOGIC YANG BENAR - Cek apakah dari transaksi atau riwayat
+            // ✅ HANYA BUKA MODAL JIKA DARI TRANSAKSI ATAU RIWAYAT
             if (from === "transaksi" || from === "riwayat") {
-                // Mode transaksi/riwayat → Buka modal
                 const riwayatId = "{{ request('id_transaksi') }}";
                 console.log('📦 Opening modal for transaction');
                 openModal(namaJenis, idJenis, from, riwayatId || null);
             } 
-            // ✅ Kalau dari halaman lain (dashboard, dll) → redirect ke edit
-            else if (from) {
+            // ✅ SELAIN ITU (termasuk dari dashboard) → REDIRECT KE EDIT LAYANAN
+            else {
                 console.log('➡️ Redirect to edit layanan:', idLayanan);
                 window.location.href = `/admin2/layanan/${idLayanan}/edit`;
-            }
-            // ✅ Kalau tidak ada parameter 'from' → JUGA buka modal (default behavior)
-            else {
-                console.log('📦 No from param, opening modal');
-                openModal(namaJenis, idJenis, "transaksi", null);
             }
         });
     });
 
-    // ================= DROPDOWN =================
+// ================= DROPDOWN =================
     document.querySelectorAll(".dropdown-area").forEach(area => {
         area.addEventListener("click", e => e.stopPropagation());
     });
@@ -407,13 +398,12 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll(".dropdown-menu").forEach(m => m.classList.add("hidden"));
     });
 
-    // ================= TOMBOL SIMPAN =================
+// ================= TOMBOL SIMPAN =================
     if (btnSave) {
         btnSave.addEventListener("click", function(e) {
             e.preventDefault();
-            
             console.log('🔥 Button Simpan diklik!');
-            
+
             const qty = qtyInput.value.trim();
             if (!qty || qty <= 0) {
                 alert("Qty wajib diisi dan harus lebih dari 0");
@@ -424,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const idJenis = btnSave.dataset.id;
             const mode = btnSave.dataset.mode;
             const idRiwayat = btnSave.dataset.riwayat;
-            
+
             console.log('📦 Data yang akan dikirim:');
             console.log('  - ID Jenis:', idJenis);
             console.log('  - Qty:', qty);
@@ -458,14 +448,11 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(res => {
                 console.log('📡 Response Status:', res.status);
                 console.log('📡 Response OK:', res.ok);
-                
                 return res.text().then(text => {
                     console.log('📄 Response Text:', text);
-                    
                     if (!res.ok) {
                         throw new Error(`HTTP ${res.status}: ${text}`);
                     }
-                    
                     try {
                         return JSON.parse(text);
                     } catch (e) {
@@ -475,14 +462,11 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .then(data => {
                 console.log('✅ Parsed Data:', data);
-                
                 if (data.success) {
                     console.log('🎉 Sukses! Redirecting...');
-                    
                     const redirectUrl = mode === "transaksi"
                         ? "{{ route('admin2.transaksi.create') }}"
                         : `/admin2/riwayat/${idRiwayat}/edit`;
-                    
                     console.log('🔀 Redirect ke:', redirectUrl);
                     window.location.href = redirectUrl;
                 } else {
@@ -492,17 +476,15 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(err => {
                 console.error('❌ Error:', err);
                 alert("Gagal menyimpan layanan: " + err.message);
-                
                 // Re-enable button
                 btnSave.disabled = false;
                 btnSave.textContent = "Simpan";
             });
         });
-        
         btnSave.disabled = false;
     }
 
-    // ================= SEARCH =================
+// ================= SEARCH =================
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', function(e) {
@@ -517,5 +499,4 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log('✅ Script loaded successfully!');
 });
 </script>
-
 @endsection

@@ -3,8 +3,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,38 +16,65 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        View::composer('layouts.sidebar', function ($view) {
-            $menus = collect();
-            $roleId = null;
+        // ✅ Tambahkan check untuk avoid error saat migration/seeding
+        if (!app()->runningInConsole() || app()->runningUnitTests()) {
+            $this->composeMenus();
+        }
+    }
 
-            // Cek guard admin
-            if (Auth::guard('admin')->check()) {
-                $roleId = Auth::guard('admin')->user()->role_id;
-            }
-            // Cek guard admin2
-            elseif (Auth::guard('admin2')->check()) {
-                $roleId = Auth::guard('admin2')->user()->role_id;
-            }
-            // Cek guard kasir
-            elseif (Auth::guard('kasir')->check()) {
-                $roleId = 3; // Kasir selalu role_id = 3
-            }
+    protected function composeMenus(): void
+    {
+        try {
+            View::composer(['layouts.sidebar', 'layouts.master'], function ($view) {
+                $menus = collect();
+                $roleId = null;
+                $guardType = null;
 
-            // Query menggunakan relationship
-            if ($roleId) {
-                $menus = Menu::whereHas('roles', function($query) use ($roleId) {
-                        $query->where('role_id', $roleId)
-                              ->where('can_view', 1);
-                    })
-                    ->where('status', 1)
-                    ->with(['roles' => function($query) use ($roleId) {
-                        $query->where('role_id', $roleId);
-                    }])
-                    ->orderBy('urutan', 'asc')
-                    ->get();
-            }
+                try {
+                    // ✅ Cek guard dengan lebih hati-hati
+                    if (Auth::guard('admin')->check()) {
+                        $user = Auth::guard('admin')->user();
+                        if ($user && isset($user->role_id)) {
+                            $roleId = $user->role_id;
+                            $guardType = 'admin';
+                        }
+                    }
+                    elseif (Auth::guard('kasir')->check()) {
+                        $user = Auth::guard('kasir')->user();
+                        if ($user) {
+                            $roleId = 3;
+                            $guardType = 'kasir';
+                        }
+                    }
 
-            $view->with('menus', $menus);
-        });
+                    // ✅ Load menu hanya jika roleId valid
+                    if ($roleId && DB::table('menu')->exists()) {
+                        $menus = DB::table('menu')
+                            ->join('menu_role', function($join) use ($roleId) {
+                                $join->on('menu.id', '=', 'menu_role.menu_id')
+                                     ->where('menu_role.role_id', '=', $roleId);
+                            })
+                            ->where('menu.status', 1)
+                            ->where('menu_role.can_view', 1)
+                            ->orderBy('menu.urutan', 'asc')
+                            ->select('menu.*')
+                            ->get();
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error loading menus: ' . $e->getMessage());
+                    $menus = collect();
+                    $roleId = null;
+                    $guardType = null;
+                }
+
+                $view->with([
+                    'menus' => $menus,
+                    'guardType' => $guardType,
+                    'roleId' => $roleId
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error in view composer: ' . $e->getMessage());
+        }
     }
 }

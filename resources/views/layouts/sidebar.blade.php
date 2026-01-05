@@ -12,19 +12,16 @@ if (Auth::guard('kasir')->check()) {
     $user = Auth::guard('admin')->user();
     $nama = $user->nama_admin ?? 'Admin';
     $role = $user->role->nama_role ?? 'Admin';
-} elseif (Auth::guard('admin2')->check()) {
-    $user = Auth::guard('admin2')->user();
-    $nama = $user->nama_admin ?? 'Admin2';
-    $role = $user->role->nama_role ?? 'Admin';
 } else {
     $user = null;
     $nama = '';
     $role = '';
 }
-
-// ✅ Gunakan $menus dari AppServiceProvider
-// Variabel $menus sudah tersedia dari View Composer
 @endphp
+
+@foreach($menus as $menu)
+    <!-- Menu items here -->
+@endforeach
 
 <!-- OVERLAY -->
 <div id="sidebarOverlay"
@@ -57,32 +54,46 @@ if (Auth::guard('kasir')->check()) {
         </div>
     </div>
 
-
-    <!-- MENU -->
-    <div class="p-4 overflow-y-auto h-[calc(100vh-250px)]">
-        @forelse($menus as $menu)
-            @if($menu->route && Route::has($menu->route))
-                @php
-                    // Ambil permission dari pivot
-                    $pivot = $menu->roles->first()?->pivot;
-                @endphp
-                
+  <!-- MENU -->
+<div class="p-4 overflow-y-auto h-[calc(100vh-250px)]">
+    @forelse($menus as $menu)
+        @if($menu->route)
+            {{-- Cek apakah route ada di Laravel --}}
+            @if(Route::has($menu->route))
                 <a href="{{ route($menu->route) }}"
                    class="flex items-center gap-3 p-3 rounded-xl mb-2 transition-all
                           {{ request()->routeIs($menu->route) 
                               ? 'bg-gray-900 text-yellow-400 font-bold shadow-lg scale-105' 
                               : 'text-gray-900 hover:bg-yellow-500 hover:pl-5' }}">
-                    <i class="{{ $menu->icon }} text-xl"></i>
+                    <i class="{{ $menu->icon ?? 'bi bi-circle' }} text-xl"></i>
+                    <span class="font-semibold">{{ $menu->nama_menu }}</span>
+                </a>
+            @else
+                {{-- Jika route tidak terdaftar, tampilkan sebagai link biasa dengan URL --}}
+                <a href="{{ url($menu->route) }}"
+                   class="flex items-center gap-3 p-3 rounded-xl mb-2 transition-all
+                          {{ request()->is(trim($menu->route, '/')) 
+                              ? 'bg-gray-900 text-yellow-400 font-bold shadow-lg scale-105' 
+                              : 'text-gray-900 hover:bg-yellow-500 hover:pl-5' }}">
+                    <i class="{{ $menu->icon ?? 'bi bi-circle' }} text-xl"></i>
                     <span class="font-semibold">{{ $menu->nama_menu }}</span>
                 </a>
             @endif
-        @empty
-            <div class="text-center py-8 text-gray-700">
-                <i class="bi bi-inbox text-4xl mb-2"></i>
-                <p class="text-sm">Tidak ada menu tersedia</p>
+        @else
+            {{-- Jika route null, tampilkan menu disabled atau skip --}}
+            <div class="flex items-center gap-3 p-3 rounded-xl mb-2 text-gray-500 cursor-not-allowed opacity-50">
+                <i class="{{ $menu->icon ?? 'bi bi-circle' }} text-xl"></i>
+                <span class="font-semibold">{{ $menu->nama_menu }}</span>
+                <span class="text-xs ml-auto">(No Route)</span>
             </div>
-        @endforelse
-    </div>
+        @endif
+    @empty
+        <div class="text-center py-8 text-gray-700">
+            <i class="bi bi-inbox text-4xl mb-2"></i>
+            <p class="text-sm">Tidak ada menu tersedia</p>
+        </div>
+    @endforelse
+</div>
 
     <!-- LOGOUT -->
     <div class="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-yellow-500 bg-yellow-400">
@@ -91,17 +102,17 @@ if (Auth::guard('kasir')->check()) {
                 @csrf
                 <button type="submit"
                         class="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 
-                               text-yellow-400 p-3 rounded-xl font-bold transition-all hover:scale-105">
+                            text-yellow-400 p-3 rounded-xl font-bold transition-all hover:scale-105">
                     <i class="bi bi-box-arrow-right text-xl"></i>
                     <span>Logout</span>
                 </button>
             </form>
-        @elseif(Auth::guard('admin')->check() || Auth::guard('admin2')->check())
+        @elseif(Auth::guard('admin')->check())
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit"
                         class="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 
-                               text-yellow-400 p-3 rounded-xl font-bold transition-all hover:scale-105">
+                            text-yellow-400 p-3 rounded-xl font-bold transition-all hover:scale-105">
                     <i class="bi bi-box-arrow-right text-xl"></i>
                     <span>Logout</span>
                 </button>

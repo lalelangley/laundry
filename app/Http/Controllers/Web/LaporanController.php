@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Pengeluaran;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;  // ✅ TAMBAH INI
+use App\Exports\TransaksiExport; 
 use Illuminate\Support\Facades\Auth;
 
 class LaporanController extends Controller
@@ -284,122 +286,121 @@ class LaporanController extends Controller
     // ===============================
     // LAPORAN TRANSAKSI - ADMIN
     // ===============================
-    public function transaksiIndex(Request $request)
-    {
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
+   public function transaksiIndex(Request $request)
+{
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $query = Transaksi::with([
-            'pelanggan',
-            'detail.jenis.satuan',
-            'metodeBayar',
-        ])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
-
-        // 🔍 SEARCH
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query
-            ->orderBy('tgl_transaksi', 'DESC')
-            ->get();
-
-        return view('laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    // ✅ FIXED: Hapus 'detail.jenis.satuan'
+    $query = Transaksi::with([
+        'pelanggan',
+        'metodeBayar',
+    ])
+        ->where('status_transaksi', 'selesai')
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
+
+    $transaksi = $query
+        ->orderBy('tgl_transaksi', 'DESC')
+        ->get();
+
+    return view('laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $transaksi->sum('total_bayar'),
+        'jumlah'     => $transaksi->count(),
+    ]);
+}
 
     // ===============================
     // LAPORAN TRANSAKSI - KASIR
     // ===============================
     public function transaksiIndexKasir(Request $request)
-    {
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
+{
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $query = Transaksi::with([
-            'pelanggan',
-            'detail.jenis.satuan',
-            'metodeBayar',
-        ])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
-
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-        return view('kasir.laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    // ✅ FIXED: Hapus 'detail.jenis.satuan'
+    $query = Transaksi::with([
+        'pelanggan',
+        'metodeBayar',
+    ])
+        ->where('status_transaksi', 'selesai')
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
+
+    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+
+    return view('kasir.laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $transaksi->sum('total_bayar'),
+        'jumlah'     => $transaksi->count(),
+    ]);
+}
 
     // ===============================
     // LAPORAN TRANSAKSI - ADMIN2
     // ===============================
-    public function transaksiIndexAdmin2(Request $request)
-    {
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
+   public function transaksiIndexAdmin2(Request $request)
+{
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $query = Transaksi::with([
-            'pelanggan',
-            'detail.jenis.satuan',
-            'metodeBayar',
-        ])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
-
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-        return view('admin2.laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    // ✅ FIXED: Hapus 'detail.jenis.satuan'
+    $query = Transaksi::with([
+        'pelanggan',
+        'metodeBayar',
+    ])
+        ->where('status_transaksi', 'selesai')
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
+
+    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+
+    return view('admin2.laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $transaksi->sum('total_bayar'),
+        'jumlah'     => $transaksi->count(),
+    ]);
+}
 
     // ===============================
     // LAPORAN KASIR - ADMIN (FIXED QUERY)
@@ -778,7 +779,7 @@ class LaporanController extends Controller
 
         return view('admin2.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
-    // ===============================
+   // ===============================
 // LAPORAN DRIVER - ADMIN
 // ===============================
 public function driver(Request $request)
@@ -786,41 +787,37 @@ public function driver(Request $request)
     $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
     $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    // Query semua driver aktif
-    $driverList = DB::table('driver')
-        ->where('status', 'aktif')
-        ->select('id_driver', 'nama_driver', 'no_telp')
+    // Query data driver dari tabel delivery
+    $data = DB::table('delivery')
+        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+        ->select(
+            'driver.id_driver',
+            'driver.nama_driver',
+            'driver.no_telp',
+            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+        )
+        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+        ->orderByDesc('total_pengiriman')
         ->get();
 
-    // Untuk setiap driver, hitung statistik pengiriman
-    $data = $driverList->map(function($driver) use ($tglAwal, $tglAkhir) {
-        // Query pengiriman per driver dalam periode
-        $pengiriman = DB::table('transaksi')
-            ->where('id_driver', $driver->id_driver)
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal . ' 00:00:00',
-                $tglAkhir . ' 23:59:59'
-            ])
-            ->get();
+    // Hitung statistik untuk cards
+    $stats = [
+        'total_driver_aktif' => $data->count(),
+        'total_pengiriman' => $data->sum('total_pengiriman'),
+        'total_pickup' => $data->sum('total_pickup'),
+        'total_antar' => $data->sum('total_antar'),
+        'total_terkirim' => $data->sum('terkirim'),
+        'total_gagal' => $data->sum('gagal'),
+        'total_proses' => $data->sum('dalam_proses'),
+    ];
 
-        // Hitung breakdown per status
-        $driver->dalam_perjalanan = $pengiriman->where('status_transaksi', 'dalam_perjalanan')->count();
-        $driver->terkirim = $pengiriman->where('status_transaksi', 'selesai')->count();
-        $driver->gagal = $pengiriman->whereIn('status_transaksi', ['batal', 'ditolak'])->count();
-
-        // Total pengiriman dan pendapatan
-        $driver->total_pengiriman = $pengiriman->count();
-        $driver->total_pendapatan = $pengiriman
-            ->where('status_transaksi', 'selesai')
-            ->sum('total_bayar');
-
-        return $driver;
-    });
-
-    // Sort by total pengiriman
-    $data = $data->sortByDesc('total_pengiriman')->values();
-
-    return view('laporan.driver.index', compact('data', 'tglAwal', 'tglAkhir'));
+    return view('laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
 }
 
 // ===============================
@@ -831,34 +828,37 @@ public function driverKasir(Request $request)
     $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
     $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    $driverList = DB::table('driver')
-        ->where('status', 'aktif')
-        ->select('id_driver', 'nama_driver', 'no_telp')
+    // Query data driver dari tabel delivery
+    $data = DB::table('delivery')
+        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+        ->select(
+            'driver.id_driver',
+            'driver.nama_driver',
+            'driver.no_telp',
+            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+        )
+        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+        ->orderByDesc('total_pengiriman')
         ->get();
 
-    $data = $driverList->map(function($driver) use ($tglAwal, $tglAkhir) {
-        $pengiriman = DB::table('transaksi')
-            ->where('id_driver', $driver->id_driver)
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal . ' 00:00:00',
-                $tglAkhir . ' 23:59:59'
-            ])
-            ->get();
+    // Hitung statistik untuk cards
+    $stats = [
+        'total_driver_aktif' => $data->count(),
+        'total_pengiriman' => $data->sum('total_pengiriman'),
+        'total_pickup' => $data->sum('total_pickup'),
+        'total_antar' => $data->sum('total_antar'),
+        'total_terkirim' => $data->sum('terkirim'),
+        'total_gagal' => $data->sum('gagal'),
+        'total_proses' => $data->sum('dalam_proses'),
+    ];
 
-        $driver->dalam_perjalanan = $pengiriman->where('status_transaksi', 'dalam_perjalanan')->count();
-        $driver->terkirim = $pengiriman->where('status_transaksi', 'selesai')->count();
-        $driver->gagal = $pengiriman->whereIn('status_transaksi', ['batal', 'ditolak'])->count();
-        $driver->total_pengiriman = $pengiriman->count();
-        $driver->total_pendapatan = $pengiriman
-            ->where('status_transaksi', 'selesai')
-            ->sum('total_bayar');
-
-        return $driver;
-    });
-
-    $data = $data->sortByDesc('total_pengiriman')->values();
-
-    return view('kasir.laporan.driver.index', compact('data', 'tglAwal', 'tglAkhir'));
+    return view('kasir.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
 }
 
 // ===============================
@@ -869,33 +869,106 @@ public function driverAdmin2(Request $request)
     $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
     $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    $driverList = DB::table('driver')
-        ->where('status', 'aktif')
-        ->select('id_driver', 'nama_driver', 'no_telp')
+    // Query data driver dari tabel delivery
+    $data = DB::table('delivery')
+        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+        ->select(
+            'driver.id_driver',
+            'driver.nama_driver',
+            'driver.no_telp',
+            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+        )
+        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+        ->orderByDesc('total_pengiriman')
         ->get();
 
-    $data = $driverList->map(function($driver) use ($tglAwal, $tglAkhir) {
-        $pengiriman = DB::table('transaksi')
-            ->where('id_driver', $driver->id_driver)
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal . ' 00:00:00',
-                $tglAkhir . ' 23:59:59'
-            ])
-            ->get();
+    // Hitung statistik untuk cards
+    $stats = [
+        'total_driver_aktif' => $data->count(),
+        'total_pengiriman' => $data->sum('total_pengiriman'),
+        'total_pickup' => $data->sum('total_pickup'),
+        'total_antar' => $data->sum('total_antar'),
+        'total_terkirim' => $data->sum('terkirim'),
+        'total_gagal' => $data->sum('gagal'),
+        'total_proses' => $data->sum('dalam_proses'),
+    ];
 
-        $driver->dalam_perjalanan = $pengiriman->where('status_transaksi', 'dalam_perjalanan')->count();
-        $driver->terkirim = $pengiriman->where('status_transaksi', 'selesai')->count();
-        $driver->gagal = $pengiriman->whereIn('status_transaksi', ['batal', 'ditolak'])->count();
-        $driver->total_pengiriman = $pengiriman->count();
-        $driver->total_pendapatan = $pengiriman
-            ->where('status_transaksi', 'selesai')
-            ->sum('total_bayar');
-
-        return $driver;
-    });
-
-    $data = $data->sortByDesc('total_pengiriman')->values();
-
-    return view('admin2.laporan.driver.index', compact('data', 'tglAwal', 'tglAkhir'));
+    return view('admin2.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
 }
+ // ✅ METHOD BARU: Export Excel
+public function exportTransaksi(Request $request)
+{
+    $request->validate([
+        'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
+        'tanggal_awal' => 'required|date',
+        'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
+        'status_bayar' => 'in:semua,belum_lunas,DP,lunas'
+    ]);
+
+    $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
+    $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
+
+    return Excel::download(
+        new TransaksiExport(
+            $request->filter_type,
+            $request->tanggal_awal,
+            $request->tanggal_akhir,
+            $request->status_bayar
+        ),
+        $namaFile
+    );
+}
+
+     // ✅ METHOD BARU: Export Excel
+    public function exportTransaksiAdmin2(Request $request)
+    {
+        $request->validate([
+            'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
+            'tanggal_awal' => 'required|date',
+            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
+            'status_bayar' => 'in:semua,lunas,belum_lunas,dp'
+        ]);
+
+        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
+        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
+
+        return Excel::download(
+            new TransaksiExport(
+                $request->filter_type,
+                $request->tanggal_awal,
+                $request->tanggal_akhir,
+                $request->status_bayar
+            ),
+            $namaFile
+        );
+    }
+     // ✅ METHOD BARU: Export Excel
+    public function exportTransaksiKasir(Request $request)
+    {
+        $request->validate([
+            'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
+            'tanggal_awal' => 'required|date',
+            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
+            'status_bayar' => 'in:semua,lunas,belum_lunas,dp'
+        ]);
+
+        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
+        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
+
+        return Excel::download(
+            new TransaksiExport(
+                $request->filter_type,
+                $request->tanggal_awal,
+                $request->tanggal_akhir,
+                $request->status_bayar
+            ),
+            $namaFile
+        );
+    }
 }

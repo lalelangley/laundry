@@ -331,7 +331,22 @@ class PesananOnlineController extends Controller
         // Ambil semua driver yang aktif
         $drivers = Driver::where('status', 'aktif')->get();
         
-        return view('Admin2.pesanan_online.listonlinedriver', compact('pesanan', 'drivers'));
+        return view('admin2.pesanan_online.listonlinedriver', compact('pesanan', 'drivers'));
+    }
+
+    /**
+     * TAMPILKAN LIST DRIVER UNTUK DELIVERY - KASIR
+     */
+    public function listDriverKasir($id)
+    {
+        $pesanan = Transaksi::with('pelanggan')
+            ->where('jenis_transaksi', 'online')
+            ->findOrFail($id);
+        
+        // Ambil semua driver yang aktif
+        $drivers = Driver::where('status', 'aktif')->get();
+        
+        return view('kasir.pesanan_online.listonlinedriver', compact('pesanan', 'drivers'));
     }
 
     /**
@@ -398,6 +413,34 @@ public function assignDriverAdmin2(Request $request, $id)
         ->with('success', 'Driver berhasil ditentukan! Pesanan siap untuk diantar.');
 }
 
+public function assignDriverKasir(Request $request, $id)
+{
+    $request->validate([
+        'id_driver' => 'required|exists:driver,id_driver',
+        'catatan_driver' => 'nullable|string'
+    ]);
+
+    $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+    
+    // Update status transaksi ke siap_di_antar
+    $pesanan->update([
+        'status_transaksi' => 'siap_di_antar'
+    ]);
+
+    // Buat record di tabel delivery
+    Delivery::create([
+        'id_transaksi' => $pesanan->id_transaksi,
+        'id_driver' => $request->id_driver,
+        'jenis' => 'antar', // ✅ Tambahkan jenis delivery
+        'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-', // ✅ Ganti dari alamat_pengiriman
+        'status' => 'pending', // ✅ Nilai ENUM yang valid: pending, accepted, on_the_way_to_pickup, dll
+        'waktu' => now() // ✅ Ganti dari tgl_delivery
+    ]);
+
+    return redirect()
+        ->route('kasir.pesanan.online.detail', $id)
+        ->with('success', 'Driver berhasil ditentukan! Pesanan siap untuk diantar.');
+}
     public function listDeliveryOnline()
     {
         $deliveries = Delivery::with('transaksi.pelanggan')
@@ -491,6 +534,39 @@ public function assignDriverAdmin2(Request $request, $id)
             ->with('success', 'Data pesanan berhasil diperbarui!');
     }
     
+    public function updateDataKasir(Request $request, $id)
+    {
+        $request->validate([
+            'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
+            'qty.*' => 'required|numeric|min:0.01',
+            'id_satuan.*' => 'required|exists:satuan,id_satuan',
+            'total_harga' => 'required|numeric|min:0',
+            'keterangan' => 'nullable|string',
+        ]);
+
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+
+        // ✅ Update qty dan satuan untuk setiap detail_transaksi
+        if ($request->has('id_detail')) {
+            foreach ($request->id_detail as $index => $idDetail) {
+                DetailTransaksi::where('id_detail_transaksi', $idDetail)->update([
+                    'qty' => $request->qty[$index],
+                    'id_satuan' => $request->id_satuan[$index],
+                ]);
+            }
+        }
+
+        // ✅ Update total harga dan keterangan di transaksi
+        $pesanan->update([
+            'total_harga' => $request->total_harga,
+            'keterangan' => $request->keterangan,
+        ]);
+
+        return redirect()
+            ->route('kasir.pesanan.online.detail', $id)
+            ->with('success', 'Data pesanan berhasil diperbarui!');
+    }
+
     /**
      * KONFIRMASI PESANAN
      * (kirim detail ke pelanggan via WhatsApp/SMS)
@@ -545,4 +621,24 @@ public function assignDriverAdmin2(Request $request, $id)
             ->route('pesanan.online.detail', $id)
             ->with('success', 'Pesanan berhasil dikonfirmasi!');
     }
+    public function konfirmasiKasir(Request $request, $id)
+{
+    $request->validate([
+        'kirim_via' => 'required|in:whatsapp,email',
+        // validasi lainnya sesuai kebutuhan
+    ]);
+
+    $pesanan = Transaksi::findOrFail($id);
+    
+    // Logic untuk kirim konfirmasi via WhatsApp atau Email
+    if ($request->kirim_via === 'whatsapp') {
+        // Logic kirim WhatsApp
+    } else {
+        // Logic kirim Email
+    }
+
+    return redirect()
+        ->route('kasir.pesanan.online.detail', $id)
+        ->with('success', 'Konfirmasi berhasil dikirim!');
+}
 }

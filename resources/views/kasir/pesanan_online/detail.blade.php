@@ -5,7 +5,7 @@
 
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ route('pesanan.online.index') }}"
+        <a href="{{ route('kasir.pesanan.online.index') }}"
            class="text-black text-2xl font-bold hover:opacity-70">
             <i class="bi bi-arrow-left"></i>
         </a>
@@ -244,7 +244,7 @@
 
                 {{-- PROSES --}}
                 @if($dataLengkap && in_array($pesanan->status_transaksi, ['antrian', 'menunggu_konfirmasi', 'dikonfirmasi']))
-                <a href="{{ route('pesanan.online.proses',$pesanan->id_transaksi) }}"
+                <a href="{{ route('kasir.pesanan.online.proses',$pesanan->id_transaksi) }}"
                    class="block text-center py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2">
                     <i class="bi bi-play-circle"></i>
                     <span>Mulai Proses</span>
@@ -258,7 +258,7 @@
                         <i class="bi bi-truck"></i> Pilih Metode Pengambilan:
                     </p>
                     <div class="grid grid-cols-2 gap-2">
-                        <a href="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}"
+                        <a href="{{ route('kasir.pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}"
                            class="block text-center py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium">
                             <i class="bi bi-shop"></i> Pick Up
                         </a>
@@ -272,7 +272,7 @@
 
                 {{-- SELESAI --}}
                 @if(in_array($pesanan->status_transaksi, ['siap_di_ambil', 'siap_di_antar']))
-                <a href="{{ route('pesanan.online.selesai',$pesanan->id_transaksi) }}"
+                <a href="{{ route('kasir.pesanan.online.selesai',$pesanan->id_transaksi) }}"
                    class="block text-center py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
                     <i class="bi bi-check-circle"></i>
                     <span>Selesaikan Pesanan</span>
@@ -302,7 +302,7 @@
             </button>
         </div>
 
-        <form action="{{ route('pesanan.online.updateData', $pesanan->id_transaksi) }}" method="POST">
+        <form action="{{ route('kasir.pesanan.online.updateData', $pesanan->id_transaksi) }}" method="POST">
             @csrf
             @method('PUT')
 
@@ -434,7 +434,7 @@
             </div>
         </div>
 
-        <form action="{{ route('pesanan.online.konfirmasi', $pesanan->id_transaksi) }}" method="POST">
+        <form action="{{ route('kasir.pesanan.online.konfirmasi', $pesanan->id_transaksi) }}" method="POST">
             @csrf
 
             <div class="mb-4">
@@ -510,7 +510,7 @@
                     class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
                 Batal
             </button>
-            <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}"
+            <a href="{{ route('kasir.pesanan.online.list-driver', $pesanan->id_transaksi) }}"
                class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-center flex items-center justify-center gap-2 shadow-md">
                 <i class="bi bi-person-check"></i>
                 Tentukan Driver

@@ -1,7 +1,8 @@
 @extends('layouts.master')
-@section('title', 'Laporan Transaksi')
-@section('content')
 
+@section('title', 'Laporan Transaksi')
+
+@section('content')
 <div class="min-h-screen bg-gray-100">
 
     {{-- HEADER --}}
@@ -19,46 +20,46 @@
         </div>
     </div>
 
- <form method="GET" action="{{ route('laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
+    {{-- FORM FILTER --}}
+    <form method="GET" action="{{ route('laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
 
-    {{-- FILTER TANGGAL --}}
-    <div class="flex items-center gap-4">
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
-                   class="bg-transparent outline-none w-full">
+        {{-- FILTER TANGGAL --}}
+        <div class="flex items-center gap-4">
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
+
+            <span class="font-bold">&gt;</span>
+
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
+                       class="bg-transparent outline-none w-full">
+            </div>
         </div>
 
-        <span class="font-bold">&gt;</span>
+        {{-- SEARCH --}}
+        <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
+            <i class="bi bi-search text-xl text-gray-400"></i>
 
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
-                   class="bg-transparent outline-none w-full">
+            <input
+                type="text"
+                name="q"
+                value="{{ request('q') }}"
+                placeholder="Cari nama pelanggan / no nota / no HP..."
+                class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
+            >
+
+            <button type="submit"
+                    class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
+                Cari
+            </button>
         </div>
-    </div>
 
-    {{-- SEARCH --}}
-    <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
-        <i class="bi bi-search text-xl text-gray-400"></i>
+    </form>
 
-        <input
-            type="text"
-            name="q"
-            value="{{ request('q') }}"
-            placeholder="Cari nama pelanggan / no nota / no HP..."
-            class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
-        >
-
-        <button type="submit"
-                class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
-            Cari
-        </button>
-    </div>
-
-</form>
-
-</form>
     {{-- SUMMARY --}}
     <div class="px-8 mt-6">
         <div class="bg-white border-2 border-yellow-400 rounded-2xl p-6 font-semibold">
@@ -80,26 +81,54 @@
         <div class="bg-white rounded-2xl shadow p-6 flex gap-6">
 
             {{-- AVATAR --}}
-        <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 
-            flex items-center justify-center">
+            <div class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-yellow-400 to-yellow-500 flex-shrink-0 flex items-center justify-center shadow-lg">
+                @php
+                    $showImage = false;
+                    $imageSrc = '';
+                    
+                    if ($t->pelanggan && !empty($t->pelanggan->gambar)) {
+                        $gambar = $t->pelanggan->gambar;
+                        
+                        $paths = [
+                            $gambar,
+                            'pelanggan/' . $gambar,
+                            'gambar_pelanggan/' . $gambar,
+                            'images/pelanggan/' . $gambar,
+                            ltrim($gambar, '/'),
+                            str_replace('public/', '', $gambar),
+                        ];
+                        
+                        foreach ($paths as $testPath) {
+                            $fullPath = storage_path('app/public/' . $testPath);
+                            if (file_exists($fullPath) && is_file($fullPath)) {
+                                $imageSrc = asset('storage/' . $testPath);
+                                $showImage = true;
+                                break;
+                            }
+                        }
+                    }
+                @endphp
 
-    @if($t->pelanggan && $t->pelanggan->gambar)
-        <img 
-            class="w-full h-full object-cover"
-            src="{{ asset('storage/'.$t->pelanggan->gambar) }}"
-        >
-    @else
-        <i class="bi bi-person text-5xl text-gray-500"></i>
-    @endif
-
-</div>
+                @if($showImage)
+                    <img 
+                        class="w-full h-full object-cover"
+                        src="{{ $imageSrc }}"
+                        alt="{{ $t->nama_pelanggan }}"
+                        loading="lazy"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                    >
+                    <i class="bi bi-person text-3xl text-white" style="display:none;"></i>
+                @else
+                    <i class="bi bi-person text-3xl text-white"></i>
+                @endif
+            </div>
 
             {{-- INFO --}}
             <div class="flex-1">
-               <div class="flex justify-between items-start">
+                <div class="flex justify-between items-start">
                     <div>
                         <h3 class="text-xl font-bold">{{ $t->nama_pelanggan }}</h3>
-                        {{-- ✅ BADGE JENIS TRANSAKSI --}}
+                        
                         @if($t->jenis_transaksi === 'online')
                             <span class="inline-flex items-center gap-1 mt-1 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
                                 <i class="bi bi-globe"></i>
@@ -146,7 +175,11 @@
                         <i class="bi bi-percent text-yellow-500"></i>
                         <span>Diskon</span>
                         <span class="ml-auto">
-                            Rp {{ number_format($t->diskon,0,',','.') }}
+                            @if($t->tipe_diskon === 'percent')
+                                {{ $t->diskon }}% (Rp {{ number_format($t->total_harga * $t->diskon / 100, 0, ',', '.') }})
+                            @else
+                                Rp {{ number_format($t->diskon, 0, ',', '.') }}
+                            @endif
                         </span>
                     </div>
                 </div>
@@ -154,25 +187,24 @@
         </div>
         @empty
             <div class="text-center text-gray-500 py-10">
-                Tidak ada transaksi
+                <i class="bi bi-inbox text-5xl mb-3 block"></i>
+                <p class="font-semibold">Tidak ada transaksi</p>
             </div>
         @endforelse
 
     </div>
 </div>
-
 @endsection
+
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
+    // Auto submit saat tanggal berubah
     document.querySelectorAll('input[type="date"]').forEach(input => {
         input.addEventListener('change', function () {
-            this.form.submit(); // 🔥 AUTO SUBMIT
+            this.form.submit();
         });
     });
-
 });
 </script>
 @endpush
-

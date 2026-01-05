@@ -20,6 +20,53 @@
         body { 
             font-family: 'Poppins', sans-serif;
         }
+        
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .loading-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #FACC15;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Page content fade in */
+        .page-content {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .page-content.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -32,14 +79,14 @@
     @include('layouts.sidebar')
 
     {{-- Main Content --}}
-    <div class="min-h-screen relative z-[1]">
+    <div class="min-h-screen relative z-[1] page-content">
         @yield('content')
     </div>
 
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    {{-- GLOBAL LOADING SCRIPT --}}
+    {{-- GLOBAL LOADING SCRIPT - FIXED --}}
     <script>
         (function () {
             const loading = document.getElementById('loading');
@@ -47,14 +94,47 @@
             
             // === SHOW LOADING SAAT MAU PINDAH HALAMAN ===
             function showLoading() {
-                loading?.classList.add('show');
-                pageContent?.classList.remove('show');
+                if (loading) {
+                    loading.classList.add('show');
+                }
+                if (pageContent) {
+                    pageContent.classList.remove('show');
+                }
+            }
+            
+            function hideLoading() {
+                if (loading) {
+                    loading.classList.remove('show');
+                }
+                if (pageContent) {
+                    pageContent.classList.add('show');
+                }
             }
 
-            // Semua submit form
+            // ✅ PERBAIKAN: Skip form yang download file (Excel, PDF, dll)
             document.addEventListener('submit', function (e) {
                 if (e.target.tagName === 'FORM') {
-                    showLoading();
+                    const form = e.target;
+                    
+                    // ✅ Daftar form yang TIDAK perlu loading overlay
+                    const skipLoadingForms = [
+                        'data-ajax',           // Form AJAX
+                        'data-no-loading',     // Form dengan atribut khusus
+                        'data-download',       // Form download
+                    ];
+                    
+                    // Cek apakah form ini adalah form download/export
+                    const isDownloadForm = skipLoadingForms.some(attr => form.hasAttribute(attr)) ||
+                                         form.id === 'formBayar' ||
+                                         form.classList.contains('ajax-form') ||
+                                         form.action.includes('/export') ||
+                                         form.action.includes('/download') ||
+                                         form.action.includes('/print');
+                    
+                    // ✅ Jangan show loading untuk download/export form
+                    if (!isDownloadForm) {
+                        showLoading();
+                    }
                 }
             }, true);
 
@@ -72,21 +152,22 @@
                 if (link && !link.hasAttribute('target') && link.href.startsWith(window.location.origin)) {
                     let href = link.getAttribute('href');
                     
-                    // Skip hash links and javascript: links
-                    if (href && href !== '#' && !href.startsWith('javascript:')) {
+                    // Skip hash links, javascript: links, and download links
+                    if (href && 
+                        href !== '#' && 
+                        !href.startsWith('javascript:') &&
+                        !link.hasAttribute('download') &&
+                        !link.classList.contains('no-loading')) {
+                        
                         e.preventDefault();
                         
-                        // 🔥 FIX: Kalau klik link layanan dari sidebar/menu, hapus semua query parameters
                         if (link.href.includes('/layanan')) {
                             const url = new URL(link.href);
                             const fromSidebar = link.closest('#sidebar') !== null;
                             
-                            // Kalau dari sidebar dan belum ada parameter 'from', berarti akses dari menu
                             if (fromSidebar && !href.includes('from=')) {
-                                // Hapus semua query parameters
                                 url.search = '';
                                 href = url.pathname;
-                                console.log('🔧 Cleaned layanan URL:', href);
                             }
                         }
                         
@@ -98,31 +179,33 @@
                 }
             }, true);
 
-            // === FADE IN SAAT HALAMAN BARU SIAP ===
+            // ✅ PERBAIKAN: Hide loading jika halaman sudah loaded
             window.addEventListener('pageshow', () => {
-                // Small delay to ensure DOM is ready
                 setTimeout(() => {
-                    loading?.classList.remove('show');
-                    pageContent?.classList.add('show');
+                    hideLoading();
                 }, 50);
             });
 
             // Initial page load
             if (document.readyState === 'complete') {
-                pageContent?.classList.add('show');
+                hideLoading();
             } else {
                 window.addEventListener('load', () => {
-                    pageContent?.classList.add('show');
+                    hideLoading();
                 });
             }
+            
+            // ✅ Fallback: Hide loading setelah 10 detik (jika stuck)
+            setTimeout(() => {
+                hideLoading();
+            }, 10000);
         })();
     </script>
     
-        {{-- Script tambahan dari halaman --}}
+    {{-- Script tambahan dari halaman --}}
     @yield('scripts')
 
     @stack('scripts')
-
 
 </body>
 </html>

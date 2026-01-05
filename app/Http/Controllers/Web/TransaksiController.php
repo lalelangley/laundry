@@ -214,13 +214,14 @@ public function addLayanan(Request $request, $id)
             array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
         );
 
-        // 🔥 CREATE TRANSAKSI
+        // 🔥 CREATE TRANSAKSI - TAMBAH id_kasir
         $transaksi = \App\Models\Transaksi::create([
             'id_pelanggan' => $pelanggan['id_pelanggan'],
             'tanggal'      => now(),
             'total_harga'  => $total,
             'status'       => 'proses',
             'keterangan'   => session('keterangan_transaksi'),
+            'id_kasir'     => auth()->id(), // ✅ TAMBAHKAN INI
         ]);
 
         foreach ($detail as $d) {
@@ -252,12 +253,20 @@ public function addLayanan(Request $request, $id)
             ->with('error', 'Gagal menyimpan transaksi');
     }
 }
-
     // ==========================
     // 7. SIMPAN TRANSAKSI
     // ==========================
     public function bayar(Request $request)
     {
+
+        // ✅ DEBUG: Cek user yang sedang login
+        \Log::info('=== DEBUG USER LOGIN ===');
+        \Log::info('User ID: ' . auth()->id());
+        \Log::info('User Name: ' . auth()->user()->name ?? 'NULL');
+        \Log::info('User Email: ' . auth()->user()->email ?? 'NULL');
+        \Log::info('User Role: ' . auth()->user()->role ?? 'NULL');
+    
+
         $pelanggan = session('pelanggan');
         $detail    = session('detail_transaksi', []);
 
@@ -308,25 +317,26 @@ public function addLayanan(Request $request, $id)
         // Simpan transaksi
         // ================================
         // Di method bayar() dan bayarKasir(), tambahkan ini:
-        $trans = Transaksi::create([
-            'id_pelanggan'     => $pelanggan['id_pelanggan'],
-            'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
-            'no_hp'            => $pelanggan['no_hp'],
-            'total_harga'      => $totalAwal,
-            'total_bayar'      => $totalBayar,
-            'dp'               => $dp,
-            'diskon'           => $diskon,
-            'tipe_diskon'      => $tipeDiskon,
-            'status_bayar'     => $statusBayar,
-            'status_transaksi' => 'antrian',
-            'jenis_transaksi'  => 'offline',  // 🔥 TAMBAHKAN INI
-            'keterangan'       => $keterangan,
-            'tgl_transaksi'    => now(),
-            'tgl_estimasi'     => $tglEstimasi,
-            'tgl_lunas'        => $tglLunas,
-            'id_kasir'         => auth()->id(),
-            'id_metode_bayar'  => $idMetodeBayar,
-        ]);
+       $trans = Transaksi::create([
+        'id_pelanggan'     => $pelanggan['id_pelanggan'],
+        'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
+        'no_hp'            => $pelanggan['no_hp'],
+        'total_harga'      => $totalAwal,
+        'total_bayar'      => $totalBayar,
+        'dp'               => $dp,
+        'diskon'           => $diskon,
+        'tipe_diskon'      => $tipeDiskon,
+        'status_bayar'     => $statusBayar,
+        'status_transaksi' => 'antrian',
+        'jenis_transaksi'  => 'offline',
+        'keterangan'       => $keterangan,
+        'tgl_transaksi'    => now(),
+        'tgl_estimasi'     => $tglEstimasi,
+        'tgl_lunas'        => $tglLunas,
+        'id_kasir'         => current_user_id(),    // ✅ GANTI
+        'nama_kasir'       => current_user_name(),  // ✅ GANTI (jika ada field ini)
+        'id_metode_bayar'  => $idMetodeBayar,
+    ]);
 
         // ================================
         // Simpan detail transaksi
@@ -367,136 +377,32 @@ public function addLayanan(Request $request, $id)
     // ==========================
     // 7. SIMPAN TRANSAKSI
     // ==========================
-    public function bayarKasir(Request $request)
-    {
-        $pelanggan = session('pelanggan');
-        $detail    = session('detail_transaksi', []);
-
-        if (!$pelanggan || empty($detail)) {
-            return response()->json(['error' => 'Transaksi tidak valid'], 400);
-        }
-
-        // ================================
-        // Ambil input dari JSON fetch
-        // ================================
-        $diskon       = floatval($request->input('diskon', 0));
-        $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
-        $dp           = floatval($request->input('dp', 0));
-        $langsungBayar= intval($request->input('langsung_bayar', 0));
-        $keterangan   = $request->input('keterangan', '-');
-        $idMetodeBayar= $request->input('id_metode_bayar', 1);
-        $tglEstimasi  = $request->input('tgl_estimasi', now());
-
-        // ================================
-        // Hitung total awal & diskon
-        // ================================
-        $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
-
-        if ($tipeDiskon === 'percent') {
-            $diskon = $totalAwal * ($diskon / 100);
-        }
-
-        $totalAkhir = max($totalAwal - $diskon, 0);
-
-        // ================================
-        // Hitung status bayar
-        // ================================
-        $totalBayar = $dp;
-        if ($langsungBayar === 1 || $dp >= $totalAkhir) {
-            $totalBayar = $totalAkhir;
-            $statusBayar = 'lunas';
-            $tglLunas = now();
-            $dp = 0; // otomatis 0 kalau lunas
-        } elseif ($dp > 0) {
-            $statusBayar = 'DP';
-            $tglLunas = null;
-        } else {
-            $statusBayar = 'belum_lunas';
-            $tglLunas = null;
-        }
-
-        // ================================
-        // Simpan transaksi
-        // ================================
-        $trans = Transaksi::create([
-            'id_pelanggan'     => $pelanggan['id_pelanggan'],
-            'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
-            'no_hp'            => $pelanggan['no_hp'],
-            'total_harga'      => $totalAwal,
-            'total_bayar'      => $totalBayar,
-            'dp'               => $dp,
-            'diskon'           => $diskon,
-            'tipe_diskon'      => $tipeDiskon,
-            'status_bayar'     => $statusBayar,
-            'status_transaksi' => 'antrian',
-            'keterangan'       => $keterangan,
-            'tgl_transaksi'    => now(),
-            'tgl_estimasi'     => $tglEstimasi,
-            'tgl_lunas'        => $tglLunas,
-            'id_kasir'         => auth()->id(),
-            'id_metode_bayar'  => $idMetodeBayar,
-        ]);
-
-        // ================================
-        // Simpan detail transaksi
-        // ================================
-        foreach ($detail as $d) {
-            $jenis = \App\Models\JenisLayanan::with('satuan')
-                ->where('id_jenis_layanan', $d['id_jenis_layanan'])
-                ->first();
-
-            $idSatuan = $jenis?->satuan?->id_satuan ?? null;
-
-            $trans->detail()->create([
-                'id_layanan'       => $d['id_layanan'],
-                'id_jenis_layanan' => $d['id_jenis_layanan'],
-                'id_parfum'        => $d['id_parfum'] ?? null,
-                'harga'            => $d['harga'],
-                'qty'              => $d['qty'],
-                'id_satuan'        => $idSatuan,
-                'tipe_diskon'      => $tipeDiskon,
-            ]);
-        }
-
-        session()->forget(['pelanggan', 'detail_transaksi', 'keterangan_transaksi']);
-
-        return response()->json([
-            'success'      => true,
-            'total'        => $totalAkhir,
-            'bayar'        => $totalBayar,
-            'nama'         => $pelanggan['nama_pelanggan'],
-            'hp'           => $pelanggan['no_hp'],
-            'status_bayar' => $statusBayar,
-            'diskon'       => $diskon,
-            'total_bayar'  => $totalBayar,
-            'tgl_lunas'    => $tglLunas,
-        ]);
-    }
-
-
-    // ==========================
-    // 7. SIMPAN TRANSAKSI
-    // ==========================
-    public function bayarAdmin2(Request $request)
+    /**
+ * SIMPAN TRANSAKSI - KASIR (Logic sama dengan Admin/bayar)
+ */
+public function bayarKasir(Request $request)
 {
-    // ✅ GANTI session key
-    $pelanggan = session('pelanggan_transaksi');  // ✅ BENAR
+    $pelanggan = session('pelanggan');
     $detail    = session('detail_transaksi', []);
 
     if (!$pelanggan || empty($detail)) {
         return response()->json(['error' => 'Transaksi tidak valid'], 400);
     }
 
-    // Ambil input
-    $diskon        = floatval($request->input('diskon', 0));
-    $tipeDiskon    = $request->input('tipe_diskon', 'nominal');
-    $dp            = floatval($request->input('dp', 0));
-    $langsungBayar = intval($request->input('langsung_bayar', 0));
-    $keterangan    = $request->input('keterangan', '-');
-    $idMetodeBayar = $request->input('id_metode_bayar', 1);
-    $tglEstimasi   = $request->input('tgl_estimasi', now());
+    // ================================
+    // Ambil input dari JSON fetch
+    // ================================
+    $diskon       = floatval($request->input('diskon', 0));
+    $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
+    $dp           = floatval($request->input('dp', 0));
+    $langsungBayar= intval($request->input('langsung_bayar', 0));
+    $keterangan   = $request->input('keterangan', '-');
+    $idMetodeBayar= $request->input('id_metode_bayar', 1);
+    $tglEstimasi  = $request->input('tgl_estimasi', now());
 
-    // Hitung total & diskon
+    // ================================
+    // Hitung total awal & diskon
+    // ================================
     $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
     if ($tipeDiskon === 'percent') {
@@ -505,23 +411,26 @@ public function addLayanan(Request $request, $id)
 
     $totalAkhir = max($totalAwal - $diskon, 0);
 
-    // ✅ LOGIC STATUS BAYAR YANG BENAR
+    // ================================
+    // Hitung status bayar
+    // ================================
     $totalBayar = $dp;
-    $statusBayar = 'belum_lunas';
-    $tglLunas = null;
-
     if ($langsungBayar === 1 || $dp >= $totalAkhir) {
-        // Kalau langsung bayar atau DP >= total → LUNAS
         $totalBayar = $totalAkhir;
         $statusBayar = 'lunas';
         $tglLunas = now();
-        $dp = 0; // Set DP = 0 kalau lunas
-    } elseif ($dp > 0 && $dp < $totalAkhir) {
-        // Kalau DP ada tapi kurang dari total → DP
+        $dp = 0; // otomatis 0 kalau lunas
+    } elseif ($dp > 0) {
         $statusBayar = 'DP';
+        $tglLunas = null;
+    } else {
+        $statusBayar = 'belum_lunas';
+        $tglLunas = null;
     }
 
-    // ✅ CREATE TRANSAKSI DENGAN FIELD YANG BENAR
+    // ================================
+    // Simpan transaksi
+    // ================================
     $trans = Transaksi::create([
         'id_pelanggan'     => $pelanggan['id_pelanggan'],
         'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
@@ -533,16 +442,19 @@ public function addLayanan(Request $request, $id)
         'tipe_diskon'      => $tipeDiskon,
         'status_bayar'     => $statusBayar,
         'status_transaksi' => 'antrian',
-        'jenis_transaksi'  => 'offline',  // ✅ TAMBAHKAN
+        'jenis_transaksi'  => 'offline',
         'keterangan'       => $keterangan,
-        'tgl_transaksi'    => now(),  // ✅ BENAR (bukan 'tanggal')
+        'tgl_transaksi'    => now(),
         'tgl_estimasi'     => $tglEstimasi,
         'tgl_lunas'        => $tglLunas,
-        'id_kasir'         => auth()->id(),
+        'id_kasir'         => current_user_id(),    // ✅ GANTI
+        'nama_kasir'       => current_user_name(),  // ✅ GANTI (jika ada field ini)
         'id_metode_bayar'  => $idMetodeBayar,
     ]);
 
-    // Simpan detail
+    // ================================
+    // Simpan detail transaksi
+    // ================================
     foreach ($detail as $d) {
         $jenis = \App\Models\JenisLayanan::with('satuan')
             ->where('id_jenis_layanan', $d['id_jenis_layanan'])
@@ -561,9 +473,108 @@ public function addLayanan(Request $request, $id)
         ]);
     }
 
-    // ✅ CLEAR SESSION DENGAN KEY YANG BENAR
+    session()->forget(['pelanggan', 'detail_transaksi', 'keterangan_transaksi']);
+
+    return response()->json([
+        'success'      => true,
+        'total'        => $totalAkhir,
+        'bayar'        => $totalBayar,
+        'nama'         => $pelanggan['nama_pelanggan'],
+        'hp'           => $pelanggan['no_hp'],
+        'status_bayar' => $statusBayar,
+        'diskon'       => $diskon,
+        'total_bayar'  => $totalBayar,
+        'tgl_lunas'    => $tglLunas,
+    ]);
+}
+
+
+    // ==========================
+    // 7. SIMPAN TRANSAKSI
+    // ==========================
+   /**
+ * SIMPAN TRANSAKSI - ADMIN2
+ */
+public function bayarAdmin2(Request $request)
+{
+    // ✅ BENAR - pakai 'pelanggan_transaksi' sesuai setPelangganAdmin2
+    $pelanggan = session('pelanggan_transaksi');
+    $detail    = session('detail_transaksi', []);
+
+    if (!$pelanggan || empty($detail)) {
+        return response()->json(['error' => 'Transaksi tidak valid'], 400);
+    }
+
+    $diskon        = floatval($request->input('diskon', 0));
+    $tipeDiskon    = $request->input('tipe_diskon', 'nominal');
+    $dp            = floatval($request->input('dp', 0));
+    $langsungBayar = intval($request->input('langsung_bayar', 0));
+    $keterangan    = $request->input('keterangan', '-');
+    $idMetodeBayar = $request->input('id_metode_bayar', 1);
+    $tglEstimasi   = $request->input('tgl_estimasi', now());
+
+    $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
+
+    if ($tipeDiskon === 'percent') {
+        $diskon = $totalAwal * ($diskon / 100);
+    }
+
+    $totalAkhir = max($totalAwal - $diskon, 0);
+
+    $totalBayar = $dp;
+    $statusBayar = 'belum_lunas';
+    $tglLunas = null;
+
+    if ($langsungBayar === 1 || $dp >= $totalAkhir) {
+        $totalBayar = $totalAkhir;
+        $statusBayar = 'lunas';
+        $tglLunas = now();
+        $dp = 0;
+    } elseif ($dp > 0 && $dp < $totalAkhir) {
+        $statusBayar = 'DP';
+    }
+
+    $trans = Transaksi::create([
+        'id_pelanggan'     => $pelanggan['id_pelanggan'],
+        'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
+        'no_hp'            => $pelanggan['no_hp'],
+        'total_harga'      => $totalAwal,
+        'total_bayar'      => $totalBayar,
+        'dp'               => $dp,
+        'diskon'           => $diskon,
+        'tipe_diskon'      => $tipeDiskon,
+        'status_bayar'     => $statusBayar,
+        'status_transaksi' => 'antrian',
+        'jenis_transaksi'  => 'offline',
+        'keterangan'       => $keterangan,
+        'tgl_transaksi'    => now(),
+        'tgl_estimasi'     => $tglEstimasi,
+        'tgl_lunas'        => $tglLunas,
+        'id_kasir'         => current_user_id(),    // ✅ GANTI
+        'nama_kasir'       => current_user_name(),  // ✅ GANTI (jika ada field ini)
+        'id_metode_bayar'  => $idMetodeBayar,
+    ]);
+
+    foreach ($detail as $d) {
+        $jenis = \App\Models\JenisLayanan::with('satuan')
+            ->where('id_jenis_layanan', $d['id_jenis_layanan'])
+            ->first();
+
+        $idSatuan = $jenis?->satuan?->id_satuan ?? null;
+
+        $trans->detail()->create([
+            'id_layanan'       => $d['id_layanan'],
+            'id_jenis_layanan' => $d['id_jenis_layanan'],
+            'id_parfum'        => $d['id_parfum'] ?? null,
+            'harga'            => $d['harga'],
+            'qty'              => $d['qty'],
+            'id_satuan'        => $idSatuan,
+            'tipe_diskon'      => $tipeDiskon,
+        ]);
+    }
+
     session()->forget([
-        'pelanggan_transaksi',  // ✅ BENAR
+        'pelanggan_transaksi',
         'detail_transaksi',
         'keterangan_transaksi'
     ]);
@@ -699,7 +710,8 @@ public function createAdmin2()
 public function checkoutKasir(Request $request)
 {
     try {
-        $pelanggan = session('pelanggan_transaksi');
+        // ✅ BENAR - pakai 'pelanggan' (bukan 'pelanggan_transaksi')
+        $pelanggan = session('pelanggan');
         $detail    = session('detail_transaksi', []);
 
         if (!$pelanggan || count($detail) === 0) {
@@ -712,13 +724,18 @@ public function checkoutKasir(Request $request)
             array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
         );
 
-        // 🔥 CREATE TRANSAKSI
+        // ✅ CREATE TRANSAKSI DENGAN id_kasir
         $transaksi = \App\Models\Transaksi::create([
             'id_pelanggan' => $pelanggan['id_pelanggan'],
-            'tanggal'      => now(),
-            'total_harga'  => $total,
-            'status'       => 'proses',
-            'keterangan'   => session('keterangan_transaksi'),
+            'nama_pelanggan' => $pelanggan['nama_pelanggan'],
+            'no_hp' => $pelanggan['no_hp'],
+            'total_harga' => $total,
+            'status_transaksi' => 'antrian',
+            'status_bayar' => 'belum_lunas',
+            'jenis_transaksi' => 'offline',
+            'keterangan' => session('keterangan_transaksi'),
+            'tgl_transaksi' => now(),
+            'id_kasir' => auth()->id(), // ✅ ID KASIR
         ]);
 
         foreach ($detail as $d) {
@@ -731,9 +748,9 @@ public function checkoutKasir(Request $request)
             ]);
         }
 
-        // 🔥 CLEAR SESSION SETELAH SUKSES
+        // ✅ CLEAR SESSION - pakai 'pelanggan' (konsisten)
         session()->forget([
-            'pelanggan_transaksi',
+            'pelanggan',
             'detail_transaksi',
             'keterangan_transaksi'
         ]);
@@ -767,13 +784,14 @@ public function checkoutAdmin2(Request $request)
             array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
         );
 
-        // 🔥 CREATE TRANSAKSI
+        // 🔥 CREATE TRANSAKSI - TAMBAH id_kasir
         $transaksi = \App\Models\Transaksi::create([
             'id_pelanggan' => $pelanggan['id_pelanggan'],
             'tanggal'      => now(),
             'total_harga'  => $total,
             'status'       => 'proses',
             'keterangan'   => session('keterangan_transaksi'),
+            'id_kasir'     => auth()->id(), // ✅ TAMBAHKAN INI
         ]);
 
         foreach ($detail as $d) {
@@ -907,7 +925,6 @@ public function addJenis(Request $request, $idJenis)
             'parfum' => 'nullable|exists:parfum,id_parfum',
         ]);
 
-        // 🔥 Coba find() dulu (harusnya works karena primary key udah bener)
         $jenis = JenisLayanan::find($idJenis);
         
         \Log::info("Jenis found: " . ($jenis ? 'YES' : 'NO'));
@@ -931,7 +948,8 @@ public function addJenis(Request $request, $idJenis)
         \Log::info("Jenis data: " . json_encode([
             'id' => $jenis->id_jenis_layanan,
             'nama' => $jenis->nama_jenis,
-            'harga' => $jenis->harga
+            'harga' => $jenis->harga,
+            'gambar' => $jenis->gambar, // ✅ Log gambar
         ]));
 
         $cart = session()->get('detail_transaksi', []);
@@ -949,6 +967,7 @@ public function addJenis(Request $request, $idJenis)
             'parfum_nama'      => $request->parfum
                 ? \App\Models\Parfum::find($request->parfum)?->nama_parfum
                 : null,
+            'gambar'           => $jenis->gambar, // ✅✅✅ TAMBAHKAN INI
         ];
 
         $cart[] = $newItem;
@@ -984,11 +1003,11 @@ public function addJenis(Request $request, $idJenis)
 }
 
 // ==========================
-// TAMBAH BERDASARKAN JENIS
+// TAMBAH BERDASARKAN JENIS - KASIR
 // ==========================
 public function addJenisKasir(Request $request, $idJenis)
 {
-    \Log::info("=== ADD JENIS DEBUG ===");
+    \Log::info("=== ADD JENIS KASIR DEBUG ===");
     \Log::info("ID diterima: " . $idJenis);
     \Log::info("Request data: " . json_encode($request->all()));
     
@@ -998,7 +1017,6 @@ public function addJenisKasir(Request $request, $idJenis)
             'parfum' => 'nullable|exists:parfum,id_parfum',
         ]);
 
-        // 🔥 Coba find() dulu (harusnya works karena primary key udah bener)
         $jenis = JenisLayanan::find($idJenis);
         
         \Log::info("Jenis found: " . ($jenis ? 'YES' : 'NO'));
@@ -1022,7 +1040,8 @@ public function addJenisKasir(Request $request, $idJenis)
         \Log::info("Jenis data: " . json_encode([
             'id' => $jenis->id_jenis_layanan,
             'nama' => $jenis->nama_jenis,
-            'harga' => $jenis->harga
+            'harga' => $jenis->harga,
+            'gambar' => $jenis->gambar, // ✅ Log gambar
         ]));
 
         $cart = session()->get('detail_transaksi', []);
@@ -1040,6 +1059,7 @@ public function addJenisKasir(Request $request, $idJenis)
             'parfum_nama'      => $request->parfum
                 ? \App\Models\Parfum::find($request->parfum)?->nama_parfum
                 : null,
+            'gambar'           => $jenis->gambar, // ✅✅✅ TAMBAHKAN INI
         ];
 
         $cart[] = $newItem;
@@ -1050,7 +1070,7 @@ public function addJenisKasir(Request $request, $idJenis)
 
         return response()->json([
             'success' => true,
-            'message' => 'Jenis layanan berhasil ditambahkan',
+            'message' => 'Jenis layanan berhasil ditambahkan (Kasir)',
             'data' => $newItem,
             'cart_count' => count($cart)
         ]);
@@ -1064,7 +1084,7 @@ public function addJenisKasir(Request $request, $idJenis)
         ], 422);
         
     } catch (\Exception $e) {
-        \Log::error('Error addJenis: ' . $e->getMessage());
+        \Log::error('Error addJenisKasir: ' . $e->getMessage());
         \Log::error($e->getTraceAsString());
         
         return response()->json([
@@ -1074,9 +1094,12 @@ public function addJenisKasir(Request $request, $idJenis)
     }
 }
 
+// ==========================
+// TAMBAH BERDASARKAN JENIS - ADMIN2
+// ==========================
 public function addJenisAdmin2(Request $request, $idJenis)
 {
-    \Log::info("=== ADD JENIS DEBUG ===");
+    \Log::info("=== ADD JENIS ADMIN2 DEBUG ===");
     \Log::info("ID diterima: " . $idJenis);
     \Log::info("Request data: " . json_encode($request->all()));
     
@@ -1133,12 +1156,12 @@ public function addJenisAdmin2(Request $request, $idJenis)
         $cart[] = $newItem;
         session()->put('detail_transaksi', $cart);
 
-        \Log::info('Item ditambahkan ke cart', $newItem);
+        \Log::info('Item ditambahkan ke cart (Admin2)', $newItem);
         \Log::info('Total items di cart: ' . count($cart));
 
         return response()->json([
             'success' => true,
-            'message' => 'Jenis layanan berhasil ditambahkan',
+            'message' => 'Jenis layanan berhasil ditambahkan (Admin2)',
             'data' => $newItem,
             'cart_count' => count($cart)
         ]);
@@ -1152,7 +1175,7 @@ public function addJenisAdmin2(Request $request, $idJenis)
         ], 422);
         
     } catch (\Exception $e) {
-        \Log::error('Error addJenis: ' . $e->getMessage());
+        \Log::error('Error addJenisAdmin2: ' . $e->getMessage());
         \Log::error($e->getTraceAsString());
         
         return response()->json([
@@ -1162,10 +1185,11 @@ public function addJenisAdmin2(Request $request, $idJenis)
     }
 }
 /**
- * Halaman konfirmasi checkout
+ * Halaman konfirmasi checkout - ADMIN2
  */
 public function confirmAdmin2()
 {
+    // ✅ GANTI JADI 'pelanggan' (konsisten dengan setPelangganAdmin2)
     $pelanggan  = session('pelanggan_transaksi');
     $detail     = session('detail_transaksi', []);
     $keterangan = session('keterangan_transaksi', '');
@@ -1186,7 +1210,6 @@ public function confirmAdmin2()
         array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
     );
 
-    // ✅ TAMBAHKAN INI
     $metode_bayar = \App\Models\MetodeBayar::all();
 
     return view('admin2.transaksi.checkout', compact(
@@ -1194,12 +1217,17 @@ public function confirmAdmin2()
         'detail',
         'keterangan',
         'totalHarga',
-        'metode_bayar'  // ✅ TAMBAHKAN INI
+        'metode_bayar'
     ));
 }
+
+/**
+ * Halaman konfirmasi checkout - ADMIN (TRANSAKSI BIASA)
+ */
 public function confirm()
 {
-    $pelanggan  = session('pelanggan_transaksi');
+    // ✅ BENAR - pakai 'pelanggan'
+    $pelanggan  = session('pelanggan');
     $detail     = session('detail_transaksi', []);
     $keterangan = session('keterangan_transaksi', '');
 
@@ -1219,7 +1247,6 @@ public function confirm()
         array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
     );
 
-    // ✅ TAMBAHKAN INI
     $metode_bayar = \App\Models\MetodeBayar::all();
 
     return view('transaksi.checkout', compact(
@@ -1227,12 +1254,17 @@ public function confirm()
         'detail',
         'keterangan',
         'totalHarga',
-        'metode_bayar'  // ✅ TAMBAHKAN INI
+        'metode_bayar'
     ));
 }
+
+/**
+ * Halaman konfirmasi checkout - KASIR
+ */
 public function confirmKasir()
 {
-    $pelanggan  = session('pelanggan_transaksi');
+    // ✅ GANTI JADI 'pelanggan' (konsisten dengan setPelangganKasir)
+    $pelanggan  = session('pelanggan');
     $detail     = session('detail_transaksi', []);
     $keterangan = session('keterangan_transaksi', '');
 
@@ -1252,7 +1284,6 @@ public function confirmKasir()
         array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
     );
 
-    // ✅ TAMBAHKAN INI
     $metode_bayar = \App\Models\MetodeBayar::all();
 
     return view('kasir.transaksi.checkout', compact(
@@ -1260,7 +1291,7 @@ public function confirmKasir()
         'detail',
         'keterangan',
         'totalHarga',
-        'metode_bayar'  // ✅ TAMBAHKAN INI
+        'metode_bayar'
     ));
 }
 }

@@ -4,100 +4,126 @@
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
-    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('kasir.laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Laporan Driver</h1>
-                    <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
-                </div>
+    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
+        <div class="flex items-center gap-4">
+            <a href="{{ route('kasir.laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Laporan Driver</h1>
+                <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
             </div>
         </div>
     </div>
 
-    {{-- FILTER SECTION --}}
-    <div class="px-8 py-6">
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <form method="GET" action="{{ route('kasir.laporan.driver.index') }}" class="flex items-end gap-4">
-                <div class="flex-1">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-calendar-event me-1"></i>Dari Tanggal
-                    </label>
-                    <input type="date" 
-                           name="dari" 
-                           value="{{ $tglAwal }}"
-                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition">
-                </div>
-                
-                <div class="flex-1">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="bi bi-calendar-check me-1"></i>Sampai Tanggal
-                    </label>
-                    <input type="date" 
-                           name="sampai" 
-                           value="{{ $tglAkhir }}"
-                           class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition">
-                </div>
-                
-                <button type="submit" 
-                        class="px-8 py-3 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
-                    <i class="bi bi-funnel-fill"></i>
-                    <span>Filter</span>
-                </button>
-            </form>
+   <form method="GET" action="{{ route('kasir.laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
+
+    {{-- FILTER TANGGAL --}}
+    <div class="flex items-center gap-4">
+        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+            <i class="bi bi-calendar-event"></i>
+            <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
+                   class="bg-transparent outline-none w-full">
         </div>
+
+        <span class="font-bold">&gt;</span>
+
+        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+            <i class="bi bi-calendar-event"></i>
+            <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
+                   class="bg-transparent outline-none w-full">
+        </div>
+    </div>
+
+    {{-- SEARCH --}}
+    <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
+        <i class="bi bi-search text-xl text-gray-400"></i>
+
+        <input
+            type="text"
+            name="q"
+            value="{{ request('q') }}"
+            placeholder="Cari nama pelanggan / no HP..."
+            class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
+        >
+
+        <button type="submit"
+                class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
+            Cari
+        </button>
     </div>
 
     {{-- STATISTICS CARDS --}}
     <div class="px-8 pb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {{-- Total Driver Aktif --}}
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold">Total Driver Aktif</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ $data->count() }}</h3>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-semibold mb-2">Total Driver Aktif</p>
+                        <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_driver_aktif'] }}</h3>
                     </div>
-                    <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                         <i class="bi bi-person-badge text-3xl text-blue-600"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-green-500">
+            {{-- Total Pengiriman --}}
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-shadow">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold">Total Pengiriman</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ $data->sum('total_pengiriman') }}</h3>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-semibold mb-2">Total Pengiriman</p>
+                        <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_pengiriman'] }}</h3>
+                        <div class="flex gap-3 mt-2">
+                            <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 font-semibold rounded-full">
+                                {{ $stats['total_pickup'] }} Pickup
+                            </span>
+                            <span class="text-xs px-2 py-1 bg-teal-100 text-teal-700 font-semibold rounded-full">
+                                {{ $stats['total_antar'] }} Antar
+                            </span>
+                        </div>
                     </div>
-                    <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-truck text-3xl text-green-600"></i>
+                    <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-truck text-3xl text-purple-600"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-emerald-500">
+            {{-- Berhasil Terkirim --}}
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-green-500 hover:shadow-xl transition-shadow">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold">Berhasil Terkirim</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ $data->sum('terkirim') }}</h3>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-semibold mb-2">Berhasil Terkirim</p>
+                        <h3 class="text-3xl font-bold text-green-600">{{ $stats['total_terkirim'] }}</h3>
+                        @if($stats['total_pengiriman'] > 0)
+                            <p class="text-xs text-gray-500 mt-2 font-semibold">
+                                <i class="bi bi-graph-up-arrow text-green-500"></i>
+                                {{ number_format(($stats['total_terkirim'] / $stats['total_pengiriman']) * 100, 1) }}% Success
+                            </p>
+                        @endif
                     </div>
-                    <div class="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-check-circle text-3xl text-emerald-600"></i>
+                    <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-check-circle text-3xl text-green-600"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-purple-500">
+            {{-- Gagal & Dalam Proses --}}
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-red-500 hover:shadow-xl transition-shadow">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold">Total Pendapatan</p>
-                        <h3 class="text-2xl font-bold text-gray-900 mt-2">Rp {{ number_format($data->sum('total_pendapatan'), 0, ',', '.') }}</h3>
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-500 font-semibold mb-2">Proses</p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl text-gray-300 font-bold">/</span>
+                            <div class="text-center">
+                                <h3 class="text-2xl font-bold text-orange-500">{{ $stats['total_proses'] }}</h3>
+                                <p class="text-xs text-gray-500">Proses</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-cash-stack text-3xl text-purple-600"></i>
+                    <div class="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-exclamation-triangle text-3xl text-red-600"></i>
                     </div>
                 </div>
             </div>
@@ -107,15 +133,23 @@
     {{-- TABLE --}}
     <div class="px-8 pb-10">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            {{-- Header --}}
-            <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-graph-up text-white text-xl"></i>
+            {{-- Table Header --}}
+            <div class="px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-graph-up text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Performa Driver</h2>
+                            <p class="text-sm text-gray-500">
+                                Periode: <span class="font-semibold">{{ \Carbon\Carbon::parse($tglAwal)->format('d M Y') }}</span> - 
+                                <span class="font-semibold">{{ \Carbon\Carbon::parse($tglAkhir)->format('d M Y') }}</span>
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Performa Driver</h2>
-                        <p class="text-sm text-gray-500">Periode: {{ \Carbon\Carbon::parse($tglAwal)->format('d M Y') }} - {{ \Carbon\Carbon::parse($tglAkhir)->format('d M Y') }}</p>
+                    <div class="text-sm text-gray-500">
+                        <span class="font-semibold text-gray-700">{{ $data->count() }}</span> Driver
                     </div>
                 </div>
             </div>
@@ -124,70 +158,100 @@
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="bg-gray-100 border-b border-gray-200">
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">No</th>
-                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Driver</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Total Pengiriman</th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">
-                                <span class="inline-flex items-center gap-1">
-                                    <i class="bi bi-check-circle text-green-600"></i>
-                                    Terkirim
-                                </span>
+                        <tr class="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Driver</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <div class="flex flex-col items-center">
+                                    <i class="bi bi-truck text-purple-600 text-lg mb-1"></i>
+                                    <span>Total</span>
+                                </div>
                             </th>
-                            <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">
-                                <span class="inline-flex items-center gap-1">
-                                    <i class="bi bi-x-circle text-red-600"></i>
-                                    Gagal
-                                </span>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <div class="flex flex-col items-center">
+                                    <i class="bi bi-box-seam text-orange-600 text-lg mb-1"></i>
+                                    <span>Pickup</span>
+                                </div>
                             </th>
-                            <th class="px-6 py-4 text-right text-sm font-semibold text-gray-700">Total Pendapatan</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <div class="flex flex-col items-center">
+                                    <i class="bi bi-send text-teal-600 text-lg mb-1"></i>
+                                    <span>Antar</span>
+                                </div>
+                            </th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <div class="flex flex-col items-center">
+                                    <i class="bi bi-check-circle text-green-600 text-lg mb-1"></i>
+                                    <span>Delivered</span>
+                                </div>
+                            </th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                <div class="flex flex-col items-center">
+                                    <i class="bi bi-hourglass-split text-orange-600 text-lg mb-1"></i>
+                                    <span>Proses</span>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($data as $index => $driver)
-                            <tr class="hover:bg-gray-50 transition">
-                                <td class="px-6 py-4 text-gray-900 font-medium">{{ $index + 1 }}</td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                            <i class="bi bi-person-fill text-yellow-600 text-xl"></i>
+                            <tr class="hover:bg-yellow-50 transition-colors">
+                                <td class="px-6 py-5 text-gray-900 font-bold text-center">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full text-sm">
+                                        {{ $index + 1 }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
+                                            <i class="bi bi-person-fill text-white text-2xl"></i>
                                         </div>
                                         <div>
-                                            <p class="font-semibold text-gray-900">{{ $driver->nama_driver }}</p>
-                                            <p class="text-sm text-gray-500">
-                                                <i class="bi bi-telephone-fill me-1"></i>{{ $driver->no_telp ?? '-' }}
+                                            <p class="font-bold text-gray-900 text-base">{{ $driver->nama_driver }}</p>
+                                            <p class="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                                <i class="bi bi-telephone-fill text-yellow-500"></i>
+                                                {{ $driver->no_telp ?? '-' }}
                                             </p>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-700 font-bold text-lg rounded-full">
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center w-14 h-14 bg-purple-500 text-white font-bold text-xl rounded-xl shadow-md">
                                         {{ $driver->total_pengiriman }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-700">
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-orange-100 text-orange-700 border-2 border-orange-200">
+                                        {{ $driver->total_pickup }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-teal-100 text-teal-700 border-2 border-teal-200">
+                                        {{ $driver->total_antar }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-green-100 text-green-700 border-2 border-green-200">
                                         {{ $driver->terkirim }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-center">
-                                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-red-100 text-red-700">
-                                        {{ $driver->gagal }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <span class="font-bold text-gray-900">
-                                        Rp {{ number_format($driver->total_pendapatan, 0, ',', '.') }}
+                                <td class="px-6 py-5 text-center">
+                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-orange-100 text-orange-700 border-2 border-orange-200">
+                                        {{ $driver->dalam_proses }}
                                     </span>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
-                                    <div class="flex flex-col items-center gap-3">
-                                        <i class="bi bi-inbox text-5xl text-gray-300"></i>
-                                        <p class="text-gray-500 font-medium">Belum ada data driver</p>
-                                        <p class="text-sm text-gray-400">Data akan muncul setelah ada transaksi dengan driver</p>
+                                <td colspan="8" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center gap-4">
+                                        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <i class="bi bi-inbox text-5xl text-gray-300"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500 font-bold text-lg">Belum ada data driver</p>
+                                            <p class="text-sm text-gray-400 mt-2">Data akan muncul setelah ada pengiriman dengan driver</p>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -201,7 +265,16 @@
 
 @if(session('success'))
 <script>
-    alert("{{ session('success') }}");
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '{{ session('success') }}',
+        confirmButtonColor: '#F4C047',
+        customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+    });
 </script>
 @endif
 

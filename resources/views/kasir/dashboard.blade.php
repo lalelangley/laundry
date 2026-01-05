@@ -160,22 +160,51 @@
                             {{ $o->nama_pelanggan ?? '-' }}
                         </td>
 
+                        {{-- ✅ FIX: Ganti $o->status jadi $o->status_transaksi --}}
                         <td class="px-4 py-3 text-center">
                             <span class="px-3 py-1 rounded-xl text-xs font-bold
-                                @if($o->status == 'selesai') bg-green-100 text-green-700
-                                @elseif($o->status == 'proses') bg-blue-100 text-blue-700
+                                @if($o->status_transaksi == 'selesai') bg-green-100 text-green-700
+                                @elseif($o->status_transaksi == 'proses') bg-blue-100 text-blue-700
+                                @elseif($o->status_transaksi == 'antrian') bg-yellow-100 text-yellow-700
+                                @elseif($o->status_transaksi == 'siap_di_ambil') bg-purple-100 text-purple-700
                                 @else bg-red-100 text-red-700 @endif">
-                                {{ ucfirst($o->status) }}
+                                {{ ucwords(str_replace('_', ' ', $o->status_transaksi)) }}
                             </span>
                         </td>
 
+                        {{-- ✅ DEADLINE DENGAN STYLING --}}
                         <td class="px-4 py-3 text-center">
-                            {{ $o->tgl_selesai ?? '-' }}
+                            @if(isset($o->deadline_status))
+                                @if($o->deadline_status === 'terlambat')
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-red-100 text-red-700 inline-flex items-center gap-1">
+                                            <i class="bi bi-exclamation-triangle-fill"></i>
+                                            {{ $o->deadline }}
+                                        </span>
+                                    </div>
+                                @elseif($o->deadline_status === 'mendesak')
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-orange-100 text-orange-700 inline-flex items-center gap-1">
+                                            <i class="bi bi-clock-fill"></i>
+                                            {{ $o->deadline }}
+                                        </span>
+                                    </div>
+                                @elseif($o->deadline_status === 'normal')
+                                    <span class="px-3 py-1 rounded-xl text-xs font-bold bg-green-100 text-green-700">
+                                        {{ $o->deadline }}
+                                    </span>
+                                @else
+                                    <span class="text-gray-400 text-xs">Tidak ada deadline</span>
+                                @endif
+                            @else
+                                <span class="text-gray-400 text-xs">-</span>
+                            @endif
                         </td>
 
                         <td class="px-4 py-3 text-center">
                             <a href="{{ route('kasir.riwayat.detail', $o->id_transaksi) }}"
-                               class="bg-yellow-400 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500 transition">
+                               class="bg-yellow-400 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500 transition inline-flex items-center gap-2 justify-center">
+                                <i class="bi bi-eye-fill"></i>
                                 Detail
                             </a>
                         </td>
@@ -188,6 +217,7 @@
 </div>
 
 @endsection
+
 @push('scripts')
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -196,10 +226,27 @@
 <script>
 $(document).ready(function () {
     $('#kasirTable').DataTable({
-        pageLength: 5,
-        lengthChange: false,
+        pageLength: 10,
+        lengthChange: true,
+        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Semua"]],
         ordering: true,
-        searching: true
+        searching: true,
+        language: {
+            search: "Cari:",
+            lengthMenu: "Tampilkan _MENU_ data per halaman",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ transaksi",
+            infoEmpty: "Tidak ada data",
+            infoFiltered: "(difilter dari _MAX_ total transaksi)",
+            zeroRecords: "Tidak ada transaksi yang cocok",
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Selanjutnya",
+                previous: "Sebelumnya"
+            }
+        },
+        // ✅ Urutkan berdasarkan kolom Deadline (index 4) secara ascending
+        order: [[4, 'asc']]
     });
 });
 </script>

@@ -104,7 +104,7 @@
     </div>
 </div>
 
-{{-- DATA TABLES - IMPROVED --}}
+{{-- DATA TABLES - IMPROVED & FIXED --}}
 <div class="mx-4 mt-8 mb-8 bg-white rounded-3xl shadow-xl border-2 border-gray-100">
     
     {{-- HEADER SECTION --}}
@@ -128,7 +128,7 @@
         </div>
     </div>
 
-    {{-- TABLE --}}
+    {{-- TABLE - FIXED --}}
     <div class="p-8">
         <div class="overflow-x-auto rounded-2xl border-2 border-gray-200">
             <table id="orderTable" class="w-full text-sm">
@@ -138,19 +138,14 @@
                         <th class="py-4 px-6 text-left font-bold">No. Order</th>
                         <th class="py-4 px-6 text-left font-bold">Tgl Order</th>
                         <th class="py-4 px-6 text-left font-bold">Nama Pelanggan</th>
-                        <th class="py-4 px-6 text-left font-bold">Jenis Layanan</th>
-                        <th class="py-4 px-6 text-center font-bold">QYT</th>
-                        <th class="py-4 px-6 text-center font-bold">Satuan</th>
+                        <th class="py-4 px-6 text-left font-bold">Status</th>
+                        <th class="py-4 px-6 text-right font-bold">Total Bayar</th>
                         <th class="py-4 px-6 text-center font-bold">Action</th>
                     </tr>
                 </thead>
 
                 <tbody class="text-gray-700">
-                    @foreach ($orders as $i => $o)
-                    @php
-                        $d = $o->detail->first(); 
-                    @endphp
-
+                    @forelse ($orders as $i => $o)
                     <tr class="border-b border-gray-100 hover:bg-yellow-50/80 transition-colors">
                         <td class="py-4 px-6 text-gray-600 font-medium">{{ $i+1 }}</td>
 
@@ -159,25 +154,37 @@
                         </td>
 
                         <td class="py-4 px-6 text-gray-600">
-                            {{ $o->tgl_transaksi ? \Carbon\Carbon::parse($o->tgl_transaksi)->format('d/m/Y') : '-' }}
+                            {{ $o->tgl_transaksi ? \Carbon\Carbon::parse($o->tgl_transaksi)->format('d/m/Y H:i') : '-' }}
                         </td>
 
-                        <td class="py-4 px-6 font-semibold text-gray-900">
-                            {{ $o->nama_pelanggan ?? '-' }}
+                        <td class="py-4 px-6">
+                            <div class="font-semibold text-gray-900">{{ $o->nama_pelanggan ?? '-' }}</div>
+                            <div class="text-xs text-gray-500">{{ $o->no_hp ?? '-' }}</div>
                         </td>
 
-                        <td class="py-4 px-6 text-gray-600">
-                            {{ $d->jenis->nama_jenis ?? '-' }}
-                        </td>
-
-                        <td class="py-4 px-6 text-center">
-                            <span class="inline-flex items-center justify-center min-w-[3rem] px-3 py-1.5 rounded-xl bg-blue-100 text-blue-700 font-bold text-sm">
-                                {{ $d->qty ?? '-' }}
+                        <td class="py-4 px-6">
+                            @php
+                                $statusConfig = [
+                                    'antrian' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Antrian'],
+                                    'proses' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Proses'],
+                                    'siap_di_ambil' => ['bg' => 'bg-purple-100', 'text' => 'text-purple-800', 'label' => 'Siap Ambil'],
+                                    'pick_up' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800', 'label' => 'Pick Up'],
+                                    'selesai' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Selesai'],
+                                    'batal' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Batal'],
+                                ];
+                                
+                                $status = $statusConfig[$o->status_transaksi] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => ucfirst($o->status_transaksi)];
+                            @endphp
+                            
+                            <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full {{ $status['bg'] }} {{ $status['text'] }}">
+                                {{ $status['label'] }}
                             </span>
                         </td>
 
-                        <td class="py-4 px-6 text-center text-gray-600 font-medium">
-                            {{ $d->jenis->satuan->nama_satuan ?? '-' }}
+                        <td class="py-4 px-6 text-right">
+                            <span class="font-bold text-gray-900">
+                                Rp {{ number_format($o->total_bayar, 0, ',', '.') }}
+                            </span>
                         </td>
 
                         <td class="py-4 px-6 text-center">
@@ -188,7 +195,16 @@
                             </a>
                         </td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="7" class="py-10 text-center">
+                            <div class="text-gray-400">
+                                <i class="bi bi-inbox text-5xl mb-3 block"></i>
+                                <p class="font-semibold">Belum ada transaksi</p>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
