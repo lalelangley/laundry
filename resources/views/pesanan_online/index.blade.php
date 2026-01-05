@@ -34,49 +34,44 @@
              STATUS TABS
         ======================================== --}}
         <div class="mb-6 bg-white p-2 rounded-2xl shadow-lg overflow-x-auto">
-            <div class="flex gap-2 flex-wrap justify-center">
+            <div class="flex gap-2 justify-between">
                 @php
                     $tabs = [
-
-                    'pickup' => [
-    'label' => 'Pickup',
-    'icon'  => 'truck'
-],
-                        'menunggu_konfirmasi' => [
-                            'label' => 'Antrian', 
-                            'icon' => 'hourglass-split'
+                        'pickup' => [
+                            'label' => 'Pickup',
+                            'icon'  => 'truck'
                         ],
                         'proses' => [
-                            'label' => 'Proses', 
-                            'icon' => 'arrow-repeat'
+                            'label' => 'Proses',
+                            'icon'  => 'arrow-repeat'
                         ],
-                        'siap_di_ambil' => [
-                            'label' => 'Siap Diambil', 
-                            'icon' => 'box-seam'
+                        'siap_diambil' => [
+                            'label' => 'Siap Diambil',
+                            'icon'  => 'check-circle'
                         ],
-                        'siap_di_antar' => [
-                            'label' => 'Siap Diantar', 
-                            'icon' => 'truck'
+                        'siap_diantar' => [
+                            'label' => 'Siap Diantar',
+                            'icon'  => 'truck'
                         ],
                         'selesai' => [
-                            'label' => 'Selesai', 
-                            'icon' => 'check-all'
+                            'label' => 'Selesai',
+                            'icon'  => 'check-all'
                         ],
                         'ditolak' => [
-                            'label' => 'Ditolak', 
-                            'icon' => 'x-circle'
-                        ]
+                            'label' => 'Ditolak',
+                            'icon'  => 'x-circle'
+                        ],
                     ];
                 @endphp
                 
                 @foreach ($tabs as $key => $data)
                     <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
-                       class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
+                       class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
                               {{ $tab == $key 
                                   ? 'bg-yellow-400 text-black shadow-md scale-105' 
                                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
                         <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
-                        <span class="hidden md:inline">{{ $data['label'] }}</span>
+                        <span class="hidden sm:inline">{{ $data['label'] }}</span>
                     </a>
                 @endforeach
             </div>
@@ -88,33 +83,21 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5" id="pesananList">
             
             @forelse ($pesanan as $p)
-                <div class="group relative" 
-                     data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
+                <div data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
                      data-id="{{ $p->id_transaksi }}">
                     <a href="{{ route('pesanan.online.detail', $p->id_transaksi) }}" 
-                       class="block">
+                       class="block group">
                         <div class="relative bg-white shadow-lg rounded-2xl p-6 
                                     hover:shadow-xl transition-all duration-300 hover:-translate-y-1 
                                     border-l-4
-@if($p->delivery && $p->delivery->jenis == 'pickup' && $p->delivery->status == 'pending')
-    <span class="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
-        Pickup (Belum Ada Driver)
-    </span>
-@elseif($p->delivery && $p->delivery->jenis == 'pickup' && $p->delivery->status == 'accepted')
-    <span class="bg-blue-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
-        Driver Dipilih
-    </span>
-@elseif($p->delivery && $p->delivery->status == 'arrive_at_laundry')
-    <span class="bg-orange-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
-        Sampai Laundry
-    </span>
-@else
-    <span class="bg-gray-500 text-white px-3 py-1 rounded-lg text-xs font-semibold">
-        {{ ucfirst(str_replace('_', ' ', $p->status_transaksi)) }}
-    </span>
-@endif
-
-
+                                    @if($p->status_transaksi == 'pick_up') border-yellow-500
+                                    @elseif($p->status_transaksi == 'proses') border-purple-500
+                                    @elseif($p->status_transaksi == 'siap_di_ambil') border-teal-500
+                                    @elseif($p->status_transaksi == 'siap_di_antar') border-indigo-500
+                                    @elseif($p->status_transaksi == 'selesai') border-green-500
+                                    @else border-red-500
+                                    @endif">
+                            
                             {{-- Card Header --}}
                             <div class="flex justify-between items-start mb-4 pb-4 border-b-2 border-gray-100">
                                 <div class="flex-1">
@@ -126,7 +109,7 @@
                                         ORDER/{{ $p->id_transaksi }}
                                     </p>
                                 </div>
-
+                                
                                 {{-- Delete Button (hover to show) --}}
                                 <form action="{{ route('pesanan.online.destroy', $p->id_transaksi) }}"
                                       method="POST"
@@ -198,11 +181,10 @@
                                 {{-- Transaction Status Badge --}}
                                 <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
                                              text-white text-xs font-semibold
-                                             @if ($p->status_transaksi == 'menunggu_konfirmasi') bg-orange-500
-                                             @elseif ($p->status_transaksi == 'dikonfirmasi') bg-blue-500
+                                             @if ($p->status_transaksi == 'pick_up') bg-yellow-500
                                              @elseif ($p->status_transaksi == 'proses') bg-purple-600
                                              @elseif ($p->status_transaksi == 'siap_di_ambil') bg-teal-600
-                                             @elseif ($p->status_transaksi == 'siap_di_antar') bg-gray-600
+                                             @elseif ($p->status_transaksi == 'siap_di_antar') bg-indigo-600
                                              @elseif ($p->status_transaksi == 'selesai') bg-green-600
                                              @else bg-red-600
                                              @endif">
@@ -211,11 +193,17 @@
                                 </span>
 
                                 {{-- Payment Status Badge --}}
-                                @if ($p->status_bayar == 'belum_bayar' || $p->status_bayar == 'belum_lunas')
+                                @if ($p->status_bayar == 'belum_lunas' || $p->status_bayar == 'belum_bayar')
                                     <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                                  bg-red-500 text-white rounded-lg text-xs font-semibold">
                                         <i class="bi bi-x-circle"></i>
                                         Belum Bayar
+                                    </span>
+                                @elseif ($p->status_bayar == 'DP')
+                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 
+                                                 bg-yellow-400 text-gray-800 rounded-lg text-xs font-semibold">
+                                        <i class="bi bi-cash"></i>
+                                        DP
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1 px-3 py-1.5 
@@ -226,63 +214,7 @@
                                 @endif
                                 
                             </div>
-
-                            {{-- Action Buttons --}}
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                
-                                {{-- Menunggu Konfirmasi Actions --}}
-                                @if($p->status_transaksi == 'menunggu_konfirmasi')
-                                    <form action="{{ route('pesanan.online.terima', $p->id_transaksi) }}" method="POST" class="flex-1">
-                                    @csrf
-                                    <button type="submit"
-                                        class="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
-                                        <i class="bi bi-check-lg"></i> Terima
-                                    </button>
-                                </form>
-
-                                    <a href="{{ route('pesanan.online.tolak', $p->id_transaksi) }}"
-                                       onclick="event.preventDefault(); event.stopPropagation(); if(confirm('Tolak pesanan ini?')) window.location.href=this.href;"
-                                       class="flex-1 text-center px-4 py-2 bg-red-500 text-white rounded-lg shadow 
-                                              hover:bg-red-600 transition-all font-semibold">
-                                        <i class="bi bi-x-lg"></i> Tolak
-                                    </a>
-                                @endif
-
-                                {{-- Button: Proses --}}
-                                @if($p->status_transaksi == 'dikonfirmasi')
-                                    <a href="{{ route('pesanan.online.proses', $p->id_transaksi) }}"
-                                       onclick="event.preventDefault(); event.stopPropagation(); window.location.href=this.href;"
-                                       class="flex-1 text-center px-4 py-2 bg-blue-500 text-white rounded-lg shadow 
-                                              hover:bg-blue-600 transition-all font-semibold">
-                                        <i class="bi bi-arrow-repeat mr-1"></i>
-                                        Proses
-                                    </a>
-                                @endif
-
-                                {{-- Button: Siap Diambil --}}
-                                @if($p->status_transaksi == 'proses')
-                                    <a href="{{ route('pesanan.online.siap_di_ambil', $p->id_transaksi) }}"
-                                       onclick="event.preventDefault(); event.stopPropagation(); window.location.href=this.href;"
-                                       class="flex-1 text-center px-4 py-2 bg-teal-500 text-white rounded-lg shadow 
-                                              hover:bg-teal-600 transition-all font-semibold">
-                                        <i class="bi bi-box-seam mr-1"></i>
-                                        Siap Diambil
-                                    </a>
-                                @endif
-
-                                {{-- Button: Selesai --}}
-                                @if($p->status_transaksi == 'siap_di_ambil')
-                                    <a href="{{ route('pesanan.online.selesai', $p->id_transaksi) }}"
-                                       onclick="event.preventDefault(); event.stopPropagation(); window.location.href=this.href;"
-                                       class="flex-1 text-center px-4 py-2 bg-green-500 text-white rounded-lg shadow 
-                                              hover:bg-green-600 transition-all font-semibold">
-                                        <i class="bi bi-check-all mr-1"></i>
-                                        Selesai
-                                    </a>
-                                @endif
-                                
-                            </div>
-
+                            
                         </div>
                     </a>
                 </div>
@@ -299,7 +231,9 @@
             @endforelse
             
         </div>
+        
     </div>
+    
 </div>
 
 {{-- ========================================

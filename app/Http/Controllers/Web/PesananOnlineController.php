@@ -12,61 +12,22 @@ use App\Models\Driver;
 
 class PesananOnlineController extends Controller
 {
-
-    public function driverArriveAtLaundry($id)
-    {
-        DB::transaction(function () use ($id) {
-
-            $pesanan = Transaksi::where('jenis_transaksi', 'online')
-                ->where('status_transaksi', 'pickup')
-                ->findOrFail($id);
-
-            // update transaksi ke ANTRIAN
-            $pesanan->update([
-                'status_transaksi' => 'antrian'
-            ]);
-
-            // update delivery pickup
-            Delivery::where('id_transaksi', $pesanan->id_transaksi)
-                ->where('jenis', 'pickup')
-                ->update([
-                    'status' => 'arrive_at_laundry'
-                ]);
-        });
-
-        return redirect()
-            ->route('pesanan.online.detail', $id)
-            ->with('success', 'Driver sampai laundry, pesanan masuk antrian');
-    }
-
     // ==================== KASIR ====================
     
     public function indexKasir(Request $request)
     {
-        $tab = $request->get('tab', 'menunggu_konfirmasi');
+        $tab = $request->get('tab', 'pickup');
         $statusMap = $this->statusMap();
 
-        if ($tab === 'pickup') {
-            // ✅ SAMA SEPERTI ADMIN - tampilkan pickup dengan status pending & accepted
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereHas('delivery', function ($q) {
-                    $q->where('jenis', 'pickup')
-                      ->whereIn('status', ['pending', 'accepted']);
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-        } else {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-                ->orderByDesc('id_transaksi')
-                ->get();
-        }
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
+            ->where('jenis_transaksi', 'online')
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['pick_up'])
+            ->orderByDesc('id_transaksi')
+            ->get();
 
         return view('kasir.pesanan_online.index', compact('pesanan', 'tab'));
     }
+
     
     public function detailKasir($id)
     {
@@ -77,21 +38,11 @@ class PesananOnlineController extends Controller
             'detail_transaksi.jenis',
             'detail_transaksi.parfum',
             'detail_transaksi.satuan',
-            'delivery'
         ])
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
         
         return view('kasir.pesanan_online.detail', compact('pesanan'));
-    }
-    
-    public function terimaKasir($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'dikonfirmasi']);
-        
-        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'dikonfirmasi'])
-            ->with('success', 'Pesanan berhasil diterima');
     }
     
     public function tolakKasir($id)
@@ -105,20 +56,36 @@ class PesananOnlineController extends Controller
     
     public function prosesKasir($id)
     {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'proses']);
-        
-        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'proses'])
-            ->with('success', 'Pesanan dalam proses');
+        Transaksi::where('jenis_transaksi', 'online')
+            ->where('id_transaksi', $id)
+            ->update(['status_transaksi' => 'proses']);
+
+        return redirect()
+            ->route('kasir.pesanan.online.index', ['tab' => 'proses'])
+            ->with('success', 'Pesanan diproses');
     }
+
     
     public function siapDiAmbilKasir($id)
     {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'siap_di_ambil']);
-        
-        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'siap_di_ambil'])
+        Transaksi::where('jenis_transaksi', 'online')
+            ->where('id_transaksi', $id)
+            ->update(['status_transaksi' => 'siap_di_ambil']);
+
+        return redirect()
+            ->route('kasir.pesanan.online.index', ['tab' => 'siap_di_ambil'])
             ->with('success', 'Pesanan siap diambil');
+    }
+
+    public function siapDiAntarKasir($id)
+    {
+        Transaksi::where('jenis_transaksi', 'online')
+            ->where('id_transaksi', $id)
+            ->update(['status_transaksi' => 'siap_di_antar']);
+
+        return redirect()
+            ->route('kasir.pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
     }
     
     public function selesaiKasir($id)
@@ -155,33 +122,15 @@ class PesananOnlineController extends Controller
 
     public function index(Request $request)
     {
-        $tab = $request->get('tab', 'menunggu_konfirmasi');
+        $tab = $request->get('tab', 'pickup');
         $statusMap = $this->statusMap();
 
-        if ($tab === 'pickup') {
-            // ✅ TAMPILKAN PICKUP DENGAN STATUS PENDING
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereHas('delivery', function ($q) {
-                    $q->where('jenis', 'pickup')
-                      ->whereIn('status', ['pending']);
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-        } else {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-                ->when($tab === 'menunggu_konfirmasi', function ($query) {
-                    // hanya ambil yang delivery statusnya 'arrived_at_laundry'
-                    $query->whereHas('delivery', function ($q) {
-                        $q->where('status', 'arrived_at_laundry');
-                    });
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
-        }
+        // ✅ Gunakan statusMap untuk SEMUA tab termasuk pickup
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
+            ->where('jenis_transaksi', 'online')
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['pick_up'])
+            ->orderByDesc('id_transaksi')
+            ->get();
 
         return view('pesanan_online.index', compact('pesanan', 'tab'));
     }
@@ -199,15 +148,6 @@ class PesananOnlineController extends Controller
         ])->findOrFail($id);
         
         return view('pesanan_online.detail', compact('pesanan'));
-    }
-    
-    public function terima($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'dikonfirmasi']);
-        
-        return redirect()->route('pesanan.online.index', ['tab' => 'dikonfirmasi'])
-            ->with('success', 'Pesanan berhasil diterima');
     }
     
     public function tolak($id)
@@ -235,6 +175,15 @@ class PesananOnlineController extends Controller
         
         return redirect()->route('pesanan.online.index', ['tab' => 'siap_di_ambil'])
             ->with('success', 'Pesanan siap diambil');
+    }
+    
+    public function siapDiAntar($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+        
+        return redirect()->route('pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
     }
     
     public function selesai($id)
@@ -271,27 +220,14 @@ class PesananOnlineController extends Controller
     
     public function indexAdmin2(Request $request)
     {
-        $tab = $request->get('tab', 'menunggu_konfirmasi');
+        $tab = $request->get('tab', 'pickup');
         $statusMap = $this->statusMap();
 
-        if ($tab === 'pickup') {
-            // ✅ SAMA SEPERTI ADMIN - tampilkan pickup dengan status pending & accepted
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereHas('delivery', function ($q) {
-                    $q->where('jenis', 'pickup')
-                      ->whereIn('status', ['pending', 'accepted']);
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-        } else {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
-                ->where('jenis_transaksi', 'online')
-                ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-                ->orderByDesc('id_transaksi')
-                ->get();
-        }
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'delivery'])
+            ->where('jenis_transaksi', 'online')
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['pick_up'])
+            ->orderByDesc('id_transaksi')
+            ->get();
 
         return view('admin2.pesanan_online.index', compact('pesanan', 'tab'));
     }
@@ -305,21 +241,11 @@ class PesananOnlineController extends Controller
             'detail_transaksi.jenis',
             'detail_transaksi.parfum',
             'detail_transaksi.satuan',
-            'delivery'
         ])
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
         
         return view('admin2.pesanan_online.detail', compact('pesanan'));
-    }
-    
-    public function terimaAdmin2($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'dikonfirmasi']);
-        
-        return redirect()->route('admin2.pesanan.online.index', ['tab' => 'dikonfirmasi'])
-            ->with('success', 'Pesanan berhasil diterima');
     }
     
     public function tolakAdmin2($id)
@@ -347,6 +273,15 @@ class PesananOnlineController extends Controller
         
         return redirect()->route('admin2.pesanan.online.index', ['tab' => 'siap_di_ambil'])
             ->with('success', 'Pesanan siap diambil');
+    }
+    
+    public function siapDiAntarAdmin2($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+        
+        return redirect()->route('admin2.pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
     }
     
     public function selesaiAdmin2($id)
@@ -378,88 +313,36 @@ class PesananOnlineController extends Controller
         return redirect()->route('admin2.pesanan.online.index')
             ->with('success', 'Pesanan berhasil dihapus');
     }
+
+    // ==================== DELIVERY FUNCTIONS ====================
     
-    // ==================== DELIVERY ONLINE ====================
-
     /**
-     * LIST DRIVER UNTUK PICKUP
-     * ❗ HANYA PILIH DRIVER
-     */
-    public function listDriverPickup($id)
-    {
-        $pesanan = Transaksi::with(['pelanggan', 'delivery'])
-            ->where('jenis_transaksi', 'online')
-            ->where('status_transaksi', 'pickup')
-            ->findOrFail($id);
-
-        $drivers = Driver::where('status', 'aktif')->get();
-
-        return view('pesanan_online.pickup.list_driver', compact('pesanan', 'drivers'));
-    }
-
-    /**
-     * ASSIGN DRIVER UNTUK PICKUP
-     * ❗ TIDAK MENGUBAH STATUS TRANSAKSI
-     */
-    public function assignDriverPickup(Request $request, $id)
-    {
-        $request->validate([
-            'id_driver' => 'required|exists:driver,id_driver',
-            'catatan_driver' => 'nullable|string'
-        ]);
-
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-
-        // Update pickup delivery yang sudah ada
-        $updated = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->where('status', 'pending')
-            ->update([
-                'id_driver' => $request->id_driver,
-                'status'    => 'accepted',
-                'waktu'     => now(),
-            ]);
-
-        if (!$updated) {
-            return redirect()->back()->with('error', 'Driver pickup gagal ditentukan. Pastikan ada delivery pickup dengan status pending.');
-        }
-
-        return redirect()
-            ->route('pesanan.online.detail', $id)
-            ->with('success', 'Driver pickup berhasil ditentukan');
-    }
-
-    /**
-     * TAMPILKAN LIST DRIVER UNTUK DELIVERY
+     * LIST DRIVER UNTUK DELIVERY ANTAR
      */
     public function listDriver($id)
     {
-        $pesanan = Transaksi::with(['pelanggan', 'delivery'])
+        $pesanan = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
         
-        // Ambil semua driver yang aktif
         $drivers = Driver::where('status', 'aktif')->get();
         
-        return view('pesanan_online.listonlinedriver', compact('pesanan', 'drivers'));
+        return view('pesanan_online.list_driver', compact('pesanan', 'drivers'));
     }
 
     /**
-     * ASSIGN DRIVER UNTUK DELIVERY
+     * ASSIGN DRIVER UNTUK DELIVERY ANTAR
      */
     public function assignDriver(Request $request, $id)
     {
         $request->validate([
             'id_driver' => 'required|exists:driver,id_driver',
-            'catatan_driver' => 'nullable|string'
         ]);
 
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
         
         // Update status transaksi ke siap_di_antar
-        $pesanan->update([
-            'status_transaksi' => 'siap_di_antar'
-        ]);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
 
         // Buat record di tabel delivery
         Delivery::create([
@@ -476,104 +359,116 @@ class PesananOnlineController extends Controller
             ->with('success', 'Driver berhasil ditentukan! Pesanan siap untuk diantar.');
     }
 
+    /**
+     * LIST DRIVER UNTUK PICKUP
+     */
+    public function listDriverPickup($id)
+    {
+        $pesanan = Transaksi::with('pelanggan')
+            ->where('jenis_transaksi', 'online')
+            ->findOrFail($id);
+        
+        $drivers = Driver::where('status', 'aktif')->get();
+        
+        return view('pesanan_online.list_driver_pickup', compact('pesanan', 'drivers'));
+    }
+
+    /**
+     * ASSIGN DRIVER UNTUK PICKUP
+     */
+    public function assignDriverPickup(Request $request, $id)
+    {
+        $request->validate([
+            'id_driver' => 'required|exists:driver,id_driver',
+        ]);
+
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+
+        // Buat atau update record di tabel delivery
+        Delivery::updateOrCreate(
+            ['id_transaksi' => $pesanan->id_transaksi],
+            [
+                'id_driver' => $request->id_driver,
+                'jenis' => 'pickup',
+                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                'status' => 'accepted',
+                'waktu' => now()
+            ]
+        );
+
+        return redirect()
+            ->route('pesanan.online.index', ['tab' => 'pickup'])
+            ->with('success', 'Driver berhasil dipilih untuk pickup!');
+    }
+
+    /**
+     * DRIVER SAMPAI DI LAUNDRY (setelah pickup)
+     */
+    public function driverArrive($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        
+        // Update delivery status
+        $delivery = Delivery::where('id_transaksi', $id)->first();
+        if ($delivery) {
+            $delivery->update(['status' => 'arrived_at_laundry']);
+        }
+        
+        // Update status transaksi ke proses langsung (tidak ke antrian)
+        $pesanan->update(['status_transaksi' => 'proses']);
+
+        return redirect()
+            ->route('pesanan.online.index', ['tab' => 'proses'])
+            ->with('success', 'Driver sudah sampai. Pesanan masuk proses.');
+    }
+
     public function listDeliveryOnline()
     {
-        $deliveries = Delivery::with(['transaksi.pelanggan', 'driver'])
+        $deliveries = Delivery::with('transaksi.pelanggan')
             ->whereNull('id_driver')
             ->get();
 
         return view('pesanan_online.delivery.index', compact('deliveries'));
     }
 
-    private function statusMap()
-    {
-        return [
-            'pickup'              => ['pickup'],
-            'menunggu_konfirmasi' => ['antrian'],
-            'dikonfirmasi'        => ['dikonfirmasi'],
-            'proses'              => ['proses'],
-            'siap_di_ambil'       => ['siap_di_ambil'],
-            'siap_di_antar'       => ['siap_di_antar'],
-            'selesai'             => ['selesai'],
-            'ditolak'             => ['ditolak'],
-        ];
-    }
-    
     /**
      * UPDATE DATA PESANAN (ISI DATA PESANAN)
-     * ✅ UPDATE QTY & SATUAN PER ITEM DI DETAIL_TRANSAKSI + DISKON
      */
     public function updateData(Request $request, $id)
     {
         $request->validate([
             'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
-            'qty.*'       => 'required|numeric|min:0.01',
-            'keterangan'  => 'nullable|string',
-            'diskon'      => 'nullable|numeric|min:0',
-            'tipe_diskon' => 'nullable|in:percent,nominal',
+            'qty.*' => 'required|numeric|min:0.01',
+            'id_satuan.*' => 'required|exists:satuan,id_satuan',
+            'total_harga' => 'required|numeric|min:0',
+            'keterangan' => 'nullable|string',
         ]);
 
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')
-            ->findOrFail($id);
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
 
-        $totalHarga = 0;
-
-        foreach ($request->id_detail as $index => $idDetail) {
-
-            $detail = DetailTransaksi::with('jenis')
-                ->findOrFail($idDetail);
-
-            // ✅ DATA OTOMATIS DARI JENIS LAYANAN
-            $qty       = $request->qty[$index];
-            $harga     = $detail->jenis->harga;
-            $idSatuan  = $detail->jenis->id_satuan;
-            $subtotal  = $qty * $harga;
-
-            $totalHarga += $subtotal;
-
-            $detail->update([
-                'qty'        => $qty,
-                'harga'      => $harga,
-                'id_satuan'  => $idSatuan,
-                'subtotal'   => $subtotal,
-            ]);
-        }
-
-        // ✅ HITUNG DISKON
-        $diskon = $request->diskon ?? 0;
-        $tipeDiskon = $request->tipe_diskon ?? 'nominal';
-        $nilaiDiskon = 0;
-
-        if ($diskon > 0) {
-            if ($tipeDiskon == 'percent') {
-                // Diskon dalam persen (max 100%)
-                $diskon = min($diskon, 100);
-                $nilaiDiskon = ($totalHarga * $diskon) / 100;
-            } else {
-                // Diskon nominal (max total harga)
-                $nilaiDiskon = min($diskon, $totalHarga);
+        // Update qty dan satuan untuk setiap detail_transaksi
+        if ($request->has('id_detail')) {
+            foreach ($request->id_detail as $index => $idDetail) {
+                DetailTransaksi::where('id_detail_transaksi', $idDetail)->update([
+                    'qty' => $request->qty[$index],
+                    'id_satuan' => $request->id_satuan[$index],
+                ]);
             }
         }
 
-        // ✅ TOTAL AKHIR SETELAH DISKON
-        $totalAkhir = $totalHarga - $nilaiDiskon;
-
-        // ✅ UPDATE TOTAL TRANSAKSI
+        // Update total harga dan keterangan di transaksi
         $pesanan->update([
-            'total_harga' => $totalAkhir,
-            'diskon'      => $nilaiDiskon,
-            'tipe_diskon' => $tipeDiskon,
-            'keterangan'  => $request->keterangan,
+            'total_harga' => $request->total_harga,
+            'keterangan' => $request->keterangan,
         ]);
 
         return redirect()
             ->route('pesanan.online.detail', $id)
             ->with('success', 'Data pesanan berhasil diperbarui!');
     }
-
+    
     /**
-     * KONFIRMASI PESANAN
-     * (kirim detail ke pelanggan via WhatsApp/SMS)
+     * KONFIRMASI PESANAN (kirim detail ke pelanggan via WhatsApp/SMS)
      */
     public function konfirmasiPesanan(Request $request, $id)
     {
@@ -584,11 +479,6 @@ class PesananOnlineController extends Controller
         $pesanan = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
-
-        // Update status
-        $pesanan->update([
-            'status_transaksi' => 'dikonfirmasi'
-        ]);
 
         // Ambil data dari tabel transaksi DAN pelanggan
         $namaPelanggan = $pesanan->nama_pelanggan ?? 'Pelanggan';
@@ -624,5 +514,23 @@ class PesananOnlineController extends Controller
         return redirect()
             ->route('pesanan.online.detail', $id)
             ->with('success', 'Pesanan berhasil dikonfirmasi!');
+    }
+
+    // ==================== HELPER METHOD ====================
+    
+    /**
+     * STATUS MAP untuk filter tab
+     * ✅ Semua pesanan online otomatis masuk ke pickup
+     */
+    private function statusMap()
+    {
+        return [
+            'pickup'         => ['pick_up'],
+            'proses'         => ['proses'],
+            'siap_diambil'   => ['siap_di_ambil'],
+            'siap_diantar'   => ['siap_di_antar'],
+            'selesai'        => ['selesai'],
+            'ditolak'        => ['ditolak'],
+        ];
     }
 }

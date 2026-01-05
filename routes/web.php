@@ -632,7 +632,7 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             ->name('jenis.add.edit');
     });
 
-  // ================= PESANAN ONLINE (With Permission) =================
+// ================= PESANAN ONLINE (With Permission) =================
 Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
     
     // Index & Detail
@@ -667,6 +667,15 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
         ->middleware('permission:edit')
         ->name('siap_di_ambil');
     
+    Route::get('/{id}/siap-di-antar', [PesananOnlineController::class, 'siapDiAntar'])
+        ->middleware('permission:edit')
+        ->name('siap_di_antar');
+    
+    // Tolak
+    Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolak'])
+        ->middleware('permission:edit')
+        ->name('tolak');
+    
     // Payment & Delete
     Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayar'])
         ->middleware('permission:edit')
@@ -676,13 +685,25 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
         ->middleware('permission:delete')
         ->name('destroy');
     
-    // Delivery
+    // Delivery - List Driver untuk Antar
     Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
         ->name('delivery');
     
-    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])->name('assign-driver'); // ✅ TAMBAH INI
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])
+        ->name('list-driver');
     
-    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])->name('list-driver'); // ✅ TAMBAH INI
+    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
+        ->name('assign-driver');
+    
+    // Pickup - List Driver untuk Pickup
+    Route::get('/{id}/pickup/list-driver', [PesananOnlineController::class, 'listDriverPickup'])
+        ->name('pickup.list_driver');
+    
+    Route::post('/{id}/pickup/assign-driver', [PesananOnlineController::class, 'assignDriverPickup'])
+        ->name('pickup.assign_driver');
+    
+    Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArrive'])
+        ->name('driver_arrive');
 });
 
     // ================= RIWAYAT (With Permission) =================
