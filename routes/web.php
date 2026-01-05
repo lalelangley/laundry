@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\UserManagerController;
 use App\Http\Controllers\Web\PengaturanController;
 use App\Http\Controllers\Web\ChangePasswordController;
 use App\Http\Controllers\Web\PesananOnlineController;
+use App\Http\Controllers\Web\ProfileController;
 use App\Models\Satuan;
 
 /*
@@ -438,6 +439,12 @@ Route::prefix('riwayat')->name('kasir.riwayat.')->group(function () {
 
     Route::post('/change-password', [ChangePasswordController::class, 'updateKasir'])
         ->name('kasir.password.update');
+
+     Route::get('/profile', [ProfileController::class, 'editKasir'])
+        ->name('profile.kasir.edit');
+
+    Route::post('/profile', [ProfileController::class, 'updateKasir'])
+        ->name('profile.kasir.update');
 });
 /*
 |--------------------------------------------------------------------------
@@ -458,7 +465,6 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
     Route::post('/logout', [AuthWebController::class, 'adminLogout'])
         ->name('admin.logout');
 
-    // ================= USER MANAGER (Super Admin Only) =================
     // ================= USER MANAGER (Super Admin Only) =================
 Route::prefix('manager')
     ->name('manager.')
@@ -911,6 +917,12 @@ Route::prefix('manager')
     
     Route::post('/change-password', [ChangePasswordController::class, 'update'])
         ->name('password.update');
+
+     Route::get('/profile', [ProfileController::class, 'editAdmin'])
+        ->name('profile.admin.edit');
+
+    Route::post('/profile', [ProfileController::class, 'updateAdmin'])
+        ->name('profile.admin.update');
 });
 
 /*
@@ -1271,19 +1283,88 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
             ->name('admin2.pengeluaran.destroy');
     });
 
-    // ================= USER MANAGER (KELOLA KASIR) =================
-    Route::prefix('manager')->name('manager.')->group(function () {
-        Route::get('/', [UserManagerController::class, 'indexAdmin2'])->name('index');
-        Route::get('/hak-akses', [UserManagerController::class, 'hakAksesKasir'])->name('hak.akses');
-        Route::post('/hak-akses', [UserManagerController::class, 'saveHakAksesKasir'])->name('hak.akses.save');
-        Route::get('/kasir/create', [UserManagerController::class, 'createKasirAdmin2'])->name('kasir.create');
-        Route::post('/kasir/store', [UserManagerController::class, 'storeKasirAdmin2'])->name('kasir.store');
-        Route::get('/kasir/{id}/akses', [UserManagerController::class, 'aksesKasirAdmin2'])->name('kasir.akses');
-        Route::post('/kasir/{id}/akses', [UserManagerController::class, 'saveAksesKasirAdmin2'])->name('kasir.akses.save');
-        Route::post('/kasir/{id}/status', [UserManagerController::class, 'updateStatusKasirAdmin2'])->name('kasir.status');
-        Route::get('/menu-role/akses/{id}', [UserManagerController::class, 'menuRoleAksesAdmin2'])->name('menu-role.akses');
-        Route::post('/menu-role/akses/{id}', [UserManagerController::class, 'saveMenuRoleAksesAdmin2'])->name('menu-role.akses.save');
+// ================= USER MANAGER (SUPER ADMIN) =================
+Route::prefix('manager')
+    ->name('manager.')
+    ->middleware(['auth:admin'])
+    ->group(function () {
+        // INDEX
+        Route::get('/', [UserManagerController::class, 'index'])->name('index');
+        
+        // UPDATE STATUS (Admin, Kasir, Driver)
+        Route::post('/status', [UserManagerController::class, 'updateStatus'])->name('update.status');
+        // ✅ UPDATE STATUS (untuk Admin, Kasir, Driver)
+        Route::post('/status', [UserManagerController::class, 'updateStatusAdmin2'])->name('admin2.update.status');
+        
+
+        // ✅ ADMIN ROUTES
+        Route::prefix('admin')->name('admin.')->group(function() {
+            Route::get('/create', function () {
+                $roles = \App\Models\Role::all();
+                return view('manager.admin.create', compact('roles'));
+            })->name('create');
+            Route::post('/', [AuthWebController::class, 'storeAdmin'])->name('store');
+            Route::get('/{id}/edit', [UserManagerController::class, 'editAdmin'])->name('edit');
+            Route::put('/{id}', [UserManagerController::class, 'updateAdmin'])->name('update');
+        });
+        
+        // ✅ KASIR ROUTES
+        Route::prefix('kasir')->name('kasir.')->group(function() {
+            Route::get('/create', function () {
+                return view('manager.kasir.create');
+            })->name('create');
+            Route::post('/', [UserManagerController::class, 'storeKasir'])->name('store');
+            Route::get('/{id}/edit', [UserManagerController::class, 'editKasir'])->name('edit');
+            Route::put('/{id}', [UserManagerController::class, 'updateKasir'])->name('update');
+        });
+        
+        // ✅ DRIVER ROUTES
+        Route::prefix('driver')->name('driver.')->group(function() {
+            Route::get('/create', [UserManagerController::class, 'createDriver'])->name('create');
+            Route::post('/', [UserManagerController::class, 'storeDriver'])->name('store');
+            Route::get('/{id}/edit', [UserManagerController::class, 'editDriver'])->name('edit');
+            Route::put('/{id}', [UserManagerController::class, 'updateDriver'])->name('update');
+            Route::delete('/{id}', [UserManagerController::class, 'destroyDriver'])->name('destroy');
+        });
+        
+        // ✅ HAK AKSES & MENU ROLE
+        Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
+        Route::post('/permission/user', [UserManagerController::class, 'saveUserPermission'])->name('permission.save.user');
+        Route::get('/menu-role/create', [UserManagerController::class, 'create'])->name('create');
+        Route::post('/menu-role', [UserManagerController::class, 'store'])->name('store');
+        Route::put('/menu-role/{id}', [UserManagerController::class, 'update'])->name('update');
+        Route::delete('/menu-role/{id}', [UserManagerController::class, 'destroy'])->name('destroy');
+        Route::get('/role/hak-akses', [UserManagerController::class, 'hakRole'])->name('role.hak');
+        Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRole'])->name('role.hak.save');
     });
+
+Route::prefix('manager')
+    ->name('admin2.manager.')
+    ->middleware(['auth:admin'])
+    ->group(function () {
+
+        Route::get('/', [UserManagerController::class, 'indexAdmin2'])
+            ->name('index');
+
+        Route::post('/status', [UserManagerController::class, 'updateStatusAdmin2'])
+            ->name('update.status');
+
+        Route::prefix('kasir')->name('kasir.')->group(function () {
+            Route::get('/create', [UserManagerController::class, 'createKasirAdmin2'])->name('create');
+            Route::post('/', [UserManagerController::class, 'storeKasirAdmin2'])->name('store');
+            Route::get('/{id}/edit', [UserManagerController::class, 'editKasirAdmin2'])->name('edit');
+            Route::put('/{id}', [UserManagerController::class, 'updateKasirAdmin2'])->name('update');
+        });
+
+        Route::prefix('driver')->name('driver.')->group(function () {
+            Route::get('/create', [UserManagerController::class, 'createDriverAdmin2'])->name('create');
+            Route::post('/', [UserManagerController::class, 'storeDriverAdmin2'])->name('store');
+            Route::get('/{id}/edit', [UserManagerController::class, 'editDriverAdmin2'])->name('edit');
+            Route::put('/{id}', [UserManagerController::class, 'updateDriverAdmin2'])->name('update');
+            Route::delete('/{id}', [UserManagerController::class, 'destroyDriverAdmin2'])->name('destroy');
+        });
+    });
+
 
     // ================= LAPORAN =================
     Route::prefix('laporan')->name('laporan.')->group(function () {
@@ -1315,4 +1396,10 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
     
     Route::post('/change-password', [ChangePasswordController::class, 'updateAdmin2'])
         ->name('admin2.password.update');
+
+     Route::get('/profile', [ProfileController::class, 'editAdmin2'])
+        ->name('profile.admin2.edit');
+
+    Route::post('/profile', [ProfileController::class, 'updateAdmin2'])
+        ->name('profile.admin2.update');
 });

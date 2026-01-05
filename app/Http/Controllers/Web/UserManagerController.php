@@ -219,7 +219,7 @@ class UserManagerController extends Controller
             'nama_kasir' => $request->nama_kasir,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
-           'role_id' => 2, // KASIR // otomatis Kasir
+           'role_id' => 3, // KASIR ✅ // KASIR // otomatis Kasir
         ]);
 
         return redirect()
@@ -232,6 +232,34 @@ class UserManagerController extends Controller
         $adminLogin = auth('admin')->user(); // ← gunakan guard admin
 
         if (!$adminLogin || $adminLogin->role_id != 1) {
+            abort(403);
+        }
+
+        $request->validate([
+            'user_type' => 'required|in:admin,kasir,driver', // ✅ FIXED
+            'user_id'   => 'required',
+            'status'    => 'required|in:aktif,nonaktif',
+        ]);
+
+        if ($request->user_type === 'admin') {
+            Admin::where('id_admin', $request->user_id)
+                ->update(['status' => $request->status]);
+        } elseif ($request->user_type === 'kasir') {
+            Kasir::where('id_kasir', $request->user_id)
+                ->update(['status' => $request->status]);
+        } else {
+            Driver::where('id_driver', $request->user_id) // ✅ FIXED
+                ->update(['status' => $request->status]);
+        }
+
+        return back()->with('success', 'Status berhasil diubah');
+    }
+
+    public function updateStatusAdmin2(Request $request)
+    {
+        $adminLogin = auth('admin')->user(); // ← gunakan guard admin
+
+        if (!$adminLogin || $adminLogin->role_id != 2) {
             abort(403);
         }
 
@@ -741,7 +769,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -749,7 +776,6 @@ class UserManagerController extends Controller
         Driver::create([
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'password' => bcrypt($request->password),
             'status' => $request->status,
         ]);
@@ -791,7 +817,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'nullable|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -799,7 +824,6 @@ class UserManagerController extends Controller
         $updateData = [
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'status' => $request->status,
         ];
 
@@ -901,7 +925,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -909,7 +932,6 @@ class UserManagerController extends Controller
         Driver::create([
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'password' => bcrypt($request->password),
             'status' => $request->status,
         ]);
@@ -945,7 +967,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'nullable|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -953,7 +974,6 @@ class UserManagerController extends Controller
         $updateData = [
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'status' => $request->status,
         ];
 
@@ -1009,7 +1029,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'required|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -1017,7 +1036,6 @@ class UserManagerController extends Controller
         Driver::create([
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'password' => bcrypt($request->password),
             'status' => $request->status,
         ]);
@@ -1053,7 +1071,6 @@ class UserManagerController extends Controller
         $request->validate([
             'nama_driver' => 'required|string|max:255',
             'no_telp' => 'required|string|max:20',
-            'no_kendaraan' => 'required|string|max:20',
             'password' => 'nullable|string|min:6',
             'status' => 'required|in:aktif,nonaktif',
         ]);
@@ -1061,7 +1078,6 @@ class UserManagerController extends Controller
         $updateData = [
             'nama_driver' => $request->nama_driver,
             'no_telp' => $request->no_telp,
-            'no_kendaraan' => strtoupper($request->no_kendaraan),
             'status' => $request->status,
         ];
 
@@ -1098,12 +1114,14 @@ class UserManagerController extends Controller
     public function editAdmin($id)
     {
         $admin = auth()->guard('admin')->user();
-        
+            
         if (!$admin || $admin->role_id != 1) {
             abort(403, 'Hanya Super Admin yang dapat mengedit admin');
         }
 
         $adminData = Admin::findOrFail($id);
+
+        // 🔥 INI YANG PENTING
         $roles = Role::whereIn('id', [1, 2])->get();
 
         return view('manager.admin.edit', compact('adminData', 'roles'));
@@ -1164,6 +1182,60 @@ class UserManagerController extends Controller
 
         return view('manager.kasir.edit', compact('kasir'));
     }
+    // ===============================
+    // KASIR - EDIT
+    // ===============================
+    public function editKasirAdmin2($id)
+    {
+        $admin = auth()->guard('admin')->user();
+
+        if (!in_array($admin->role_id, [1, 2])) {
+            abort(403, 'Anda tidak memiliki izin untuk mengedit kasir');
+        }
+
+
+        $kasir = Kasir::findOrFail($id);
+
+        return view('admin2.manager.kasir.edit', compact('kasir'));
+    }
+    // ===============================
+    // KASIR - UPDATE
+    // ===============================
+    public function updateKasirAdmin2(Request $request, $id)
+{
+    $admin = auth()->guard('admin')->user();
+
+    // ROLE 1 = Super Admin
+    // ROLE 2 = Admin
+    if (!$admin || !in_array($admin->role_id, [1, 2])) {
+        abort(403, 'Anda tidak memiliki izin untuk mengupdate kasir');
+    }
+
+    $kasir = Kasir::findOrFail($id);
+
+    $request->validate([
+        'nama_kasir' => 'required|string|max:100',
+        'no_hp' => 'nullable|string|max:20',
+        'password' => 'nullable|string|min:6',
+        'status' => 'required|in:aktif,nonaktif',
+    ]);
+
+    $updateData = [
+        'nama_kasir' => $request->nama_kasir,
+        'no_hp' => $request->no_hp,
+        'status' => $request->status,
+    ];
+
+    if ($request->filled('password')) {
+        $updateData['password'] = Hash::make($request->password);
+    }
+
+    $kasir->update($updateData);
+
+    return redirect()
+        ->route('admin2.manager.index')
+        ->with('success', 'Data kasir berhasil diupdate');
+}
 
     // ===============================
     // KASIR - UPDATE
@@ -1202,4 +1274,12 @@ class UserManagerController extends Controller
             ->route('manager.index')
             ->with('success', 'Data kasir berhasil diupdate');
     }
+    private function checkAdminRole($roleId)
+{
+    $admin = auth('admin')->user();
+    if (!$admin || $admin->role_id != $roleId) abort(403);
+    return $admin;
+    
+}
+
 }

@@ -3,7 +3,7 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('manager.index') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
+        <a href="{{ route('admin2.manager.index') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold text-white">Edit Kasir</span>
@@ -17,7 +17,7 @@
              <div class="bg-gradient-to-r from-yellow-50 to-white px-12 py-10 border-b border-gray-200">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-5">
-                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
                             <i class="bi bi-pencil-square text-white text-2xl"></i>
                         </div>
                         <div>
@@ -25,9 +25,9 @@
                             <p class="text-sm text-gray-600 mt-1">Update informasi kasir: <strong>{{ $kasir->nama_kasir }}</strong></p>
                         </div>
                     </div>
-                    <div class="bg-emerald-50 px-5 py-3 rounded-xl border border-emerald-200">
-                        <p class="text-xs text-emerald-600 font-medium">ID Kasir</p>
-                        <p class="text-xl font-bold text-emerald-700">#{{ $kasir->id_kasir }}</p>
+                    <div class="bg-yellow-50 px-5 py-3 rounded-xl border border-yellow-200">
+                        <p class="text-xs text-yellow-600 font-medium">ID Kasir</p>
+                        <p class="text-xl font-bold text-yellow-700">#{{ $kasir->id_kasir }}</p>
                     </div>
                 </div>
             </div>
@@ -51,7 +51,7 @@
                 </div>
                 @endif
 
-                <form action="{{ route('manager.kasir.update', $kasir->id_kasir) }}" method="POST">
+                <form action="{{ route('admin2.manager.kasir.update', $kasir->id_kasir) }}" method="POST">
                     @csrf
                     @method('PUT')
                     
@@ -68,7 +68,7 @@
                                 <input type="text" 
                                        name="nama_kasir"
                                        value="{{ old('nama_kasir', $kasir->nama_kasir) }}"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('nama_kasir') border-red-300 @enderror" 
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none @error('nama_kasir') border-red-300 @enderror" 
                                        placeholder="Contoh: Siti Nurhaliza"
                                        required>
                             </div>
@@ -95,7 +95,7 @@
                                 <input type="tel" 
                                        name="no_hp"
                                        value="{{ old('no_hp', $kasir->no_hp) }}"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-24 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('no_hp') border-red-300 @enderror"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-24 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none @error('no_hp') border-red-300 @enderror"
                                        placeholder="81234567890"
                                        pattern="[0-9]+"
                                        maxlength="15">
@@ -124,7 +124,7 @@
                                 <input type="password" 
                                        name="password"
                                        id="password"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('password') border-red-300 @enderror"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none @error('password') border-red-300 @enderror"
                                        placeholder="Kosongkan jika tidak ingin mengubah"
                                        minlength="6">
                                 <button type="button" 
@@ -155,7 +155,7 @@
                                     <i class="bi bi-toggle-on text-gray-400 text-lg"></i>
                                 </div>
                                 <select name="status" 
-                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none appearance-none bg-white" 
+                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none appearance-none bg-white" 
                                         required>
                                     <option value="aktif" {{ old('status', $kasir->status) === 'aktif' ? 'selected' : '' }}>✓ Aktif - Siap Bertugas</option>
                                     <option value="nonaktif" {{ old('status', $kasir->status) === 'nonaktif' ? 'selected' : '' }}>✕ Nonaktif - Tidak Bertugas</option>
@@ -180,13 +180,13 @@
 
                     {{-- Card Footer / Buttons --}}
                     <div class="flex items-center justify-between gap-4 mt-12 pt-10 border-t border-gray-200">
-                        <a href="{{ route('manager.index') }}"
+                        <a href="{{ route('admin2.manager.index') }}"
                            class="px-8 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                             <i class="bi bi-x-circle"></i>
                             <span>Batal</span>
                         </a>
                         <button type="submit"
-                                class="px-10 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-emerald-500 hover:from-yellow-500 hover:to-emerald-600 text-white font-bold transition inline-flex items-center gap-2 shadow-lg shadow-emerald-200">
+                                class="px-10 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold transition inline-flex items-center gap-2 shadow-lg shadow-yellow-200">
                             <i class="bi bi-check-circle-fill"></i>
                             <span>Update Kasir</span>
                         </button>

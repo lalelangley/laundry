@@ -35,10 +35,12 @@
 <!-- USER BAR -->
 <div class="mx-4 mt-4 flex items-center justify-end gap-3">
 
-    <!-- Icon User -->
-    <div class="bg-gray-300 w-12 h-12 flex items-center justify-center rounded-full text-2xl text-black shadow">
+   <!-- Edit Profile -->
+    <a href="{{ route('profile.admin.edit') }}"
+    class="bg-gray-300 w-12 h-12 flex items-center justify-center rounded-full text-2xl text-black shadow
+            hover:bg-gray-400 transition">
         <i class="bi bi-person-fill"></i>
-    </div>
+    </a>
 
     <!-- Logout (bulat) -->
     <form action="{{ route('logout') }}" method="POST">

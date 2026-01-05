@@ -3,7 +3,7 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('manager.index') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
+        <a href="{{ route('admin2.manager.index') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold text-white">Tambah Driver</span>
@@ -45,7 +45,7 @@
                 </div>
                 @endif
 
-                <form action="{{ route('manager.driver.store') }}" method="POST">
+                <form action="{{ route('admin2.manager.driver.store') }}" method="POST">
                     @csrf
                     
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -175,7 +175,7 @@
 
                     {{-- Card Footer / Buttons --}}
                     <div class="flex items-center justify-between gap-4 mt-12 pt-10 border-t border-gray-200">
-                        <a href="{{ route('manager.index') }}"
+                        <a href="{{ route('admin2.manager.index') }}"
                            class="px-8 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                             <i class="bi bi-x-circle"></i>
                             <span>Batal</span>

@@ -427,7 +427,7 @@ class AuthWebController extends Controller
         }
 
         $admins    = Admin::with('role')->orderBy('nama')->get();
-        $roles     = Role::all();
+        $roles = Role::whereIn('id', [1, 2])->get();
         $menus     = Menu::all();
         $menuRoles = MenuRole::with(['role', 'menu'])
             ->orderBy('role_id')
