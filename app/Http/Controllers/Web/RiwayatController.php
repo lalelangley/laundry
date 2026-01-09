@@ -22,7 +22,6 @@ class RiwayatController extends Controller
     {
         if (!$idKasir) return 'System';
         
-        // ✅ PRIORITAS: Admin dulu, baru Kasir
         $admin = \App\Models\Admin::find($idKasir);
         if ($admin) return $admin->nama;
         
@@ -32,9 +31,14 @@ class RiwayatController extends Controller
         return 'Unknown';
     }
 
-    /** TAMPILKAN RIWAYAT */
+    // =============================
+    // ADMIN - TAMPILKAN RIWAYAT
+    // =============================
     public function index(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $tab = $request->get('tab', 'antrian');
         $allowedTabs = [
             'antrian',
@@ -59,71 +63,14 @@ class RiwayatController extends Controller
         return view('riwayat.index', compact('riwayat', 'tab'));
     }
 
-    /** FORM EDIT DATA */
-    public function edit($id)
-    {
-        $riwayat = Transaksi::with(['detail.jenis.satuan', 'detail.parfum', 'pelanggan'])
-            ->findOrFail($id);
-        $detail = $riwayat->detail;
-        $pelanggan = $riwayat->pelanggan;
-        $parfum = Parfum::all();
-
-        return view('riwayat.edit', compact(
-            'riwayat',
-            'detail',
-            'pelanggan',
-            'parfum'
-        ));
-    }
-
-    /** UPDATE DATA TRANSAKSI */
-    public function update(Request $request, $id)
-    {
-        $riwayat = Transaksi::findOrFail($id);
-
-        foreach ($request->detail as $id_detail => $d) {
-            $detail = DetailTransaksi::find($id_detail);
-            if ($detail) {
-                $detail->update([
-                    'qty' => $d['qty'],
-                    'id_parfum' => $d['id_parfum'] ?? null,
-                    'harga' => $detail->harga,
-                ]);
-            }
-        }
-
-        $total = DetailTransaksi::where('id_transaksi', $id)
-            ->sum(DB::raw('qty * harga'));
-        $riwayat->update(['total_harga' => $total]);
-
-        return redirect()->route('riwayat.detail', ['id' => $id])
-            ->with('success', 'Transaksi berhasil diperbarui');
-    }
-
-    /** UPDATE STATUS TRANSAKSI */
-    public function updateStatus(Request $request, $id)
-    {
-        $request->validate(['status_transaksi' => 'required']);
-        $transaksi = Transaksi::findOrFail($id);
-        $transaksi->status_transaksi = $request->status_transaksi;
-        $transaksi->save();
-
-        return back()->with('success', 'Status berhasil diperbarui');
-    }
-
-    /** HAPUS RIWAYAT */
-    public function destroy($id)
-    {
-        Transaksi::findOrFail($id)->delete();
-        return redirect()
-            ->route('riwayat.index')
-            ->with('success', 'Riwayat transaksi berhasil dihapus');
-    }
-
-    /** DETAIL TRANSAKSI - FIXED */
+    // =============================
+    // ADMIN - DETAIL TRANSAKSI
+    // =============================
     public function detail($id)
     {
-        // ✅ AMBIL DATA TRANSAKSI TANPA JOIN
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = DB::table('transaksi as t')
             ->leftJoin('metode_bayar as mb', 'mb.id_metode_bayar', '=', 't.id_metode_bayar')
             ->select('t.*', 'mb.nama_metode_bayar')
@@ -132,7 +79,6 @@ class RiwayatController extends Controller
 
         if (!$transaksi) abort(404);
 
-        // ✅ GUNAKAN HELPER FUNCTION UNTUK NAMA KASIR
         $transaksi->nama_kasir = $this->getNamaKasir($transaksi->id_kasir);
 
         $pelanggan = $transaksi->id_pelanggan
@@ -154,9 +100,95 @@ class RiwayatController extends Controller
         return view('riwayat.detail', compact('transaksi','pelanggan','detail','subtotal'));
     }
 
-    /** PROSES ORDER */
+    // =============================
+    // ADMIN - FORM EDIT DATA
+    // =============================
+    public function edit($id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
+        $riwayat = Transaksi::with(['detail.jenis.satuan', 'detail.parfum', 'pelanggan'])
+            ->findOrFail($id);
+        $detail = $riwayat->detail;
+        $pelanggan = $riwayat->pelanggan;
+        $parfum = Parfum::all();
+
+        return view('riwayat.edit', compact(
+            'riwayat',
+            'detail',
+            'pelanggan',
+            'parfum'
+        ));
+    }
+
+    // =============================
+    // ADMIN - UPDATE DATA TRANSAKSI
+    // =============================
+    public function update(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
+        $riwayat = Transaksi::findOrFail($id);
+
+        foreach ($request->detail as $id_detail => $d) {
+            $detail = DetailTransaksi::find($id_detail);
+            if ($detail) {
+                $detail->update([
+                    'qty' => $d['qty'],
+                    'id_parfum' => $d['id_parfum'] ?? null,
+                    'harga' => $detail->harga,
+                ]);
+            }
+        }
+
+        $total = DetailTransaksi::where('id_transaksi', $id)
+            ->sum(DB::raw('qty * harga'));
+        $riwayat->update(['total_harga' => $total]);
+
+        return redirect()->route('riwayat.detail', ['id' => $id])
+            ->with('success', 'Transaksi berhasil diperbarui');
+    }
+
+    // =============================
+    // ADMIN - UPDATE STATUS TRANSAKSI
+    // =============================
+    public function updateStatus(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
+        $request->validate(['status_transaksi' => 'required']);
+        $transaksi = Transaksi::findOrFail($id);
+        $transaksi->status_transaksi = $request->status_transaksi;
+        $transaksi->save();
+
+        return back()->with('success', 'Status berhasil diperbarui');
+    }
+
+    // =============================
+    // ADMIN - HAPUS RIWAYAT
+    // =============================
+    public function destroy($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
+        Transaksi::findOrFail($id)->delete();
+        return redirect()
+            ->route('riwayat.index')
+            ->with('success', 'Riwayat transaksi berhasil dihapus');
+    }
+
+    // =============================
+    // ADMIN - PROSES ORDER
+    // =============================
     public function prosesOrder($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if ($trx->status_transaksi === 'antrian') {
             $trx->status_transaksi = 'proses';
@@ -166,9 +198,14 @@ class RiwayatController extends Controller
             ->with('success','Transaksi berhasil diproses!');
     }
 
-    /** SELESAI ORDER */
+    // =============================
+    // ADMIN - SELESAI ORDER
+    // =============================
     public function selesaiOrder($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if (in_array($trx->status_transaksi, ['proses', 'siap_di_ambil'])) {
             $trx->status_transaksi = 'selesai';
@@ -179,9 +216,14 @@ class RiwayatController extends Controller
             ->with('success','Transaksi berhasil diselesaikan!');
     }
 
-    /** SIAP DIAMBIL */
+    // =============================
+    // ADMIN - SIAP DIAMBIL
+    // =============================
     public function siapDiAmbil($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
@@ -189,68 +231,100 @@ class RiwayatController extends Controller
             ->with('success','Transaksi siap diambil!');
     }
 
-    /** BAYAR SUBMIT */
-   // ✅ PERBAIKAN METHOD bayarSubmit - Support AJAX
-public function bayarSubmit(Request $request, $id)
-{
-    $trs = Transaksi::findOrFail($id);
-    
-    // Validasi dengan format yang berbeda untuk display vs actual value
-    $validated = $request->validate([
-        'jumlah_bayar' => 'required|numeric|min:1'
-    ]);
-    
-    $jumlahBayarBaru = (float)$request->jumlah_bayar;
-    $totalBayarLama = (float)($trs->total_bayar ?? 0);
-    $subtotal = (float)$trs->total_harga;
-    $diskon = (float)($trs->diskon ?? 0);
-    $totalTagihan = $subtotal - $diskon;
-    $totalBayarBaru = $totalBayarLama + $jumlahBayarBaru;
-    
-    $trs->dp = $totalBayarBaru < $totalTagihan ? $totalBayarBaru : ($trs->dp ?? $totalBayarBaru);
-    $trs->total_bayar = $totalBayarBaru;
-    $sisaTagihan = $totalTagihan - $totalBayarBaru;
+    // =============================
+    // ADMIN - BATAL ORDER
+    // =============================
+    public function batalOrder($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
+        $transaksi = Transaksi::findOrFail($id);
 
-    if ($sisaTagihan <= 0) {
-        $trs->status_bayar = 'lunas';
-        $trs->tgl_lunas = now();
-    } elseif ($totalBayarBaru > 0) {
-        $trs->status_bayar = 'DP';
-        $trs->tgl_lunas = null;
-    } else {
-        $trs->status_bayar = 'belum bayar';
-        $trs->tgl_lunas = null;
-    }
-    
-    $trs->save();
+        if ($transaksi->status_transaksi === 'batal') {
+            return redirect()
+                ->route('riwayat.index', ['tab' => 'batal'])
+                ->with('info', 'Transaksi ini sudah dibatalkan');
+        }
 
-    // ✅ Support AJAX Request
-    if ($request->ajax() || $request->wantsJson()) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Pembayaran berhasil diperbarui',
-            'dp_terbayar' => $totalBayarBaru,
-            'sisa_bayar' => max(0, $sisaTagihan),
-            'status_bayar' => $trs->status_bayar,
-            'total_tagihan' => $totalTagihan
+        if (
+            $transaksi->status_bayar === 'lunas' ||
+            $transaksi->status_transaksi === 'selesai'
+        ) {
+            return redirect()
+                ->route('riwayat.index')
+                ->with('error', 'Transaksi tidak bisa dibatalkan');
+        }
+
+        $transaksi->update([
+            'status_transaksi' => 'batal'
         ]);
+
+        return redirect()
+            ->route('riwayat.index', ['tab' => 'batal'])
+            ->with('success', 'Transaksi berhasil dibatalkan');
     }
 
-    return redirect()->back()->with('success','Pembayaran berhasil diperbarui.');
-}
+    // =============================
+    // ADMIN - BAYAR SUBMIT
+    // =============================
+    public function bayarSubmit(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
+        $trs = Transaksi::findOrFail($id);
+        
+        $validated = $request->validate([
+            'jumlah_bayar' => 'required|numeric|min:1'
+        ]);
+        
+        $jumlahBayarBaru = (float)$request->jumlah_bayar;
+        $totalBayarLama = (float)($trs->total_bayar ?? 0);
+        $subtotal = (float)$trs->total_harga;
+        $diskon = (float)($trs->diskon ?? 0);
+        $totalTagihan = $subtotal - $diskon;
+        $totalBayarBaru = $totalBayarLama + $jumlahBayarBaru;
+        
+        $trs->dp = $totalBayarBaru < $totalTagihan ? $totalBayarBaru : ($trs->dp ?? $totalBayarBaru);
+        $trs->total_bayar = $totalBayarBaru;
+        $sisaTagihan = $totalTagihan - $totalBayarBaru;
 
-public function bayarSubmitAdmin2(Request $request, $id)
-{
-    return $this->bayarSubmit($request, $id);
-}
+        if ($sisaTagihan <= 0) {
+            $trs->status_bayar = 'lunas';
+            $trs->tgl_lunas = now();
+        } elseif ($totalBayarBaru > 0) {
+            $trs->status_bayar = 'DP';
+            $trs->tgl_lunas = null;
+        } else {
+            $trs->status_bayar = 'belum bayar';
+            $trs->tgl_lunas = null;
+        }
+        
+        $trs->save();
 
-public function bayarSubmitKasir(Request $request, $id)
-{
-    return $this->bayarSubmit($request, $id);
-}
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil diperbarui',
+                'dp_terbayar' => $totalBayarBaru,
+                'sisa_bayar' => max(0, $sisaTagihan),
+                'status_bayar' => $trs->status_bayar,
+                'total_tagihan' => $totalTagihan
+            ]);
+        }
 
+        return redirect()->back()->with('success','Pembayaran berhasil diperbarui.');
+    }
+
+    // =============================
+    // ADMIN - EDIT LAYANAN
+    // =============================
     public function editLayanan($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $detail = DetailTransaksi::with([
             'layanan',
             'jenis.satuan',
@@ -277,9 +351,14 @@ public function bayarSubmitKasir(Request $request, $id)
         ]);
     }
 
-    /** UPDATE LAYANAN */
+    // =============================
+    // ADMIN - UPDATE LAYANAN
+    // =============================
     public function updateLayanan(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $detail = DetailTransaksi::findOrFail($id);
         $request->validate([
             'nama_jenis'=>'required|string|max:255',
@@ -316,9 +395,14 @@ public function bayarSubmitKasir(Request $request, $id)
             ->with('success','Layanan berhasil diperbarui.');
     }
 
-    /** TAMBAH LAYANAN KE RIWAYAT (TRANSAKSI SUDAH ADA) */
+    // =============================
+    // ADMIN - TAMBAH LAYANAN KE RIWAYAT
+    // =============================
     public function storeLayanan(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('riwayat', 'add');
+        
         $request->validate([
             'id_layanan' => 'required|exists:layanan,id_layanan',
             'qty'        => 'required|numeric|min:0.01',
@@ -350,8 +434,14 @@ public function bayarSubmitKasir(Request $request, $id)
         ]);
     }
 
+    // =============================
+    // ADMIN - ADD LAYANAN
+    // =============================
     public function addLayanan(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('riwayat', 'add');
+        
         try {
             $request->validate([
                 'id_layanan' => 'required|exists:layanan,id_layanan',
@@ -389,8 +479,14 @@ public function bayarSubmitKasir(Request $request, $id)
         }
     }
 
+    // =============================
+    // ADMIN - ADD LAYANAN PAGE
+    // =============================
     public function addLayananPage($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $riwayat = Transaksi::findOrFail($id);
         $layananUtama = Layanan::with('jenis.satuan')->get();
         $parfum = Parfum::all();
@@ -415,60 +511,14 @@ public function bayarSubmitKasir(Request $request, $id)
         ));
     }
 
-    public function addLayananPageAdmin2($id)
-    {
-        $riwayat = Transaksi::findOrFail($id);
-        $layananUtama = Layanan::with('jenis.satuan')->get();
-        $parfum = Parfum::all();
-
-        $jenisLayananData = [];
-        foreach ($layananUtama as $layanan) {
-            $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
-                return [
-                    'id' => $jenis->id_jenis_layanan,
-                    'nama' => $jenis->nama_jenis,
-                    'harga' => $jenis->harga,
-                    'satuan' => $jenis->satuan->nama_satuan ?? ''
-                ];
-            })->toArray();
-        }
-
-        return view('admin2.riwayat.addlayanan', compact(
-            'riwayat',
-            'layananUtama',
-            'parfum',
-            'jenisLayananData'
-        ));
-    }
-
-    public function addLayananPageKasir($id)
-    {
-        $riwayat = Transaksi::findOrFail($id);
-        $layananUtama = Layanan::with('jenis.satuan')->get();
-        $parfum = Parfum::all();
-
-        $jenisLayananData = [];
-        foreach ($layananUtama as $layanan) {
-            $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
-                return [
-                    'id' => $jenis->id_jenis_layanan,
-                    'nama' => $jenis->nama_jenis,
-                    'harga' => $jenis->harga,
-                    'satuan' => $jenis->satuan->nama_satuan ?? ''
-                ];
-            })->toArray();
-        }
-
-        return view('kasir.riwayat.addlayanan', compact(
-            'riwayat',
-            'layananUtama',
-            'parfum',
-            'jenisLayananData'
-        ));
-    }
-
+    // =============================
+    // ADMIN - UPDATE DETAIL
+    // =============================
     public function updateDetail(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $detail = DetailTransaksi::findOrFail($id);
         $detail->update([
             'qty' => $request->qty,
@@ -481,8 +531,14 @@ public function bayarSubmitKasir(Request $request, $id)
         ]);
     }
 
+    // =============================
+    // ADMIN - DELETE DETAIL
+    // =============================
     public function deleteDetail($id)
     {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
         $detail = DetailTransaksi::find($id);
         if(!$detail) {
             return response()->json([
@@ -498,38 +554,14 @@ public function bayarSubmitKasir(Request $request, $id)
         ]);
     }
 
-    public function deleteDetailAdmin2($id)
-    {
-        try {
-            $detail = DetailTransaksi::findOrFail($id);
-            $idTransaksi = $detail->id_transaksi;
-
-            $detail->delete();
-
-            $transaksi = Transaksi::findOrFail($idTransaksi);
-            $transaksi->total_harga = DetailTransaksi::where('id_transaksi', $idTransaksi)
-                ->sum(DB::raw('qty * harga'));
-            $transaksi->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Layanan berhasil dihapus'
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error deleteDetailAdmin2: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /** =============================
-     *  RIWAYAT UNTUK KASIR
-     *  =============================
-     */
+    // =============================
+    // KASIR - INDEX
+    // =============================
     public function indexKasir(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $tab = $request->tab ?? 'antrian';
         $riwayat = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'offline')
@@ -543,10 +575,14 @@ public function bayarSubmitKasir(Request $request, $id)
         return view('kasir.riwayat.index', compact('riwayat','tab'));
     }
 
-    /** DETAIL TRANSAKSI UNTUK KASIR - FIXED */
+    // =============================
+    // KASIR - DETAIL TRANSAKSI
+    // =============================
     public function detailKasir($id)
     {
-        // ✅ AMBIL DATA TRANSAKSI TANPA JOIN
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = DB::table('transaksi as t')
             ->leftJoin('metode_bayar as mb', 'mb.id_metode_bayar', '=', 't.id_metode_bayar')
             ->select('t.*', 'mb.nama_metode_bayar')
@@ -555,7 +591,6 @@ public function bayarSubmitKasir(Request $request, $id)
 
         if (!$transaksi) abort(404);
 
-        // ✅ GUNAKAN HELPER FUNCTION UNTUK NAMA KASIR
         $transaksi->nama_kasir = $this->getNamaKasir($transaksi->id_kasir);
 
         $pelanggan = $transaksi->id_pelanggan
@@ -593,9 +628,22 @@ public function bayarSubmitKasir(Request $request, $id)
         ));
     }
 
-    /** PROSES PEMBAYARAN UNTUK KASIR */
+    // =============================
+    // KASIR - METHODS (Semua dengan permission check)
+    // =============================
+    
+    public function bayarSubmitKasir(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        return $this->bayarSubmit($request, $id);
+    }
+
     public function bayarKasir(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trs = Transaksi::findOrFail($id);
         $request->validate([
             'jumlah_bayar' => 'required|numeric|min:1',
@@ -648,11 +696,16 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function showKasir($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
         return $this->detailKasir($id);
     }
 
     public function editKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $riwayat = Transaksi::with(['detail.jenis.satuan','detail.parfum','pelanggan'])
             ->findOrFail($id);
         $detail = $riwayat->detail;
@@ -664,6 +717,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function updateKasir(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $riwayat = Transaksi::findOrFail($id);
 
         foreach ($request->detail as $id_detail => $d) {
@@ -687,6 +743,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function prosesOrderKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if($trx->status_transaksi === 'antrian'){
             $trx->status_transaksi = 'proses';
@@ -698,6 +757,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function selesaiOrderKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if(in_array($trx->status_transaksi,['proses','siap_di_ambil'])){
             $trx->status_transaksi = 'selesai';
@@ -709,6 +771,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function siapDiAmbilKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
@@ -716,8 +781,32 @@ public function bayarSubmitKasir(Request $request, $id)
             ->with('success','Transaksi siap diambil!');
     }
 
+    public function batalOrderKasir($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
+        $transaksi = Transaksi::findOrFail($id);
+
+        if ($transaksi->status_bayar === 'lunas') {
+            return redirect()
+                ->route('kasir.riwayat.index')
+                ->with('error', 'Transaksi sudah lunas dan tidak bisa dibatalkan');
+        }
+
+        $transaksi->update([
+            'status_transaksi' => 'batal'
+        ]);
+
+        return redirect()->route('kasir.riwayat.index',['tab'=>'antrian'])
+            ->with('success','Transaksi berhasil dibatalkan!');
+    }
+
     public function bayarModalKasir($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = Transaksi::with(['pelanggan','detail.jenis.satuan','detail.parfum'])
             ->findOrFail($id);
         $pelanggan = $transaksi->pelanggan;
@@ -734,6 +823,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function actionsKasir($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = Transaksi::with(['pelanggan','detail.jenis.satuan','detail.parfum'])
             ->findOrFail($id);
         $pelanggan = $transaksi->pelanggan;
@@ -751,6 +843,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function addLayananKasir(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('riwayat', 'add');
+        
         try {
             $validated = $request->validate([
                 'id_layanan' => 'required|exists:layanan,id_layanan',
@@ -796,8 +891,40 @@ public function bayarSubmitKasir(Request $request, $id)
         }
     }
 
+    public function addLayananPageKasir($id)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
+        $riwayat = Transaksi::findOrFail($id);
+        $layananUtama = Layanan::with('jenis.satuan')->get();
+        $parfum = Parfum::all();
+
+        $jenisLayananData = [];
+        foreach ($layananUtama as $layanan) {
+            $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
+                return [
+                    'id' => $jenis->id_jenis_layanan,
+                    'nama' => $jenis->nama_jenis,
+                    'harga' => $jenis->harga,
+                    'satuan' => $jenis->satuan->nama_satuan ?? ''
+                ];
+            })->toArray();
+        }
+
+        return view('kasir.riwayat.addlayanan', compact(
+            'riwayat',
+            'layananUtama',
+            'parfum',
+            'jenisLayananData'
+        ));
+    }
+
     public function destroyKasir($id)
     {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->detail()->delete();
         $transaksi->delete();
@@ -807,76 +934,15 @@ public function bayarSubmitKasir(Request $request, $id)
             ->with('success', 'Transaksi berhasil dihapus');
     }
 
-    public function batalOrder($id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
-
-        if ($transaksi->status_transaksi === 'batal') {
-            return redirect()
-                ->route('riwayat.index', ['tab' => 'batal'])
-                ->with('info', 'Transaksi ini sudah dibatalkan');
-        }
-
-        if (
-            $transaksi->status_bayar === 'lunas' ||
-            $transaksi->status_transaksi === 'selesai'
-        ) {
-            return redirect()
-                ->route('riwayat.index')
-                ->with('error', 'Transaksi tidak bisa dibatalkan');
-        }
-
-        $transaksi->update([
-            'status_transaksi' => 'batal'
-        ]);
-
-        return redirect()
-            ->route('riwayat.index', ['tab' => 'batal'])
-            ->with('success', 'Transaksi berhasil dibatalkan');
-    }
-
-    public function batalOrderKasir($id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
-
-        if ($transaksi->status_bayar === 'lunas') {
-            return redirect()
-                ->route('kasir.riwayat.index')
-                ->with('error', 'Transaksi sudah lunas dan tidak bisa dibatalkan');
-        }
-
-        $transaksi->update([
-            'status_transaksi' => 'batal'
-        ]);
-
-        return redirect()->route('kasir.riwayat.index',['tab'=>'antrian'])
-            ->with('success','Transaksi berhasil dibatalkan!');
-    }
-
-    public function batalOrderAdmin2($id)
-    {
-        $transaksi = Transaksi::findOrFail($id);
-
-        if ($transaksi->status_bayar === 'lunas') {
-            return redirect()
-                ->route('admin2.riwayat.index')
-                ->with('error', 'Transaksi sudah lunas dan tidak bisa dibatalkan');
-        }
-
-        $transaksi->update([
-            'status_transaksi' => 'batal'
-        ]);
-
-        return redirect()->route('admin2.riwayat.index',['tab'=>'antrian'])
-            ->with('success','Transaksi berhasil dibatalkan!');
-    }
-
-    /** =============================
-     *  RIWAYAT UNTUK ADMIN2
-     *  =============================
-     */
+    // =============================
+    // ADMIN2 - METHODS (Semua dengan permission check)
+    // =============================
+    
     public function indexAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $tab = $request->tab ?? 'antrian';
         $riwayat = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'offline')
@@ -890,10 +956,11 @@ public function bayarSubmitKasir(Request $request, $id)
         return view('admin2.riwayat.index', compact('riwayat','tab'));
     }
 
-    /** DETAIL TRANSAKSI UNTUK ADMIN2 - FIXED */
     public function detailAdmin2($id)
     {
-        // ✅ AMBIL DATA TRANSAKSI TANPA JOIN
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = DB::table('transaksi as t')
             ->leftJoin('metode_bayar as mb', 'mb.id_metode_bayar', '=', 't.id_metode_bayar')
             ->select('t.*', 'mb.nama_metode_bayar')
@@ -902,7 +969,6 @@ public function bayarSubmitKasir(Request $request, $id)
 
         if (!$transaksi) abort(404);
 
-        // ✅ GUNAKAN HELPER FUNCTION UNTUK NAMA KASIR
         $transaksi->nama_kasir = $this->getNamaKasir($transaksi->id_kasir);
 
         $pelanggan = $transaksi->id_pelanggan
@@ -940,18 +1006,32 @@ public function bayarSubmitKasir(Request $request, $id)
         ));
     }
 
+    public function bayarSubmitAdmin2(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        return $this->bayarSubmit($request, $id);
+    }
+
     public function bayarAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
         return $this->bayarKasir($request, $id);
     }
 
     public function showAdmin2($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
         return $this->detailAdmin2($id);
     }
 
     public function editAdmin2($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $riwayat = Transaksi::with([
             'detail.jenis.satuan',
             'detail.jenis.layanan',
@@ -967,6 +1047,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function updateAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $riwayat = Transaksi::findOrFail($id);
 
         foreach ($request->detail as $id_detail => $d) {
@@ -990,6 +1073,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function prosesOrderAdmin2($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if($trx->status_transaksi === 'antrian'){
             $trx->status_transaksi = 'proses';
@@ -1001,6 +1087,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function selesaiOrderAdmin2($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         if(in_array($trx->status_transaksi,['proses','siap_di_ambil'])){
             $trx->status_transaksi = 'selesai';
@@ -1012,6 +1101,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function siapDiAmbilAdmin2($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('riwayat', 'edit');
+        
         $trx = Transaksi::findOrFail($id);
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
@@ -1019,8 +1111,32 @@ public function bayarSubmitKasir(Request $request, $id)
             ->with('success','Transaksi siap diambil!');
     }
 
+    public function batalOrderAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
+        $transaksi = Transaksi::findOrFail($id);
+
+        if ($transaksi->status_bayar === 'lunas') {
+            return redirect()
+                ->route('admin2.riwayat.index')
+                ->with('error', 'Transaksi sudah lunas dan tidak bisa dibatalkan');
+        }
+
+        $transaksi->update([
+            'status_transaksi' => 'batal'
+        ]);
+
+        return redirect()->route('admin2.riwayat.index',['tab'=>'antrian'])
+            ->with('success','Transaksi berhasil dibatalkan!');
+    }
+
     public function bayarModalAdmin2($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = Transaksi::with(['pelanggan','detail.jenis.satuan','detail.parfum'])
             ->findOrFail($id);
         $pelanggan = $transaksi->pelanggan;
@@ -1037,6 +1153,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function actionsAdmin2($id)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
         $transaksi = Transaksi::with(['pelanggan','detail.jenis.satuan','detail.parfum'])
             ->findOrFail($id);
         $pelanggan = $transaksi->pelanggan;
@@ -1054,6 +1173,9 @@ public function bayarSubmitKasir(Request $request, $id)
 
     public function addLayananAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('riwayat', 'add');
+        
         try {
             $request->validate([
                 'id_layanan' => 'required|exists:layanan,id_layanan',
@@ -1091,8 +1213,69 @@ public function bayarSubmitKasir(Request $request, $id)
         }
     }
 
+    public function addLayananPageAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('riwayat', 'view');
+        
+        $riwayat = Transaksi::findOrFail($id);
+        $layananUtama = Layanan::with('jenis.satuan')->get();
+        $parfum = Parfum::all();
+
+        $jenisLayananData = [];
+        foreach ($layananUtama as $layanan) {
+            $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
+                return [
+                    'id' => $jenis->id_jenis_layanan,
+                    'nama' => $jenis->nama_jenis,
+                    'harga' => $jenis->harga,
+                    'satuan' => $jenis->satuan->nama_satuan ?? ''
+                ];
+            })->toArray();
+        }
+
+        return view('admin2.riwayat.addlayanan', compact(
+            'riwayat',
+            'layananUtama',
+            'parfum',
+            'jenisLayananData'
+        ));
+    }
+
+    public function deleteDetailAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
+        try {
+            $detail = DetailTransaksi::findOrFail($id);
+            $idTransaksi = $detail->id_transaksi;
+
+            $detail->delete();
+
+            $transaksi = Transaksi::findOrFail($idTransaksi);
+            $transaksi->total_harga = DetailTransaksi::where('id_transaksi', $idTransaksi)
+                ->sum(DB::raw('qty * harga'));
+            $transaksi->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Layanan berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleteDetailAdmin2: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function destroyAdmin2($id)
     {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('riwayat', 'delete');
+        
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->detail()->delete();
         $transaksi->delete();

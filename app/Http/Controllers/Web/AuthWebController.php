@@ -18,7 +18,7 @@ use Carbon\Carbon;
 class AuthWebController extends Controller
 {
     // =============================
-    // LOGIN
+    // LOGIN (No Permission Check)
     // =============================
     public function showLogin()
     {
@@ -48,13 +48,9 @@ class AuthWebController extends Controller
                 return back()->with('error', 'PIN salah atau user tidak aktif');
             }
 
-            // Login dengan guard admin
             auth()->guard('admin')->login($admin);
-            
-            // Regenerate session untuk keamanan
             $request->session()->regenerate();
 
-            // ✅ REDIRECT BERDASARKAN ROLE
             if ($admin->role_id == 1) {
                 return redirect()->route('admin.dashboard');
             } else {
@@ -68,10 +64,7 @@ class AuthWebController extends Controller
                 return back()->with('error', 'PIN salah atau user tidak aktif');
             }
 
-            // Login dengan guard kasir
             auth()->guard('kasir')->login($kasir);
-            
-            // Regenerate session untuk keamanan
             $request->session()->regenerate();
             
             return redirect()->route('kasir.dashboard');
@@ -81,7 +74,7 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // DASHBOARD ADMIN (SUPER ADMIN) - FIXED
+    // DASHBOARD ADMIN (No Permission Check)
     // =============================
     public function adminDashboard()
     {
@@ -100,7 +93,6 @@ class AuthWebController extends Controller
             ->where('status_bayar', 'lunas')
             ->sum('total_bayar');
 
-        // ✅ FIXED: Hapus 'detail.jenis.satuan'
         $orders = Transaksi::query()
             ->where('jenis_transaksi', 'offline')
             ->whereIn('status_transaksi', ['antrian', 'proses', 'siap_di_ambil', 'pick_up'])
@@ -108,12 +100,10 @@ class AuthWebController extends Controller
             ->limit(10)
             ->get()
             ->map(function($o) {
-                // Format deadline
                 $o->deadline = $o->tgl_estimasi 
                     ? Carbon::parse($o->tgl_estimasi)->format('d M Y, H:i')
                     : '-';
                 
-                // Status deadline
                 if ($o->tgl_estimasi) {
                     $estimasi = Carbon::parse($o->tgl_estimasi);
                     
@@ -142,7 +132,7 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // DASHBOARD ADMIN2 - FIXED
+    // DASHBOARD ADMIN2 (No Permission Check)
     // =============================
     public function admin2Dashboard()
     {
@@ -172,7 +162,6 @@ class AuthWebController extends Controller
             ->where('jenis_transaksi', 'offline')
             ->count();
 
-        // ✅ FIXED: Hapus 'detail.jenis.satuan'
         $orders = Transaksi::query()
             ->where('jenis_transaksi', 'offline')
             ->whereIn('status_transaksi', ['antrian', 'proses'])
@@ -212,7 +201,7 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // DASHBOARD KASIR - FIXED
+    // DASHBOARD KASIR (No Permission Check)
     // =============================
     public function kasirDashboard()
     {
@@ -242,7 +231,6 @@ class AuthWebController extends Controller
             ->where('jenis_transaksi', 'offline')
             ->count();
 
-        // ✅ FIXED: Hapus 'detail.jenis.satuan'
         $orders = Transaksi::query()
             ->where('jenis_transaksi', 'offline')
             ->whereIn('status_transaksi', ['antrian', 'proses'])
@@ -282,33 +270,70 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // LIST PELANGGAN
+    // PELANGGAN - LIST (VIEW)
     // =============================
     public function pelangganIndex()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pelanggan', 'view');
+        
         $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
         return view('pelanggan.index', compact('pelanggan'));
     }
 
+    public function pelangganIndexKasir()
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pelanggan', 'view');
+        
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+        return view('kasir.pelanggan.index', compact('pelanggan'));
+    }
+
     public function pelangganIndexAdmin2()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pelanggan', 'view');
+        
         $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
         return view('admin2.pelanggan.index', compact('pelanggan'));
     }
 
     // =============================
-    // CREATE PELANGGAN
+    // PELANGGAN - CREATE (ADD)
     // =============================
     public function Create()
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
         return view('pelanggan.create');
     }
 
+    public function createKasir()
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
+        return view('kasir.pelanggan.create');
+    }
+
+    public function createAdmin2()
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
+        return view('admin2.pelanggan.create');
+    }
+
     // =============================
-    // STORE PELANGGAN
+    // PELANGGAN - STORE (ADD)
     // =============================
     public function store(Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
         $request->validate([
             'nama_pelanggan' => 'required|string|max:255',
             'no_hp'          => 'required|string|max:20',
@@ -352,20 +377,140 @@ class AuthWebController extends Controller
             ->with('success', 'Pelanggan berhasil ditambahkan!');
     }
 
+    public function storeKasir(Request $request)
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
+
+        $gambarPath = null;
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            if (!file_exists(public_path('images/pelanggan'))) {
+                mkdir(public_path('images/pelanggan'), 0755, true);
+            }
+            
+            $file->move(public_path('images/pelanggan'), $filename);
+            $gambarPath = 'pelanggan/' . $filename;
+        }
+
+        Pelanggan::create([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'gambar'         => $gambarPath,
+            'password'       => bcrypt('123456'),
+            'jk'             => $request->jk,
+            'email'          => $request->email,
+        ]);
+
+        if ($request->from === 'transaksi') {
+            return redirect()
+                ->route('kasir.transaksi.pelanggan')
+                ->with('success', 'Pelanggan berhasil ditambahkan!');
+        }
+
+        return redirect()
+            ->route('kasir.pelanggan.index')
+            ->with('success', 'Pelanggan berhasil ditambahkan!');
+    }
+
+    public function storeAdmin2(Request $request)
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pelanggan', 'add');
+        
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
+
+        $gambarPath = null;
+        if ($request->hasFile('gambar')) {
+            $file = $request->file('gambar');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            if (!file_exists(public_path('images/pelanggan'))) {
+                mkdir(public_path('images/pelanggan'), 0755, true);
+            }
+            
+            $file->move(public_path('images/pelanggan'), $filename);
+            $gambarPath = 'pelanggan/' . $filename;
+        }
+
+        Pelanggan::create([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'gambar'         => $gambarPath,
+            'password'       => bcrypt('123456'),
+            'jk'             => $request->jk,
+            'email'          => $request->email,
+        ]);
+
+        if ($request->from === 'transaksi') {
+            return redirect()
+                ->route('admin2.transaksi.pelanggan')
+                ->with('success', 'Pelanggan berhasil ditambahkan!');
+        }
+
+        return redirect()
+            ->route('admin2.pelanggan.index')
+            ->with('success', 'Pelanggan berhasil ditambahkan!');
+    }
+
     // =============================
-    // EDIT PELANGGAN
+    // PELANGGAN - EDIT (EDIT)
     // =============================
     public function pelangganEdit($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
         $pelanggan = Pelanggan::findOrFail($id);
         return view('pelanggan.edit', compact('pelanggan'));
     }
 
+    public function pelangganEditKasir($id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+        return view('kasir.pelanggan.edit', compact('pelanggan'));
+    }
+
+    public function pelangganEditAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+        return view('admin2.pelanggan.edit', compact('pelanggan'));
+    }
+
     // =============================
-    // UPDATE PELANGGAN
+    // PELANGGAN - UPDATE (EDIT)
     // =============================
     public function pelangganUpdate(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
         $pelanggan = Pelanggan::findOrFail($id);
 
         $request->validate([
@@ -404,19 +549,130 @@ class AuthWebController extends Controller
         return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
     }
 
+    public function pelangganUpdateKasir(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
+
+        if ($request->hasFile('gambar')) {
+            if ($pelanggan->gambar && file_exists(public_path('images/' . $pelanggan->gambar))) {
+                unlink(public_path('images/' . $pelanggan->gambar));
+            }
+            
+            $file = $request->file('gambar');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            if (!file_exists(public_path('images/pelanggan'))) {
+                mkdir(public_path('images/pelanggan'), 0755, true);
+            }
+            
+            $file->move(public_path('images/pelanggan'), $filename);
+            $pelanggan->gambar = 'pelanggan/' . $filename;
+        }
+
+        $pelanggan->update([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'email'          => $request->email,
+            'jk'             => $request->jk,
+        ]);
+
+        return redirect()->route('kasir.pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
+    }
+
+    public function pelangganUpdateAdmin2(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pelanggan', 'edit');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+
+        $request->validate([
+            'nama_pelanggan' => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'email'          => 'nullable|email',
+            'jk'             => 'required',
+            'alamat'         => 'required|string',
+            'gambar'         => 'nullable|image|max:2048'
+        ]);
+
+        if ($request->hasFile('gambar')) {
+            if ($pelanggan->gambar && file_exists(public_path('images/' . $pelanggan->gambar))) {
+                unlink(public_path('images/' . $pelanggan->gambar));
+            }
+            
+            $file = $request->file('gambar');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            if (!file_exists(public_path('images/pelanggan'))) {
+                mkdir(public_path('images/pelanggan'), 0755, true);
+            }
+            
+            $file->move(public_path('images/pelanggan'), $filename);
+            $pelanggan->gambar = 'pelanggan/' . $filename;
+        }
+
+        $pelanggan->update([
+            'nama_pelanggan' => $request->nama_pelanggan,
+            'no_hp'          => $request->no_hp,
+            'alamat'         => $request->alamat,
+            'email'          => $request->email,
+            'jk'             => $request->jk,
+        ]);
+
+        return redirect()->route('admin2.pelanggan.index')->with('success', 'Pelanggan berhasil diupdate!');
+    }
+
     // =============================
-    // DELETE PELANGGAN
+    // PELANGGAN - DELETE (DELETE)
     // =============================
     public function pelangganDestroy($id)
     {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pelanggan', 'delete');
+        
         $pelanggan = Pelanggan::findOrFail($id);
         $pelanggan->delete();
 
         return redirect()->route('pelanggan.index')->with('success', 'Pelanggan berhasil dihapus!');
     }
 
+    public function pelangganDestroyKasir($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pelanggan', 'delete');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+        $pelanggan->delete();
+
+        return redirect()->route('kasir.pelanggan.index')->with('success', 'Pelanggan berhasil dihapus!');
+    }
+
+    public function pelangganDestroyAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pelanggan', 'delete');
+        
+        $pelanggan = Pelanggan::findOrFail($id);
+        $pelanggan->delete();
+
+        return redirect()->route('admin2.pelanggan.index')->with('success', 'Pelanggan berhasil dihapus!');
+    }
+
     // =============================
-    // MANAGER INDEX (Super Admin Only)
+    // MANAGER INDEX (Super Admin Only - No Permission Check)
     // =============================
     public function managerIndex()
     {
@@ -443,7 +699,7 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // TAMBAH ADMIN (SUPER ADMIN)
+    // TAMBAH ADMIN (Super Admin Only - No Permission Check)
     // =============================
     public function storeAdmin(Request $request)
     {
@@ -474,10 +730,17 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // TAMBAH PELANGGAN DARI MANAGER
+    // TAMBAH PELANGGAN DARI MANAGER (Super Admin Only)
     // =============================
     public function storePelanggan(Request $request)
     {
+        // ✅ CHECK: Only Super Admin can add pelanggan from manager
+        $admin = auth()->guard('admin')->user();
+        
+        if (!$admin || $admin->role_id != 1) {
+            abort(403, 'Hanya Super Admin yang bisa menambah pelanggan dari manager');
+        }
+        
         $request->validate([
             'nama_pelanggan' => 'required|string|max:255',
             'no_hp'          => 'required|string|max:20',
@@ -514,7 +777,7 @@ class AuthWebController extends Controller
     }
 
     // =============================
-    // UPDATE PRIVILEGE ROLE
+    // UPDATE PRIVILEGE ROLE (Super Admin Only - No Permission Check)
     // =============================
     public function updateRolePrivilege(Request $request)
     {

@@ -61,11 +61,12 @@
                         <i class="bi bi-pencil-fill"></i>
                     </a>
 
-                    <form action="{{ route('satuan.destroy', $s->id_satuan) }}" method="POST" class="inline">
+                    <form action="{{ route('satuan.destroy', $s->id_satuan) }}" method="POST" class="inline delete-form">
                         @csrf
                         @method('DELETE')
-                        <button type="submit"
-                                onclick="return confirm('Yakin ingin menghapus satuan ini?')"
+                        <button type="button"
+                                onclick="confirmDelete(this)"
+                                data-nama="{{ $s->nama_satuan }}"
                                 class="bg-red-700 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                             <i class="bi bi-trash-fill"></i>
                         </button>
@@ -105,7 +106,10 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT SEARCH + SORT -->
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- JAVASCRIPT SEARCH + SORT + DELETE -->
 <script>
 function filterSatuan() {
     let input = document.getElementById("searchInput").value.toLowerCase();
@@ -137,6 +141,44 @@ function toggleSort() {
         : "bi bi-arrow-down text-xl";
 
     sortAsc = !sortAsc;
+}
+
+function confirmDelete(button) {
+    const namaSatuan = button.getAttribute('data-nama');
+    const form = button.closest('form');
+    
+    Swal.fire({
+        title: 'Hapus Satuan?',
+        html: `Apakah Anda yakin ingin menghapus<br><strong class="text-yellow-600">${namaSatuan}</strong>?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="bi bi-trash-fill me-2"></i>Ya, Hapus!',
+        cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Batal',
+        reverseButtons: true,
+        backdrop: true,
+        customClass: {
+            confirmButton: 'px-6 py-3 rounded-xl font-semibold shadow-lg',
+            cancelButton: 'px-6 py-3 rounded-xl font-semibold shadow-lg'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: 'Menghapus...',
+                html: 'Mohon tunggu sebentar',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Submit form
+            form.submit();
+        }
+    });
 }
 </script>
 

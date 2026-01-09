@@ -34,44 +34,44 @@
              STATUS TABS
         ======================================== --}}
         <div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
-            <div class="flex gap-2 flex-wrap justify-center">
+            <div class="flex gap-2 justify-between">
                 @php
                     $tabs = [
-                        'menunggu_konfirmasi' => [
-                            'label' => 'Menunggu', 
-                            'icon' => 'hourglass-split'
+                        'pickup' => [
+                            'label' => 'Pickup',
+                            'icon'  => 'truck'
                         ],
                         'proses' => [
-                            'label' => 'Proses', 
-                            'icon' => 'arrow-repeat'
+                            'label' => 'Proses',
+                            'icon'  => 'arrow-repeat'
                         ],
-                        'siap_di_ambil' => [
-                            'label' => 'Siap Diambil', 
-                            'icon' => 'box-seam'
+                        'siap_diambil' => [
+                            'label' => 'Siap Diambil',
+                            'icon'  => 'check-circle'
                         ],
-                        'siap_di_antar' => [
-                            'label' => 'Siap Diantar', 
-                            'icon' => 'truck'
+                        'siap_diantar' => [
+                            'label' => 'Siap Diantar',
+                            'icon'  => 'truck'
                         ],
                         'selesai' => [
-                            'label' => 'Selesai', 
-                            'icon' => 'check-all'
+                            'label' => 'Selesai',
+                            'icon'  => 'check-all'
                         ],
                         'ditolak' => [
-                            'label' => 'Ditolak', 
-                            'icon' => 'x-circle'
-                        ]
+                            'label' => 'Ditolak',
+                            'icon'  => 'x-circle'
+                        ],
                     ];
                 @endphp
                 
                 @foreach ($tabs as $key => $data)
                     <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
-                       class="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
+                       class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
                               {{ $tab == $key 
                                   ? 'bg-yellow-400 text-gray-900 shadow-sm' 
                                   : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
                         <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
-                        <span class="hidden md:inline">{{ $data['label'] }}</span>
+                        <span class="hidden sm:inline">{{ $data['label'] }}</span>
                     </a>
                 @endforeach
             </div>
@@ -83,22 +83,20 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5" id="pesananList">
             
             @forelse ($pesanan as $p)
-                <div class="group relative" 
-                     data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
+                <div data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
                      data-id="{{ $p->id_transaksi }}">
                     <a href="{{ route('pesanan.online.detail', $p->id_transaksi) }}" 
-                       class="block">
+                       class="block group">
                         <div class="relative bg-white shadow-sm rounded-2xl p-6 
                                     hover:shadow-md transition-all duration-300 border border-gray-200
-                                    @if($p->status_transaksi == 'menunggu_konfirmasi') hover:border-orange-300
-                                    @elseif($p->status_transaksi == 'dikonfirmasi') hover:border-blue-300
+                                    @if($p->status_transaksi == 'pick_up') hover:border-yellow-300
                                     @elseif($p->status_transaksi == 'proses') hover:border-purple-300
                                     @elseif($p->status_transaksi == 'siap_di_ambil') hover:border-teal-300
-                                    @elseif($p->status_transaksi == 'siap_di_antar') hover:border-gray-300
+                                    @elseif($p->status_transaksi == 'siap_di_antar') hover:border-indigo-300
                                     @elseif($p->status_transaksi == 'selesai') hover:border-green-300
                                     @else hover:border-red-300
                                     @endif">
-
+                            
                             {{-- Card Header --}}
                             <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
                                 <div class="flex-1">
@@ -110,7 +108,7 @@
                                         ORDER/{{ $p->id_transaksi }}
                                     </p>
                                 </div>
-
+                                
                                 {{-- Delete Button (hover to show) --}}
                                 <button type="button"
                                         onclick="event.preventDefault(); event.stopPropagation(); confirmDelete({{ $p->id_transaksi }}, '{{ $p->nama_pelanggan ?? 'Guest' }}')"
@@ -174,11 +172,10 @@
                                 {{-- Transaction Status Badge --}}
                                 <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
                                              text-xs font-semibold
-                                             @if ($p->status_transaksi == 'menunggu_konfirmasi') bg-orange-100 text-orange-700
-                                             @elseif ($p->status_transaksi == 'dikonfirmasi') bg-blue-100 text-blue-700
+                                             @if ($p->status_transaksi == 'pick_up') bg-yellow-100 text-yellow-700
                                              @elseif ($p->status_transaksi == 'proses') bg-purple-100 text-purple-700
                                              @elseif ($p->status_transaksi == 'siap_di_ambil') bg-teal-100 text-teal-700
-                                             @elseif ($p->status_transaksi == 'siap_di_antar') bg-gray-100 text-gray-700
+                                             @elseif ($p->status_transaksi == 'siap_di_antar') bg-indigo-100 text-indigo-700
                                              @elseif ($p->status_transaksi == 'selesai') bg-green-100 text-green-700
                                              @else bg-red-100 text-red-700
                                              @endif">
@@ -187,11 +184,17 @@
                                 </span>
 
                                 {{-- Payment Status Badge --}}
-                                @if ($p->status_bayar == 'belum_bayar' || $p->status_bayar == 'belum_lunas')
+                                @if ($p->status_bayar == 'belum_lunas' || $p->status_bayar == 'belum_bayar')
                                     <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                                  bg-red-100 text-red-700 rounded-lg text-xs font-semibold">
                                         <i class="bi bi-x-circle"></i>
                                         Belum Bayar
+                                    </span>
+                                @elseif ($p->status_bayar == 'DP')
+                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 
+                                                 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold">
+                                        <i class="bi bi-cash"></i>
+                                        DP
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1 px-3 py-1.5 
@@ -202,7 +205,7 @@
                                 @endif
                                 
                             </div>
-
+                            
                         </div>
                     </a>
                 </div>
@@ -219,7 +222,9 @@
             @endforelse
             
         </div>
+        
     </div>
+    
 </div>
 
 {{-- Hidden Forms for Delete --}}
@@ -233,12 +238,9 @@
 </form>
 @endforeach
 
-{{-- ========================================
-     JAVASCRIPT - SWEETALERT2 & SEARCH
-======================================== --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-// Search Functionality
+// Search functionality
 document.getElementById('searchInput').addEventListener('keyup', function() {
     let filter = this.value.toLowerCase();
     let items = document.querySelectorAll('#pesananList > div');
@@ -255,7 +257,7 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
     });
 });
 
-// Confirm Delete
+// Delete confirmation with SweetAlert2
 function confirmDelete(pesananId, namaPelanggan) {
     Swal.fire({
         title: 'Hapus Pesanan?',

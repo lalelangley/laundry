@@ -7,8 +7,8 @@
 <div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
 @php
     $backUrl = request('from') === 'transaksi'
-        ? route('transaksi.pelanggan')   
-        : route('pelanggan.index');    
+        ? route('kasir.transaksi.pelanggan')   
+        : route('kasir.pelanggan.index');    
 @endphp
 
 <a href="{{ $backUrl }}" class="text-black text-3xl font-bold">
@@ -22,7 +22,7 @@
 {{-- CONTENT --}}
 <div class="px-5 py-6">
 
-   <form action="{{ route('pelanggan.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+   <form action="{{ route('kasir.pelanggan.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
     @csrf
 
     <input type="hidden" name="from" value="{{ request('from') }}">

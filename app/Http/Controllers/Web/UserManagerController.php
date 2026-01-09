@@ -19,7 +19,7 @@ class UserManagerController extends Controller
     // =============================
     public function index()
     {
-        $adminLogin = auth('admin')->user(); // ambil user via guard
+        $adminLogin = auth('admin')->user();
 
         if (!$adminLogin) {
             abort(403, 'Silahkan login terlebih dahulu');
@@ -31,9 +31,9 @@ class UserManagerController extends Controller
 
         $kasirs = Kasir::orderBy('created_at', 'desc')->get();
         
-        $drivers = Driver::orderBy('created_at', 'desc')->get(); // ✅ FIXED
+        $drivers = Driver::orderBy('created_at', 'desc')->get();
 
-        return view('manager.index', compact('admins','kasirs','drivers','adminLogin')); // ✅ FIXED
+        return view('manager.index', compact('admins','kasirs','drivers','adminLogin'));
     }
 
     // =============================
@@ -83,7 +83,6 @@ class UserManagerController extends Controller
             abort(403);
         }
 
-        // 🔒 HANYA ROLE ADMIN
         $roles = Role::whereIn('id', [1, 2])->get();
         $menus = Menu::all();
 
@@ -165,8 +164,6 @@ class UserManagerController extends Controller
 
     public function saveUserPermission(Request $request)
     {
-        // ❌ SALAH: Admin::find(session('admin_id'))
-        // ✅ BENAR: auth('admin')->user()
         $admin = auth('admin')->user();
         
         if (!$admin || $admin->role_id != 1) {
@@ -181,7 +178,6 @@ class UserManagerController extends Controller
 
         $roleId = $request->role_id;
 
-        // Hapus permission lama untuk role tersebut
         MenuRole::where('role_id', $roleId)->delete();
 
         foreach ($request->menus ?? [] as $menuId) {
@@ -219,7 +215,7 @@ class UserManagerController extends Controller
             'nama_kasir' => $request->nama_kasir,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
-           'role_id' => 3, // KASIR ✅ // KASIR // otomatis Kasir
+           'role_id' => 3,
         ]);
 
         return redirect()
@@ -229,14 +225,14 @@ class UserManagerController extends Controller
 
     public function updateStatus(Request $request)
     {
-        $adminLogin = auth('admin')->user(); // ← gunakan guard admin
+        $adminLogin = auth('admin')->user();
 
         if (!$adminLogin || $adminLogin->role_id != 1) {
             abort(403);
         }
 
         $request->validate([
-            'user_type' => 'required|in:admin,kasir,driver', // ✅ FIXED
+            'user_type' => 'required|in:admin,kasir,driver',
             'user_id'   => 'required',
             'status'    => 'required|in:aktif,nonaktif',
         ]);
@@ -248,7 +244,7 @@ class UserManagerController extends Controller
             Kasir::where('id_kasir', $request->user_id)
                 ->update(['status' => $request->status]);
         } else {
-            Driver::where('id_driver', $request->user_id) // ✅ FIXED
+            Driver::where('id_driver', $request->user_id)
                 ->update(['status' => $request->status]);
         }
 
@@ -257,14 +253,14 @@ class UserManagerController extends Controller
 
     public function updateStatusAdmin2(Request $request)
     {
-        $adminLogin = auth('admin')->user(); // ← gunakan guard admin
+        $adminLogin = auth('admin')->user();
 
         if (!$adminLogin || $adminLogin->role_id != 2) {
             abort(403);
         }
 
         $request->validate([
-            'user_type' => 'required|in:admin,kasir,driver', // ✅ FIXED
+            'user_type' => 'required|in:admin,kasir,driver',
             'user_id'   => 'required',
             'status'    => 'required|in:aktif,nonaktif',
         ]);
@@ -276,7 +272,7 @@ class UserManagerController extends Controller
             Kasir::where('id_kasir', $request->user_id)
                 ->update(['status' => $request->status]);
         } else {
-            Driver::where('id_driver', $request->user_id) // ✅ FIXED
+            Driver::where('id_driver', $request->user_id)
                 ->update(['status' => $request->status]);
         }
 
@@ -307,7 +303,6 @@ class UserManagerController extends Controller
             ->get()
             ->keyBy('menu_id');
 
-        // 🔥 TAMBAH DI SINI
         $menuActions = [
             'layanan'       => ['view','add','edit','delete'],
             'satuan'        => ['view','add','edit','delete'],
@@ -325,54 +320,60 @@ class UserManagerController extends Controller
             'menus',
             'permissions',
             'selectedRoleId',
-            'menuActions' // ⬅️ JANGAN LUPA
+            'menuActions'
         ));
     }
 
-    // =======================
-    // SAVE HAK AKSES ROLE
-    // =======================
-    public function saveHakRole(Request $request)
-    {
-        $admin = auth('admin')->user();
-        if (!$admin || $admin->role_id != 1) abort(403);
+   public function saveHakRole(Request $request)
+{
+    $admin = auth('admin')->user();
+    if (!$admin || $admin->role_id != 1) abort(403);
 
-        $request->validate([
-            'role_id' => 'required|exists:roles,id',
-            'menus' => 'array',
-            'permissions' => 'array',
+    $request->validate([
+        'role_id' => 'required|exists:roles,id',
+        'menus' => 'array',
+    ]);
+
+    $roleId = $request->role_id;
+
+    MenuRole::where('role_id', $roleId)->delete();
+
+    $allMenus = Menu::where('role_id', $roleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->get();
+
+    foreach ($allMenus as $menu) {
+        $menuId = $menu->id;
+        $menuData = $request->menus[$menuId] ?? null;
+
+        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
+
+        $perms = $menuData['permissions'] ?? [];
+
+        MenuRole::create([
+            'role_id'    => $roleId,
+            'menu_id'    => $menuId,
+            
+            'is_active'  => $isActive,
+            
+            'can_view'   => in_array('view', $perms),
+            'can_add'    => in_array('add', $perms),
+            'can_edit'   => in_array('edit', $perms),
+            'can_delete' => in_array('delete', $perms),
+            
+            'can_cancel' => false,
+            'can_change_password' => false,
+            'can_restore_data' => false,
+            'show_delete_backup' => false,
+            'show_logout' => true,
+            'can_access_settings' => false,
         ]);
-
-        // hapus dulu
-        MenuRole::where('role_id', $request->role_id)->delete();
-
-        foreach ($request->menus ?? [] as $menuId) {
-
-            // 🔒 pastikan menu milik role tsb
-            $menu = Menu::where('id', $menuId)
-                ->where('role_id', $request->role_id)
-                ->first();
-
-            if (!$menu) continue;
-
-            $perms = $request->permissions[$menuId] ?? [];
-
-            MenuRole::create([
-                'role_id'    => $request->role_id,
-                'menu_id'    => $menuId,
-                'can_view'   => in_array('view', $perms),
-                'can_add'    => in_array('add', $perms),
-                'can_edit'   => in_array('edit', $perms),
-                'can_delete' => in_array('delete', $perms),
-            ]);
-        }
-
-        return back()->with('success', 'Hak akses role berhasil disimpan');
     }
 
-    // =======================
-    // AKSES USER
-    // =======================
+    return back()->with('success', 'Hak akses role berhasil disimpan');
+}
+
     public function aksesUser($type, $id)
     {
         $admin = auth('admin')->user();
@@ -405,20 +406,16 @@ class UserManagerController extends Controller
     {
         $admin = auth('admin')->user();
         
-        // Cek apakah Admin2
         if (!$admin || $admin->role_id != 2) {
             abort(403, 'Akses ditolak. Hanya Admin2 yang dapat mengakses halaman ini.');
         }
 
         $kasirs = Kasir::orderBy('created_at', 'desc')->get();
-        $drivers = Driver::orderBy('created_at', 'desc')->get(); // ✅ FIXED
+        $drivers = Driver::orderBy('created_at', 'desc')->get();
 
-        return view('admin2.manager.index', compact('kasirs', 'drivers', 'admin')); // ✅ FIXED
+        return view('admin2.manager.index', compact('kasirs', 'drivers', 'admin'));
     }
 
-    // =============================
-    // ADMIN2 - FORM CREATE KASIR
-    // =============================
     public function createKasirAdmin2()
     {
         $admin = auth('admin')->user();
@@ -427,12 +424,9 @@ class UserManagerController extends Controller
             abort(403);
         }
 
-        return view('admin2.manager.kasir.create'); // ✅ FIX
+        return view('admin2.manager.kasir.create');
     }
 
-    // =============================
-    // ADMIN2 - STORE KASIR
-    // =============================
     public function storeKasirAdmin2(Request $request)
     {
         $admin = auth('admin')->user();
@@ -451,18 +445,15 @@ class UserManagerController extends Controller
             'nama_kasir' => $request->nama_kasir,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
-            'role_id'    => 3, // Role Kasir
+            'role_id'    => 3,
             'status'     => 'aktif',
         ]);
 
         return redirect()
-            ->route('admin2.manager.index') // ✅ FIX
+            ->route('admin2.manager.index')
             ->with('success', 'Kasir berhasil ditambahkan');
     }
 
-    // =============================
-    // ADMIN2 - AKSES KASIR
-    // =============================
     public function aksesKasirAdmin2($id)
     {
         $admin = auth('admin')->user();
@@ -472,10 +463,9 @@ class UserManagerController extends Controller
         }
 
         $kasir = Kasir::findOrFail($id);
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
         $role = Role::findOrFail($roleId);
 
-        // Menu yang tersedia untuk Kasir
         $menus = Menu::where('role_id', $roleId)
             ->where('status', 1)
             ->whereNull('parent_id')
@@ -491,7 +481,6 @@ class UserManagerController extends Controller
             ->get()
             ->keyBy('menu_id');
 
-        // Menu actions untuk Kasir
         $menuActions = [
             'layanan'       => ['view','add','edit','delete'],
             'satuan'        => ['view','add','edit','delete'],
@@ -504,14 +493,11 @@ class UserManagerController extends Controller
             'data'          => ['view','edit','delete'],
         ];
 
-        return view('admin2.manager.menu-role.hak', compact( // ✅ FIX
+        return view('admin2.manager.menu-role.hak', compact(
             'kasir', 'role', 'menus', 'permissions', 'menuActions'
         ));
     }
 
-    // =============================
-    // ADMIN2 - SAVE AKSES KASIR
-    // =============================
     public function saveAksesKasirAdmin2(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -521,14 +507,13 @@ class UserManagerController extends Controller
         }
 
         $kasir = Kasir::findOrFail($id);
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
 
         $request->validate([
             'menus' => 'array',
             'permissions' => 'array',
         ]);
 
-        // Hapus permission lama untuk role Kasir
         MenuRole::where('role_id', $roleId)->delete();
 
         foreach ($request->menus ?? [] as $menuId) {
@@ -553,9 +538,6 @@ class UserManagerController extends Controller
         return back()->with('success', 'Hak akses kasir berhasil diperbarui');
     }
 
-    // =============================
-    // ADMIN2 - UPDATE STATUS KASIR
-    // =============================
     public function updateStatusKasirAdmin2(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -574,9 +556,6 @@ class UserManagerController extends Controller
         return back()->with('success', 'Status kasir berhasil diubah');
     }
 
-    // =============================
-    // ADMIN2 - HAK AKSES KASIR (GENERAL)
-    // =============================
     public function hakAksesKasir()
     {
         $admin = auth('admin')->user();
@@ -585,10 +564,9 @@ class UserManagerController extends Controller
             abort(403);
         }
 
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
         $role = Role::findOrFail($roleId);
 
-        // Menu yang tersedia untuk Kasir
         $menus = Menu::where('role_id', $roleId)
             ->where('status', 1)
             ->whereNull('parent_id')
@@ -604,9 +582,6 @@ class UserManagerController extends Controller
         ));
     }
 
-    // =============================
-    // ADMIN2 - SAVE HAK AKSES KASIR (GENERAL)
-    // =============================
     public function saveHakAksesKasir(Request $request)
     {
         $admin = auth('admin')->user();
@@ -615,14 +590,13 @@ class UserManagerController extends Controller
             abort(403);
         }
 
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
 
         $request->validate([
             'menus' => 'array',
             'permissions' => 'array',
         ]);
 
-        // Hapus permission lama untuk role Kasir
         MenuRole::where('role_id', $roleId)->delete();
 
         foreach ($request->menus ?? [] as $menuId) {
@@ -649,9 +623,6 @@ class UserManagerController extends Controller
             ->with('success', 'Hak akses kasir berhasil diperbarui');
     }
 
-    // =============================
-    // ADMIN2 - MENU ROLE AKSES (PER KASIR)
-    // =============================
     public function menuRoleAksesAdmin2($id)
     {
         $admin = auth('admin')->user();
@@ -661,10 +632,9 @@ class UserManagerController extends Controller
         }
 
         $kasir = Kasir::findOrFail($id);
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
         $role = Role::findOrFail($roleId);
-            // Menu yang tersedia untuk Kasir
-        $menus = Menu::where('role_id', $roleId)
+            $menus = Menu::where('role_id', $roleId)
             ->where('status', 1)
             ->whereNull('parent_id')
             ->with(['children' => function ($q) use ($roleId) {
@@ -679,7 +649,6 @@ class UserManagerController extends Controller
             ->get()
             ->keyBy('menu_id');
 
-        // Menu actions untuk Kasir
         $menuActions = [
             'layanan'       => ['view','add','edit','delete'],
             'satuan'        => ['view','add','edit','delete'],
@@ -697,9 +666,6 @@ class UserManagerController extends Controller
         ));
     }
 
-    // =============================
-    // ADMIN2 - SAVE MENU ROLE AKSES (PER KASIR)
-    // =============================
     public function saveMenuRoleAksesAdmin2(Request $request, $id)
     {
         $admin = auth('admin')->user();
@@ -709,14 +675,13 @@ class UserManagerController extends Controller
         }
 
         $kasir = Kasir::findOrFail($id);
-        $roleId = 3; // Role Kasir
+        $roleId = 3;
 
         $request->validate([
             'menus' => 'array',
             'permissions' => 'array',
         ]);
 
-        // Hapus permission lama untuk role Kasir
         MenuRole::where('role_id', $roleId)->delete();
 
         foreach ($request->menus ?? [] as $menuId) {
@@ -755,9 +720,6 @@ class UserManagerController extends Controller
         return view('manager.driver.create');
     }
 
-    // ===============================
-    // STORE DRIVER
-    // ===============================
     public function storeDriver(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -785,9 +747,6 @@ class UserManagerController extends Controller
             ->with('success', 'Driver berhasil ditambahkan');
     }
 
-    // ===============================
-    // EDIT DRIVER - SHOW FORM
-    // ===============================
     public function editDriver($id)
     {
         $admin = auth()->guard('admin')->user();
@@ -801,9 +760,6 @@ class UserManagerController extends Controller
         return view('manager.driver.edit', compact('driver'));
     }
 
-    // ===============================
-    // UPDATE DRIVER
-    // ===============================
     public function updateDriver(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -827,7 +783,6 @@ class UserManagerController extends Controller
             'status' => $request->status,
         ];
 
-        // Update password jika diisi
         if ($request->filled('password')) {
             $updateData['password'] = bcrypt($request->password);
         }
@@ -839,9 +794,6 @@ class UserManagerController extends Controller
             ->with('success', 'Driver berhasil diupdate');
     }
 
-    // ===============================
-    // DELETE DRIVER
-    // ===============================
     public function destroyDriver($id)
     {
         $admin = auth()->guard('admin')->user();
@@ -858,9 +810,6 @@ class UserManagerController extends Controller
             ->with('success', 'Driver berhasil dihapus');
     }
 
-    // ===============================
-    // KASIR
-    // ===============================
     public function indexKasir()
     {
         $admin = auth()->guard('admin')->user();
@@ -1004,9 +953,6 @@ class UserManagerController extends Controller
             ->with('success', 'Driver berhasil dihapus');
     }
 
-    // ===============================
-    // ADMIN2 DRIVER METHODS
-    // ===============================
     public function createDriverAdmin2()
     {
         $admin = auth()->guard('admin')->user();
@@ -1108,9 +1054,6 @@ class UserManagerController extends Controller
             ->with('success', 'Driver berhasil dihapus');
     }
 
-    // ===============================
-    // ADMIN - EDIT
-    // ===============================
     public function editAdmin($id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1121,14 +1064,13 @@ class UserManagerController extends Controller
 
         $adminData = Admin::findOrFail($id);
 
-        // 🔥 INI YANG PENTING
         $roles = Role::whereIn('id', [1, 2])->get();
 
         return view('manager.admin.edit', compact('adminData', 'roles'));
     }
 
     // ===============================
-    // ADMIN - UPDATE
+    // ADMIN - UPDATE ✅ FIXED
     // ===============================
     public function updateAdmin(Request $request, $id)
     {
@@ -1140,9 +1082,10 @@ class UserManagerController extends Controller
 
         $adminData = Admin::findOrFail($id);
 
+        // ✅ FIXED: ganti 'admins' jadi 'admin'
         $request->validate([
             'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:admins,email,' . $id . ',id_admin',
+            'email' => 'required|email|unique:admin,email,' . $id . ',id_admin',
             'password' => 'nullable|string|min:6',
             'role_id' => 'required|in:1,2',
             'status' => 'required|in:aktif,nonaktif',
@@ -1155,7 +1098,6 @@ class UserManagerController extends Controller
             'status' => $request->status,
         ];
 
-        // Update password jika diisi
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
         }
@@ -1167,9 +1109,6 @@ class UserManagerController extends Controller
             ->with('success', 'Data admin berhasil diupdate');
     }
 
-    // ===============================
-    // KASIR - EDIT
-    // ===============================
     public function editKasir($id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1182,9 +1121,7 @@ class UserManagerController extends Controller
 
         return view('manager.kasir.edit', compact('kasir'));
     }
-    // ===============================
-    // KASIR - EDIT
-    // ===============================
+
     public function editKasirAdmin2($id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1198,15 +1135,11 @@ class UserManagerController extends Controller
 
         return view('admin2.manager.kasir.edit', compact('kasir'));
     }
-    // ===============================
-    // KASIR - UPDATE
-    // ===============================
+
     public function updateKasirAdmin2(Request $request, $id)
 {
     $admin = auth()->guard('admin')->user();
 
-    // ROLE 1 = Super Admin
-    // ROLE 2 = Admin
     if (!$admin || !in_array($admin->role_id, [1, 2])) {
         abort(403, 'Anda tidak memiliki izin untuk mengupdate kasir');
     }
@@ -1237,9 +1170,6 @@ class UserManagerController extends Controller
         ->with('success', 'Data kasir berhasil diupdate');
 }
 
-    // ===============================
-    // KASIR - UPDATE
-    // ===============================
     public function updateKasir(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1263,7 +1193,6 @@ class UserManagerController extends Controller
             'status' => $request->status,
         ];
 
-        // Update password jika diisi
         if ($request->filled('password')) {
             $updateData['password'] = Hash::make($request->password);
         }
@@ -1274,6 +1203,7 @@ class UserManagerController extends Controller
             ->route('manager.index')
             ->with('success', 'Data kasir berhasil diupdate');
     }
+    
     private function checkAdminRole($roleId)
 {
     $admin = auth('admin')->user();

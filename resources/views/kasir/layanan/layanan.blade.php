@@ -2,24 +2,43 @@
 
 @section('content')
 @php
-$routePrefix = 'admin';
+$routePrefix = 'kasir';
 @endphp
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
+<style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+        animation: shake 0.5s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    .alert-modal {
+        animation: fadeIn 0.3s ease;
+    }
+</style>
 
 <div class="min-h-screen bg-gray-50 pb-24">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
         @php
-            // ✅ FIX: Ambil dari query string dengan default 'dashboard'
             $from = request()->query('from', 'dashboard');
             $idTransaksi = request()->query('id_transaksi');
 
-            // ✅ FIX: Logic back URL yang benar
             $backUrl = match ($from) {
                 'transaksi' => route('kasir.transaksi.create'),
                 'riwayat'   => route('kasir.riwayat.detail', ['id' => $idTransaksi]),
-                default     => route('kasir.dashboard'), // ✅ Default ke dashboard kasir
+                default     => route('kasir.dashboard'),
             };
         @endphp
 
@@ -108,7 +127,6 @@ $routePrefix = 'admin';
                                     data-id-jenis="{{ $jenis->id_jenis_layanan }}"
                                     data-nama="{{ $jenis->nama_jenis }}">
 
-                                    {{-- FIXED IMAGE SECTION --}}
                                     <div class="w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 flex-shrink-0 shadow-sm">
                                         @if(!empty($jenis->gambar))
                                             <img src="{{ asset('storage/' . $jenis->gambar) }}"
@@ -123,12 +141,8 @@ $routePrefix = 'admin';
                                     </div>
 
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-bold text-lg text-gray-800 capitalize truncate">
-                                            {{ $jenis->nama_jenis }}
-                                        </p>
-                                        <p class="text-green-600 font-semibold">
-                                            Rp {{ number_format($jenis->harga,0,',','.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}
-                                        </p>
+                                        <p class="font-bold text-lg text-gray-800 capitalize truncate">{{ $jenis->nama_jenis }}</p>
+                                        <p class="text-green-600 font-semibold">Rp {{ number_format($jenis->harga,0,',','.') }} / {{ $jenis->satuan->nama_satuan ?? '-' }}</p>
                                         <div class="flex items-center gap-1.5 text-gray-500 text-sm">
                                             <i class="bi bi-clock"></i>
                                             {{ $jenis->lama }} {{ $jenis->lama_satuan }}
@@ -163,7 +177,7 @@ $routePrefix = 'admin';
     </div>
 </div>
 
-{{-- MODAL --}}
+{{-- MODAL LAYANAN --}}
 <div id="modalLayanan" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white w-full max-w-lg mx-auto rounded-2xl shadow-2xl overflow-hidden">
         <div class="bg-yellow-400 p-6">
@@ -174,8 +188,13 @@ $routePrefix = 'admin';
                 <label class="block font-bold text-gray-700 mb-2">Jumlah Kuantitas</label>
                 <div class="relative">
                     <i class="bi bi-123 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                    <input id="qtyInput" type="number" step="0.01" class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" placeholder="Masukkan qty">
+                    <input id="qtyInput" 
+                           type="text" 
+                           inputmode="decimal"
+                           class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" 
+                           placeholder="Minimal 0.01">
                 </div>
+                <p class="text-xs text-gray-500 mt-1.5 ml-1">Minimal kuantitas: 0.01 (contoh: 1, 2.5, 10.75)</p>
             </div>
             <div>
                 <label class="block font-bold text-gray-700 mb-2">Pilih Parfum</label>
@@ -197,6 +216,24 @@ $routePrefix = 'admin';
                     Simpan
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- CUSTOM ALERT MODAL --}}
+<div id="alertModal" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[9999] hidden">
+    <div class="alert-modal bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+        <div id="alertHeader" class="p-6 flex items-center justify-center">
+            <div id="alertIcon" class="w-16 h-16 rounded-full flex items-center justify-center">
+                <!-- Icon will be injected here -->
+            </div>
+        </div>
+        <div class="px-6 pb-6 text-center">
+            <h3 id="alertTitle" class="text-xl font-bold text-gray-800 mb-2"></h3>
+            <p id="alertMessage" class="text-gray-600 mb-6"></p>
+            <button id="alertButton" class="w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+                OK, Mengerti
+            </button>
         </div>
     </div>
 </div>
@@ -275,11 +312,108 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalDelete = document.getElementById("modalDelete");
     const formDelete = document.getElementById("formDelete");
 
-    // ✅ Get 'from' parameter dari URL query string
     const urlParams = new URLSearchParams(window.location.search);
     const fromParam = urlParams.get('from') || 'dashboard';
     
     console.log('🔍 From parameter:', fromParam);
+
+    // ================= CUSTOM ALERT FUNCTION =================
+    function showAlert(type, title, message) {
+        const alertModal = document.getElementById('alertModal');
+        const alertHeader = document.getElementById('alertHeader');
+        const alertIcon = document.getElementById('alertIcon');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertButton = document.getElementById('alertButton');
+        
+        // Reset classes
+        alertIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center';
+        alertButton.className = 'w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95';
+        
+        // Set content based on type
+        if (type === 'warning') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-orange-500', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white');
+        } else if (type === 'error') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-red-500', 'to-pink-600', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-x-circle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-red-500', 'to-pink-600', 'text-white');
+        } else if (type === 'info') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-cyan-600', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-info-circle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-cyan-600', 'text-white');
+        }
+        
+        alertTitle.textContent = title;
+        alertMessage.textContent = message;
+        
+        // Show modal
+        alertModal.classList.remove('hidden');
+        
+        // Close on button click
+        alertButton.onclick = () => {
+            alertModal.classList.add('hidden');
+            // Focus back to qty input if it was an error
+            if (type === 'warning' || type === 'error') {
+                setTimeout(() => qtyInput.focus(), 100);
+            }
+        };
+        
+        // Close on backdrop click
+        alertModal.onclick = (e) => {
+            if (e.target === alertModal) {
+                alertModal.classList.add('hidden');
+            }
+        };
+    }
+
+    // ================= VALIDASI QTY INPUT =================
+    qtyInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        value = value.replace(/[^\d.,]/g, '');
+        value = value.replace(',', '.');
+        
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        if (value.length > 1 && value[0] === '0' && value[1] !== '.') {
+            value = value.replace(/^0+/, '');
+        }
+        
+        if (parts.length === 2 && parts[1].length > 2) {
+            value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+        
+        e.target.value = value;
+    });
+
+    qtyInput.addEventListener('blur', function(e) {
+        let value = parseFloat(e.target.value);
+        
+        if (isNaN(value) || value < 0.01) {
+            e.target.value = '';
+            e.target.classList.add('border-red-500');
+        } else {
+            e.target.classList.remove('border-red-500');
+        }
+    });
+
+    qtyInput.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const cleaned = paste.replace(/[^\d.,]/g, '').replace(',', '.');
+        
+        const number = parseFloat(cleaned);
+        if (!isNaN(number) && number >= 0.01) {
+            e.target.value = number.toString();
+        }
+    });
 
     // ================= MODAL UTAMA =================
     function openModal(name, id, mode = "transaksi", riwayatId = null) {
@@ -289,9 +423,12 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSave.dataset.mode = mode;
         btnSave.dataset.riwayat = riwayatId ?? "";
         qtyInput.value = "";
+        qtyInput.classList.remove('border-red-500');
         parfumSelect.value = "";
         btnSave.disabled = false;
         btnSave.style.pointerEvents = 'auto';
+        
+        setTimeout(() => qtyInput.focus(), 100);
     }
 
     function closeModal() {
@@ -304,12 +441,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modal) closeModal();
     });
 
-    // ================= DUPLICATE =================
+    // ================= DUPLICATE & DELETE =================
     window.confirmDuplicate = function(url) {
         modalDuplicate.classList.remove("hidden");
-        btnConfirmDuplicate.onclick = () => {
-            window.location.href = url;
-        };
+        btnConfirmDuplicate.onclick = () => window.location.href = url;
     };
 
     window.closeDuplicateModal = function() {
@@ -320,7 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDuplicate) closeDuplicateModal();
     });
 
-    // ================= DELETE =================
     window.confirmDelete = function(url) {
         modalDelete.classList.remove("hidden");
         formDelete.action = url;
@@ -334,10 +468,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === modalDelete) closeDeleteModal();
     });
 
-    // ================= KLIK LAYANAN UTAMA (FIXED) =================
+    // ================= KLIK LAYANAN UTAMA =================
     document.querySelectorAll('.layanan-item').forEach(card => {
         card.addEventListener('click', (e) => {
-            // Jangan proses jika klik jenis, dropdown, atau button
             if (e.target.closest('.jenis-item') || 
                 e.target.closest('.dropdown-area') ||
                 e.target.closest('button')) {
@@ -346,18 +479,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const idLayanan = card.dataset.id;
 
-            console.log('🔵 Layanan Card Clicked | From:', fromParam, '| ID:', idLayanan);
-
-            // ✅ FIX: Redirect ke edit layanan dari dashboard
-            // Dashboard/default → bisa klik card untuk edit
             if (fromParam === "dashboard" || fromParam !== "transaksi" && fromParam !== "riwayat") {
-                console.log('➡️ Redirect to edit layanan:', idLayanan);
                 window.location.href = `/kasir/layanan/${idLayanan}/edit`;
             }
         });
     });
 
-    // ================= KLIK JENIS LAYANAN (FIXED) =================
+    // ================= KLIK JENIS LAYANAN =================
     document.querySelectorAll('.jenis-item').forEach(item => {
         item.addEventListener('click', e => {
             e.stopPropagation();
@@ -366,21 +494,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const idJenis = item.dataset.idJenis;
             const namaJenis = item.dataset.nama;
 
-            console.log('🟢 Jenis Clicked:', namaJenis);
-            console.log('  - From:', fromParam);
-            console.log('  - ID Layanan:', idLayanan);
-            console.log('  - ID Jenis:', idJenis);
-
-            // ✅ LOGIC YANG BENAR - Cek apakah dari transaksi atau riwayat
             if (fromParam === "transaksi" || fromParam === "riwayat") {
-                // Mode transaksi/riwayat → Buka modal
                 const riwayatId = urlParams.get('id_transaksi');
-                console.log('📦 Opening modal for transaction');
                 openModal(namaJenis, idJenis, fromParam, riwayatId || null);
-            } 
-            // ✅ Kalau dari halaman lain → redirect ke edit
-            else {
-                console.log('➡️ Redirect to edit layanan:', idLayanan);
+            } else {
                 window.location.href = `/kasir/layanan/${idLayanan}/edit`;
             }
         });
@@ -411,40 +528,50 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSave.addEventListener("click", function(e) {
             e.preventDefault();
             
-            console.log('🔥 Button Simpan diklik!');
+            let qtyValue = qtyInput.value.trim();
             
-            const qty = qtyInput.value.trim();
-            if (!qty || qty <= 0) {
-                alert("Qty wajib diisi dan harus lebih dari 0");
+            // Validasi qty kosong
+            if (!qtyValue) {
+                qtyInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => qtyInput.classList.remove('shake'), 500);
+                showAlert('warning', 'Oops! Kuantitas Belum Diisi', 'Mohon isi jumlah kuantitas terlebih dahulu. Minimal 0.01');
                 return;
             }
+            
+            // Parse dan validasi angka
+            const qty = parseFloat(qtyValue);
+            
+            if (isNaN(qty)) {
+                qtyInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => qtyInput.classList.remove('shake'), 500);
+                showAlert('error', 'Format Tidak Valid!', 'Gunakan format angka yang benar. Contoh: 1, 2.5, atau 10.75');
+                return;
+            }
+            
+            if (qty < 0.01) {
+                qtyInput.classList.add('border-red-500', 'shake');
+                setTimeout(() => qtyInput.classList.remove('shake'), 500);
+                showAlert('warning', 'Kuantitas Terlalu Kecil!', 'Jumlah minimal adalah 0.01. Silakan masukkan nilai yang lebih besar.');
+                return;
+            }
+            
+            qtyInput.classList.remove('border-red-500');
 
             const parfum = parfumSelect.value || null;
             const idJenis = btnSave.dataset.id;
             const mode = btnSave.dataset.mode;
             const idRiwayat = btnSave.dataset.riwayat;
-            
-            console.log('📦 Data yang akan dikirim:');
-            console.log('  - ID Jenis:', idJenis);
-            console.log('  - Qty:', qty);
-            console.log('  - Parfum:', parfum);
-            console.log('  - Mode:', mode);
-            console.log('  - ID Riwayat:', idRiwayat);
 
             if (mode === "riwayat" && !idRiwayat) {
-                alert("ID transaksi tidak ditemukan");
+                showAlert('error', 'ID Transaksi Tidak Ditemukan', 'Terjadi kesalahan sistem. Silakan coba lagi.');
                 return;
             }
 
-            // Disable button
             btnSave.disabled = true;
             btnSave.textContent = "Menyimpan...";
 
-            // Build URL
             let url = addJenisTransaksiUrl.replace(':id', idJenis);
-            console.log('🌐 URL Request:', url);
 
-            // Send request
             fetch(url, {
                 method: "POST",
                 headers: {
@@ -455,12 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ qty, parfum })
             })
             .then(res => {
-                console.log('📡 Response Status:', res.status);
-                console.log('📡 Response OK:', res.ok);
-                
                 return res.text().then(text => {
-                    console.log('📄 Response Text:', text);
-                    
                     if (!res.ok) {
                         throw new Error(`HTTP ${res.status}: ${text}`);
                     }
@@ -473,16 +595,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             })
             .then(data => {
-                console.log('✅ Parsed Data:', data);
-                
                 if (data.success) {
-                    console.log('🎉 Sukses! Redirecting...');
-                    
                     const redirectUrl = mode === "transaksi"
                         ? "{{ route('kasir.transaksi.create') }}"
                         : `/kasir/riwayat/${idRiwayat}/edit`;
                     
-                    console.log('🔀 Redirect ke:', redirectUrl);
                     window.location.href = redirectUrl;
                 } else {
                     throw new Error(data.message || 'Gagal menyimpan');
@@ -490,9 +607,8 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch(err => {
                 console.error('❌ Error:', err);
-                alert("Gagal menyimpan layanan: " + err.message);
+                showAlert('error', 'Gagal Menyimpan!', 'Terjadi kesalahan: ' + err.message);
                 
-                // Re-enable button
                 btnSave.disabled = false;
                 btnSave.textContent = "Simpan";
             });

@@ -1,11 +1,7 @@
 <?php
-
 // File: app/Helpers/PermissionHelper.php
 
 if (!function_exists('canView')) {
-    /**
-     * Check if user can view a menu
-     */
     function canView(string $menuIdentifier): bool
     {
         return checkPermission($menuIdentifier, 'view');
@@ -13,9 +9,6 @@ if (!function_exists('canView')) {
 }
 
 if (!function_exists('canAdd')) {
-    /**
-     * Check if user can add/create in a menu
-     */
     function canAdd(string $menuIdentifier): bool
     {
         return checkPermission($menuIdentifier, 'add');
@@ -23,9 +16,6 @@ if (!function_exists('canAdd')) {
 }
 
 if (!function_exists('canEdit')) {
-    /**
-     * Check if user can edit in a menu
-     */
     function canEdit(string $menuIdentifier): bool
     {
         return checkPermission($menuIdentifier, 'edit');
@@ -33,53 +23,100 @@ if (!function_exists('canEdit')) {
 }
 
 if (!function_exists('canDelete')) {
-    /**
-     * Check if user can delete in a menu
-     */
     function canDelete(string $menuIdentifier): bool
     {
         return checkPermission($menuIdentifier, 'delete');
     }
 }
 
-if (!function_exists('checkPermission')) {
+if (!function_exists('requirePermission')) {
     /**
-     * Main permission checker
+     * ✅ FOOLPROOF - Bypass Super Admin dengan type juggling
      */
-    function checkPermission(string $menuIdentifier, string $action): bool
+    function requirePermission(string $menuIdentifier, string $action): void
     {
-        // Get authenticated user
+        // ✅ BYPASS SUPER ADMIN - Cast to int untuk handle string/int
+        $user = auth('admin')->user() ?? auth('kasir')->user();
+        
+        if ($user && (int)$user->role_id === 1) {
+            return; // Super Admin ALWAYS bypass
+        }
+        
+        // Check permission untuk user biasa
+        if (!checkPermission($menuIdentifier, $action)) {
+            abort(403, "Anda tidak memiliki izin untuk {$action} di menu ini");
+        }
+    }
+}
+
+if (!function_exists('isMenuActive')) {
+    function isMenuActive(string $menuIdentifier): bool
+    {
         $user = auth('admin')->user() ?? auth('kasir')->user();
         
         if (!$user) {
             return false;
         }
-
-        // Super admin has all permissions
-        if ($user->role_id == 1) {
+        
+        // ✅ Cast to int
+        if ((int)$user->role_id === 1) {
             return true;
         }
-
-        // Check in menu_role table
+        
         $permission = \App\Models\MenuRole::whereHas('menu', function($query) use ($menuIdentifier) {
                 $query->where('route', 'like', "%{$menuIdentifier}%")
                       ->orWhere('nama_menu', 'like', "%{$menuIdentifier}%");
             })
             ->where('role_id', $user->role_id)
             ->first();
-
+        
         if (!$permission) {
             return false;
         }
+        
+        return $permission->is_active ?? false;
+    }
+}
 
+if (!function_exists('checkPermission')) {
+    function checkPermission(string $menuIdentifier, string $action): bool
+    {
+        $user = auth('admin')->user() ?? auth('kasir')->user();
+        
+        if (!$user) {
+            return false;
+        }
+        
+        // ✅ Cast to int - Handle both string "1" and integer 1
+        if ((int)$user->role_id === 1) {
+            return true;
+        }
+        
+        $permission = \App\Models\MenuRole::whereHas('menu', function($query) use ($menuIdentifier, $user) {
+                $query->where('role_id', $user->role_id)
+                      ->where(function($q) use ($menuIdentifier) {
+                          $q->where('route', 'like', "%{$menuIdentifier}%")
+                            ->orWhere('nama_menu', 'like', "%{$menuIdentifier}%");
+                      });
+            })
+            ->where('role_id', $user->role_id)
+            ->first();
+        
+        if (!$permission) {
+            return false;
+        }
+        
+        // Check toggle ON/OFF
+        if (!$permission->is_active) {
+            return false;
+        }
+        
+        // Check specific permission
         return $permission->{"can_{$action}"} ?? false;
     }
 }
 
 if (!function_exists('getUserPermissions')) {
-    /**
-     * Get all permissions for current user
-     */
     function getUserPermissions(): array
     {
         $user = auth('admin')->user() ?? auth('kasir')->user();
@@ -87,9 +124,9 @@ if (!function_exists('getUserPermissions')) {
         if (!$user) {
             return [];
         }
-
-        // Super admin has all permissions
-        if ($user->role_id == 1) {
+        
+        // ✅ Cast to int
+        if ((int)$user->role_id === 1) {
             return [
                 'all' => true,
                 'view' => true,
@@ -98,7 +135,7 @@ if (!function_exists('getUserPermissions')) {
                 'delete' => true,
             ];
         }
-
+        
         $permissions = \App\Models\MenuRole::where('role_id', $user->role_id)
             ->with('menu')
             ->get()
@@ -106,6 +143,7 @@ if (!function_exists('getUserPermissions')) {
                 $menuKey = $perm->menu->route ?? $perm->menu->nama_menu;
                 return [
                     $menuKey => [
+                        'active' => $perm->is_active,
                         'view' => $perm->can_view,
                         'add' => $perm->can_add,
                         'edit' => $perm->can_edit,
@@ -114,7 +152,7 @@ if (!function_exists('getUserPermissions')) {
                 ];
             })
             ->toArray();
-
+        
         return $permissions;
     }
 }

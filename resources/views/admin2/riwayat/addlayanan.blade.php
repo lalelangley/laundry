@@ -172,8 +172,13 @@
                 <label class="block font-bold text-gray-700 mb-2">Jumlah Kuantitas</label>
                 <div class="relative">
                     <i class="bi bi-123 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                    <input id="qtyInput" type="number" step="0.01" class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" placeholder="Masukkan qty">
+                    <input id="qtyInput" 
+                           type="text" 
+                           inputmode="decimal"
+                           class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" 
+                           placeholder="Minimal 0.01">
                 </div>
+                <p class="text-xs text-gray-500 mt-1.5 ml-1">Minimal kuantitas: 0.01 (contoh: 1, 2.5, 10.75)</p>
             </div>
 
             <div>
@@ -282,6 +287,60 @@ document.addEventListener("DOMContentLoaded", () => {
     // ✅ Data dari controller
     const jenisLayananData = {!! json_encode($jenisLayananData ?? []) !!};
 
+    // ================= VALIDASI QTY INPUT =================
+    qtyInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        
+        // Hapus karakter selain angka, titik, dan koma
+        value = value.replace(/[^\d.,]/g, '');
+        
+        // Ganti koma dengan titik
+        value = value.replace(',', '.');
+        
+        // Cegah multiple titik
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Cegah angka 0 di depan (kecuali 0.xxx)
+        if (value.length > 1 && value[0] === '0' && value[1] !== '.') {
+            value = value.replace(/^0+/, '');
+        }
+        
+        // Batasi 2 desimal
+        if (parts.length === 2 && parts[1].length > 2) {
+            value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+        
+        e.target.value = value;
+    });
+
+    // Validasi saat blur (keluar dari input)
+    qtyInput.addEventListener('blur', function(e) {
+        let value = parseFloat(e.target.value);
+        
+        if (isNaN(value) || value < 0.01) {
+            e.target.value = '';
+            e.target.classList.add('border-red-500');
+        } else {
+            e.target.classList.remove('border-red-500');
+        }
+    });
+
+    // Cegah paste yang tidak valid
+    qtyInput.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const cleaned = paste.replace(/[^\d.,]/g, '').replace(',', '.');
+        
+        // Validasi angka
+        const number = parseFloat(cleaned);
+        if (!isNaN(number) && number >= 0.01) {
+            e.target.value = number.toString();
+        }
+    });
+
     /* ================= MODAL UTAMA ================= */
     function openModal(name, idLayanan, riwayatId, preselectedJenisId = null) {
         modal.classList.remove("hidden");
@@ -294,6 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Reset form
         jenisSelect.innerHTML = '<option value="">Pilih Jenis Layanan</option>';
         qtyInput.value = "";
+        qtyInput.classList.remove('border-red-500');
         parfumSelect.value = "";
         hargaInfo.classList.add("hidden");
 
@@ -314,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Trigger change event untuk show harga
             const event = new Event('change');
             jenisSelect.dispatchEvent(event);
-            qtyInput.focus(); // Focus ke qty karena jenis sudah dipilih
+            setTimeout(() => qtyInput.focus(), 100); // Focus ke qty karena jenis sudah dipilih
         } else {
             jenisSelect.focus();
         }
@@ -410,20 +470,42 @@ document.addEventListener("DOMContentLoaded", () => {
         e.stopPropagation();
 
         const idJenis = jenisSelect.value;
-        const qty = qtyInput.value;
+        let qtyValue = qtyInput.value.trim();
 
-        // Validasi
+        // Validasi jenis
         if (!idJenis) {
             alert("Jenis layanan wajib dipilih!");
             jenisSelect.focus();
             return;
         }
 
-        if (!qty || qty <= 0) {
-            alert("Qty wajib diisi dan harus lebih dari 0!");
+        // Validasi qty
+        if (!qtyValue) {
+            alert("Jumlah kuantitas wajib diisi!");
             qtyInput.focus();
+            qtyInput.classList.add('border-red-500');
             return;
         }
+
+        // Parse dan validasi angka
+        const qty = parseFloat(qtyValue);
+        
+        if (isNaN(qty)) {
+            alert("Format kuantitas tidak valid! Gunakan angka (contoh: 1 atau 2.5)");
+            qtyInput.focus();
+            qtyInput.classList.add('border-red-500');
+            return;
+        }
+        
+        if (qty < 0.01) {
+            alert("Kuantitas minimal adalah 0.01");
+            qtyInput.focus();
+            qtyInput.classList.add('border-red-500');
+            return;
+        }
+
+        // Hapus border merah jika valid
+        qtyInput.classList.remove('border-red-500');
 
         const idRiwayat = btnSave.dataset.riwayat;
         const idLayanan = btnSave.dataset.layanan;

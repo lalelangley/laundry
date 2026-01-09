@@ -53,41 +53,46 @@
         {{-- LIST TRANSAKSI --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
             @forelse ($riwayat as $t)
-                <a href="{{ route('admin2.riwayat.detail', $t->id_transaksi) }}" class="block group">
-                    <div class="relative bg-white shadow-sm rounded-2xl p-6 hover:shadow-md transition-all duration-300 border border-gray-200
-                        @if($t->status_transaksi=='antrian') hover:border-slate-300
-                        @elseif($t->status_transaksi=='proses') hover:border-blue-300
-                        @elseif($t->status_transaksi=='selesai') hover:border-green-300
-                        @else hover:border-red-300
-                        @endif">
+                <div class="relative bg-white shadow-sm rounded-2xl p-6 hover:shadow-md transition-all duration-300 border border-gray-200 group
+                    @if($t->status_transaksi=='antrian') hover:border-slate-300
+                    @elseif($t->status_transaksi=='proses') hover:border-blue-300
+                    @elseif($t->status_transaksi=='selesai') hover:border-green-300
+                    @else hover:border-red-300
+                    @endif">
+                    
+                    {{-- HEADER CARD --}}
+                    <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
+                        <a href="{{ route('admin2.riwayat.detail', $t->id_transaksi) }}" class="flex-1">
+                            <h2 class="font-bold text-xl text-gray-800 mb-1 hover:text-yellow-600 transition-colors">
+                                {{ $t->nama_pelanggan }}
+                            </h2>
+                            <p class="text-gray-500 text-sm flex items-center gap-1">
+                                <i class="bi bi-receipt-cutoff"></i>
+                                TRX/{{ $t->id_transaksi }}
+                            </p>
+                        </a>
                         
-                        {{-- HEADER CARD --}}
-                        <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
-                            <div class="flex-1">
-                                <h2 class="font-bold text-xl text-gray-800 mb-1">{{ $t->nama_pelanggan }}</h2>
-                                <p class="text-gray-500 text-sm flex items-center gap-1">
-                                    <i class="bi bi-receipt-cutoff"></i>
-                                    TRX/{{ $t->id_transaksi }}
-                                </p>
-                            </div>
-                            
-                            {{-- DELETE BUTTON --}}
-                            <form action="{{ route('admin2.riwayat.destroy', $t->id_transaksi) }}"
-                                  method="POST"
-                                  onclick="event.stopPropagation();"
-                                  class="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        class="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-500 hover:text-white hover:scale-110 transition-all"
-                                        onclick="return confirm('Yakin ingin menghapus transaksi ini?')">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            </form>
-                        </div>
+                        {{-- DELETE BUTTON --}}
+                        <form action="{{ route('admin2.riwayat.destroy', $t->id_transaksi) }}"
+                              method="POST"
+                              class="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            @csrf
+                            @method('DELETE')
+                            <button type="button"
+                                    onclick="confirmDelete(this, 'transaksi')"
+                                    data-id="{{ $t->id_transaksi }}"
+                                    data-nama="{{ $t->nama_pelanggan }}"
+                                    data-harga="Rp {{ number_format($t->total_harga, 0, ',', '.') }}"
+                                    data-tanggal="{{ $t->tgl_transaksi }}"
+                                    class="bg-red-50 text-red-600 p-2.5 rounded-lg hover:bg-red-500 hover:text-white hover:scale-110 transition-all">
+                                <i class="bi bi-trash-fill text-lg"></i>
+                            </button>
+                        </form>
+                    </div>
 
-                        {{-- PRICE TAG --}}
-                        <div class="bg-yellow-50 border border-yellow-200 text-gray-900 px-4 py-3 rounded-xl mb-4">
+                    {{-- PRICE TAG --}}
+                    <a href="{{ route('admin2.riwayat.detail', $t->id_transaksi) }}" class="block">
+                        <div class="bg-yellow-50 border border-yellow-200 text-gray-900 px-4 py-3 rounded-xl mb-4 hover:bg-yellow-100 transition-colors">
                             <p class="text-sm font-semibold mb-1 text-gray-600">Total Harga</p>
                             <p class="text-2xl font-bold text-gray-900">Rp {{ number_format($t->total_harga,0,',','.') }}</p>
                         </div>
@@ -156,8 +161,8 @@
                                 </span>
                             @endif
                         </div>
-                    </div>
-                </a>
+                    </a>
+                </div>
             @empty
                 <div class="col-span-full flex flex-col items-center justify-center py-16">
                     <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 border border-gray-200">

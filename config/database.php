@@ -61,6 +61,13 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+
+            // ✅ TAMBAHKAN INI - PATH KE MYSQLDUMP DI XAMPP MAC
+            'dump' => [
+                'dump_binary_path' => '/Applications/XAMPP/xamppfiles/bin/', // ← PATH MYSQLDUMP
+                'use_single_transaction' => true,
+                'timeout' => 60 * 5, // 5 minutes
+            ],
         ],
 
         'mariadb' => [

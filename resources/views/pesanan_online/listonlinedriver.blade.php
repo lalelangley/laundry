@@ -126,22 +126,12 @@
 
         {{-- ✅ PASTIKAN FORM METHOD POST --}}
         <form id="assignDriverForm" 
-              action="{{ route('pesanan.online.assign-driver', $pesanan->id_transaksi) }}" 
+              action="{{ route('pesanan.online.assign-driver-pickup', $pesanan->id_transaksi) }}" 
               method="POST"
               onsubmit="return confirmAssign(event)">
             @csrf
             <input type="hidden" name="id_driver" id="selectedDriverId">
             
-            <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Catatan (Opsional)
-                </label>
-                <textarea name="catatan_driver" 
-                          id="catatan_driver"
-                          rows="4"
-                          class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 resize-none"
-                          placeholder="Contoh: Harap hati-hati, barang mudah pecah&#10;Telepon jika sudah sampai lokasi"></textarea>
-            </div>
 
             <div class="flex gap-3">
                 <button type="button" 

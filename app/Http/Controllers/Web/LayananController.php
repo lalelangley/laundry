@@ -19,6 +19,9 @@ class LayananController extends Controller
     // =========================
     public function index(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('layanan', 'view');
+        
         $parfum = \App\Models\Parfum::all();
         $layananUtama = Layanan::with(['jenis.satuan'])->get();
 
@@ -32,9 +35,9 @@ class LayananController extends Controller
                 'layananUtama'     => $layananUtama,
                 'parfum'           => $parfum,
                 'from'             => 'kasir',
-                'canAddLayanan'    => true,
-                'canEditLayanan'   => true,
-                'canDeleteLayanan' => true,
+                'canAddLayanan'    => canAdd('layanan'),    // ✅ Dynamic permission
+                'canEditLayanan'   => canEdit('layanan'),   // ✅ Dynamic permission
+                'canDeleteLayanan' => canDelete('layanan'), // ✅ Dynamic permission
             ]);
         }
 
@@ -57,7 +60,9 @@ class LayananController extends Controller
     // =========================
     public function indexAdmin2(Request $request)
     {
-        // ✅ FIX: Ganti guard admin2 → admin
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('layanan', 'view');
+        
         $admin2 = Auth::guard('admin')->user();
         if (!$admin2 || $admin2->role_id != 2) {
             abort(403, 'Hanya admin biasa yang bisa akses');
@@ -78,6 +83,9 @@ class LayananController extends Controller
     // =========================
     public function indexKasir()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('layanan', 'view');
+        
         $kasir = auth('kasir')->user();
         
         if (!$kasir) {
@@ -96,6 +104,9 @@ class LayananController extends Controller
     // =========================
     public function create()
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $layanan_id = 0;
         $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
 
@@ -117,10 +128,9 @@ class LayananController extends Controller
     // =========================
     public function CreateKasir(Request $request)
     {
-        if (!$this->kasirCanAddLayanan()) {
-            abort(403);
-        }
-
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $layanan_id = 0;
         $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
         $satuan = Satuan::all();
@@ -138,10 +148,9 @@ class LayananController extends Controller
     // =========================
     public function createAdmin2(Request $request)
     {
-        if (!$this->admin2CanAddLayanan()) {
-            abort(403);
-        }
-
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $layanan_id = 0;
         $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
         $satuan = Satuan::all();
@@ -159,6 +168,9 @@ class LayananController extends Controller
     // =========================
     public function store(Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_layanan' => 'required|string|max:255',
         ]);
@@ -239,10 +251,9 @@ class LayananController extends Controller
     // =========================
     public function storeKasir(Request $request)
     {
-        if (!$this->kasirCanAddLayanan()) {
-            abort(403, 'Anda tidak memiliki hak akses menambah layanan');
-        }
-
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_layanan' => 'required|string|max:255',
             'jenis_lama' => 'array',
@@ -294,10 +305,9 @@ class LayananController extends Controller
     // =========================
     public function storeAdmin2(Request $request)
     {
-        if (!$this->admin2CanAddLayanan()) {
-            abort(403, 'Anda tidak memiliki hak akses menambah layanan');
-        }
-
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_layanan' => 'required|string|max:255',
             'jenis_lama' => 'array',
@@ -355,6 +365,9 @@ class LayananController extends Controller
     // =========================
     public function edit($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         if ($id == 0) {
             return redirect()->route('layanan.create');
         }
@@ -384,7 +397,9 @@ class LayananController extends Controller
     // =========================
     public function editAdmin2($id)
     {
-        // ✅ FIX: Ganti guard admin2 → admin
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $admin2 = Auth::guard('admin')->user();
         if (!$admin2 || $admin2->role_id != 2) {
             abort(403, 'Hanya admin biasa yang bisa akses');
@@ -403,6 +418,9 @@ class LayananController extends Controller
     // =========================
     public function updateAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $layanan = Layanan::findOrFail($id);
 
         $layanan->update([
@@ -476,6 +494,9 @@ class LayananController extends Controller
     // =========================
     public function update(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $layanan = Layanan::findOrFail($id);
 
         $layanan->update([
@@ -551,10 +572,132 @@ class LayananController extends Controller
     }
 
     // =========================
+    // DELETE LAYANAN - ADMIN
+    // =========================
+    public function destroy($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('layanan', 'delete');
+        
+        $layanan = Layanan::findOrFail($id);
+        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
+        $layanan->delete();
+
+        return redirect()->route('layanan.index')
+            ->with('success', 'Layanan berhasil dihapus');
+    }
+
+    // =========================
+    // DELETE LAYANAN - KASIR
+    // =========================
+    public function destroyKasir($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('layanan', 'delete');
+        
+        $layanan = Layanan::findOrFail($id);
+        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
+        $layanan->delete();
+
+        return redirect()->route('kasir.layanan.index')
+            ->with('success', 'Layanan berhasil dihapus!');
+    }
+
+    // =========================
+    // DELETE LAYANAN - ADMIN2
+    // =========================
+    public function destroyAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('layanan', 'delete');
+        
+        $layanan = Layanan::findOrFail($id);
+        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
+        $layanan->delete();
+
+        return redirect()->route('admin2.layanan.index')
+            ->with('success', 'Layanan berhasil dihapus!');
+    }
+
+    // =========================
+    // DUPLICATE LAYANAN - ADMIN
+    // =========================
+    public function duplicate($id)
+    {
+        // ✅ CHECK PERMISSION ADD (duplicate = add)
+        requirePermission('layanan', 'add');
+        
+        $layanan = Layanan::with('jenis')->findOrFail($id);
+
+        $new = $layanan->replicate();
+        $new->nama_layanan .= ' (Copy)';
+        $new->save();
+
+        foreach ($layanan->jenis as $jenis) {
+            $j = $jenis->replicate();
+            $j->id_layanan = $new->id_layanan;
+            $j->save();
+        }
+
+        return redirect()->back()->with('success', 'Layanan berhasil diduplikat!');
+    }
+
+    // =========================
+    // DUPLICATE LAYANAN - KASIR
+    // =========================
+    public function duplicateKasir($id)
+    {
+        // ✅ CHECK PERMISSION ADD (duplicate = add)
+        requirePermission('layanan', 'add');
+        
+        $layanan = Layanan::with('jenis')->findOrFail($id);
+
+        $new = $layanan->replicate();
+        $new->nama_layanan .= ' (Copy)';
+        $new->save();
+
+        foreach ($layanan->jenis as $jenis) {
+            $j = $jenis->replicate();
+            $j->id_layanan = $new->id_layanan;
+            $j->save();
+        }
+
+        return redirect()->route('kasir.layanan.index')
+            ->with('success', 'Layanan berhasil diduplikat!');
+    }
+
+    // =========================
+    // DUPLICATE LAYANAN - ADMIN2
+    // =========================
+    public function duplicateAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION ADD (duplicate = add)
+        requirePermission('layanan', 'add');
+        
+        $layanan = Layanan::with('jenis')->findOrFail($id);
+
+        $new = $layanan->replicate();
+        $new->nama_layanan .= ' (Copy)';
+        $new->save();
+
+        foreach ($layanan->jenis as $jenis) {
+            $j = $jenis->replicate();
+            $j->id_layanan = $new->id_layanan;
+            $j->save();
+        }
+
+        return redirect()->route('admin2.layanan.index')
+            ->with('success', 'Layanan berhasil diduplikat!');
+    }
+
+    // =========================
     // CREATE JENIS LAYANAN - ADMIN
     // =========================
     public function createJenis($id_layanan, Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $mode = $request->query('mode', 'create');
         $from = $request->query('from', $id_layanan);
         $satuan = Satuan::all();
@@ -565,6 +708,9 @@ class LayananController extends Controller
 
     public function editJenis($id_jenis)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $jenis  = \App\Models\JenisLayanan::findOrFail($id_jenis);
         $satuan = \App\Models\Satuan::all();
         $id_layanan = $jenis->id_layanan;
@@ -581,6 +727,9 @@ class LayananController extends Controller
     // =========================
     public function createJenisKasir($id_layanan, Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $mode = $request->query('mode', 'create');
         $from = $request->query('from', $id_layanan);
         $satuan = Satuan::all();
@@ -598,7 +747,9 @@ class LayananController extends Controller
     // =========================
     public function createJenisAdmin2($id_layanan, Request $request)
     {
-        // ✅ FIX: Ganti guard admin2 → admin
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $admin2 = Auth::guard('admin')->user();
         if (!$admin2 || $admin2->role_id != 2) {
             abort(403, 'Hanya admin biasa yang bisa akses');
@@ -625,6 +776,9 @@ class LayananController extends Controller
     // =========================
     public function storeJenis(Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan' => 'required|integer',
@@ -666,6 +820,9 @@ class LayananController extends Controller
     // =========================
     public function storeJenisKasir(Request $request, $id_layanan)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan' => 'required|integer',
@@ -708,6 +865,9 @@ class LayananController extends Controller
     // =========================
     public function storeJenisAdmin2(Request $request, $id_layanan)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan' => 'required|integer',
@@ -752,6 +912,9 @@ class LayananController extends Controller
     // =========================
     public function editJenisKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $jenis = JenisLayanan::findOrFail($id);
         $satuan = Satuan::all();
 
@@ -767,6 +930,9 @@ class LayananController extends Controller
     // =========================
     public function editJenisAdmin2($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $jenis = JenisLayanan::findOrFail($id);
         $satuan = Satuan::all();
         
@@ -781,6 +947,9 @@ class LayananController extends Controller
     // =========================
     public function updateJenisAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $jenis = JenisLayanan::findOrFail($id);
         
         $request->validate([
@@ -817,11 +986,58 @@ class LayananController extends Controller
             ->with('success', 'Jenis layanan berhasil diperbarui.');
     }
 
+     // =========================
+    // UPDATE JENIS - ADMIN2
+    // =========================
+    public function updateJenisKasir(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
+        $jenis = JenisLayanan::findOrFail($id);
+        
+        $request->validate([
+            'nama_jenis' => 'required|string|max:255',
+            'id_satuan' => 'required|exists:satuan,id_satuan',
+            'harga' => 'required|numeric',
+            'lama' => 'required|numeric',
+            'lama_satuan' => 'required|string|max:50',
+            'keterangan' => 'nullable|string',
+            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+        ]);
+
+        if ($request->hasFile('gambar')) {
+            if ($jenis->gambar && Storage::disk('public')->exists($jenis->gambar)) {
+                Storage::disk('public')->delete($jenis->gambar);
+            }
+
+            $file = $request->file('gambar');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('jenis', $filename, 'public');
+            $jenis->gambar = $path;
+        }
+
+        $jenis->update([
+            'nama_jenis' => $request->nama_jenis,
+            'id_satuan' => $request->id_satuan,
+            'harga' => $request->harga,
+            'lama' => $request->lama,
+            'lama_satuan' => $request->lama_satuan,
+            'keterangan' => $request->keterangan,
+        ]); 
+
+        return redirect()->route('kasir.layanan.edit', $request->from ?? $jenis->id_layanan)
+            ->with('success', 'Jenis layanan berhasil diperbarui.');
+    }
+
     // =========================
     // UPDATE JENIS - ADMIN
     // =========================
     public function updateJenis(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('layanan', 'edit');
+        
         $jenis = JenisLayanan::findOrFail($id);
 
         $request->validate([
@@ -859,107 +1075,6 @@ class LayananController extends Controller
     }
 
     // =========================
-    // DELETE LAYANAN - ADMIN
-    // =========================
-    public function destroy($id)
-    {
-        $layanan = Layanan::findOrFail($id);
-        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
-        $layanan->delete();
-
-        return redirect()->route('layanan.index')
-            ->with('success', 'Layanan berhasil dihapus');
-    }
-
-    // =========================
-    // DELETE LAYANAN - KASIR
-    // =========================
-    public function destroyKasir($id)
-    {
-        $layanan = Layanan::findOrFail($id);
-        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
-        $layanan->delete();
-
-        return redirect()->route('kasir.layanan.index')
-            ->with('success', 'Layanan berhasil dihapus!');
-    }
-
-    // =========================
-    // DELETE LAYANAN - ADMIN2
-    // =========================
-    public function destroyAdmin2($id)
-    {
-        $layanan = Layanan::findOrFail($id);
-        JenisLayanan::where('id_layanan', $layanan->id_layanan)->delete();
-        $layanan->delete();
-
-        return redirect()->route('admin2.layanan.index')
-            ->with('success', 'Layanan berhasil dihapus!');
-    }
-
-    // =========================
-    // DUPLICATE LAYANAN - ADMIN
-    // =========================
-    public function duplicate($id)
-    {
-        $layanan = Layanan::with('jenis')->findOrFail($id);
-
-        $new = $layanan->replicate();
-        $new->nama_layanan .= ' (Copy)';
-        $new->save();
-
-        foreach ($layanan->jenis as $jenis) {
-            $j = $jenis->replicate();
-            $j->id_layanan = $new->id_layanan;
-            $j->save();
-        }
-
-        return redirect()->back()->with('success', 'Layanan berhasil diduplikat!');
-    }
-
-    // =========================
-    // DUPLICATE LAYANAN - KASIR
-    // =========================
-    public function duplicateKasir($id)
-    {
-        $layanan = Layanan::with('jenis')->findOrFail($id);
-
-        $new = $layanan->replicate();
-        $new->nama_layanan .= ' (Copy)';
-        $new->save();
-
-        foreach ($layanan->jenis as $jenis) {
-            $j = $jenis->replicate();
-            $j->id_layanan = $new->id_layanan;
-            $j->save();
-        }
-
-        return redirect()->route('kasir.layanan.index')
-            ->with('success', 'Layanan berhasil diduplikat!');
-    }
-
-    // =========================
-    // DUPLICATE LAYANAN - ADMIN2
-    // =========================
-    public function duplicateAdmin2($id)
-    {
-        $layanan = Layanan::with('jenis')->findOrFail($id);
-
-        $new = $layanan->replicate();
-        $new->nama_layanan .= ' (Copy)';
-        $new->save();
-
-        foreach ($layanan->jenis as $jenis) {
-            $j = $jenis->replicate();
-            $j->id_layanan = $new->id_layanan;
-            $j->save();
-        }
-
-        return redirect()->route('admin2.layanan.index')
-            ->with('success', 'Layanan berhasil diduplikat!');
-    }
-
-    // =========================
     // SESSION METHODS - ADMIN
     // =========================
     public function clearJenisSession()
@@ -970,6 +1085,9 @@ class LayananController extends Controller
 
     public function sessionCreateJenis(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $admin = Auth::guard('admin')->user();
         if (!$admin) abort(403);
 
@@ -991,6 +1109,9 @@ class LayananController extends Controller
 
     public function sessionStoreJenis(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan'  => 'required|exists:satuan,id_satuan',
@@ -1031,6 +1152,9 @@ class LayananController extends Controller
 
     public function addJenisEdit(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan'  => 'required|exists:satuan,id_satuan',
@@ -1068,6 +1192,9 @@ class LayananController extends Controller
 
     public function addJenisEditAdmin2(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan'  => 'required|exists:satuan,id_satuan',
@@ -1104,6 +1231,9 @@ class LayananController extends Controller
 
     public function addJenisSessionForm($from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $satuanList = \App\Models\Satuan::all();
 
         return view('admin.tambah_jenis_layanan_edit', [
@@ -1117,6 +1247,9 @@ class LayananController extends Controller
     // =========================
     public function sessionCreateJenisKasir($from, Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $mode = $request->query('mode', 'create');
         $satuan = Satuan::all();
 
@@ -1140,6 +1273,9 @@ class LayananController extends Controller
 
     public function sessionStoreJenisKasir(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan' => 'required|exists:satuan,id_satuan',
@@ -1168,6 +1304,9 @@ class LayananController extends Controller
 
     public function storeJenisKasirSession(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis'  => 'required|string|max:255',
             'id_satuan'   => 'required|exists:satuan,id_satuan',
@@ -1209,7 +1348,9 @@ class LayananController extends Controller
     // =========================
     public function sessionCreateJenisAdmin2(Request $request, $id)
     {
-        // ✅ FIX: Ganti guard admin2 → admin
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $admin2 = Auth::guard('admin')->user();
         if (!$admin2 || $admin2->role_id != 2) {
             abort(403, 'Hanya admin biasa yang bisa akses');
@@ -1233,6 +1374,9 @@ class LayananController extends Controller
 
     public function sessionStoreJenisAdmin2(Request $request, $from)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('layanan', 'add');
+        
         $request->validate([
             'nama_jenis' => 'required|string|max:255',
             'id_satuan' => 'required|exists:satuan,id_satuan',
@@ -1264,11 +1408,9 @@ class LayananController extends Controller
     // =========================
     public function addLayanan(Request $request, $id)
     {
-        if (Auth::guard('kasir')->check() && !$this->kasirCanAddLayanan()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki hak akses menambahkan layanan'
-            ], 403);
+        // ✅ CHECK PERMISSION ADD
+        if (Auth::guard('kasir')->check()) {
+            requirePermission('layanan', 'add');
         }
 
         $idRiwayat = $id;
@@ -1328,33 +1470,7 @@ class LayananController extends Controller
         return redirect()->route('transaksi.create');
     }
 
-    // =========================
-    // PERMISSION HELPERS
-    // =========================
-    private function kasirCanAddLayanan()
-    {
-        $kasir = Auth::guard('kasir')->user();
-        if (!$kasir) return false;
-
-        return MenuRole::where('role_id', $kasir->role_id)
-            ->whereHas('menu', function ($q) {
-                $q->where('route', 'kasir.layanan.index');
-            })
-            ->where('can_add', 1)
-            ->exists();
-    }
-
-    // ✅ FIX: Ganti guard admin2 → admin
-    private function admin2CanAddLayanan()
-    {
-        $admin2 = Auth::guard('admin')->user();
-        if (!$admin2 || $admin2->role_id != 2) return false;
-
-        return MenuRole::where('role_id', $admin2->role_id)
-            ->whereHas('menu', function ($q) {
-                $q->where('route', 'admin2.layanan.index');
-            })
-            ->where('can_add', 1)
-            ->exists();
-    }
+    // ✅ HAPUS HELPER METHODS LAMA (sudah diganti dengan requirePermission)
+    // private function kasirCanAddLayanan() - SUDAH TIDAK DIPAKAI
+    // private function admin2CanAddLayanan() - SUDAH TIDAK DIPAKAI
 }

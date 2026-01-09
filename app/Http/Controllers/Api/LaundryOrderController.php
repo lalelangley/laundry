@@ -11,7 +11,7 @@ use App\Models\Layanan;
 use App\Models\Parfum;
 use App\Models\Delivery;
 use Illuminate\Support\Facades\Validator;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class LaundryOrderController extends Controller
 {
@@ -28,7 +28,7 @@ class LaundryOrderController extends Controller
     }
 
     // ======================
-    // CREATE ORDER
+    // CREATE ORDER (ONLINE)
     // ======================
     public function createOrder(Request $request)
     {
@@ -56,34 +56,58 @@ class LaundryOrderController extends Controller
         try {
             $pelanggan = Pelanggan::findOrFail($request->id_pelanggan);
 
-            // alamat kirim fleksibel
             $alamatKirim = $request->alamat_kirim ?: $pelanggan->alamat;
 
+            // ======================
             // TRANSAKSI (HEADER)
+            // ======================
             $transaksi = Transaksi::create([
                 'id_pelanggan'     => $pelanggan->id_pelanggan,
-                'status_transaksi' => "antrian",
+                'nama_pelanggan'   => $pelanggan->nama_pelanggan,
+                'no_hp'            => $pelanggan->no_hp,
+
+                'jenis_transaksi'  => 'online',
+                'status_transaksi' => 'antrian',
+
                 'total_harga'      => 0,
                 'total_bayar'      => 0,
+                'dp'               => 0,
+
                 'tgl_transaksi'    => now()->toDateString(),
                 'keterangan'       => $request->keterangan,
             ]);
 
-            // DETAIL TRANSAKSI (ITEM)
+            // ======================
+            // DETAIL TRANSAKSI (FIX)
+            // ======================
+            if (empty($request->items)) {
+                throw new \Exception('Item detail tidak boleh kosong');
+            }
+
             foreach ($request->items as $item) {
                 DetailTransaksi::create([
-                    'id_transaksi'       => $transaksi->id_transaksi,
-                    'id_layanan'         => $item['id_layanan'],
-                    'id_jenis_layanan'   => $item['id_jenis_layanan'],
-                    'id_parfum'          => $item['id_parfum'],
-                    'id_satuan'          => $item['id_satuan'] ?? null,
-                    'qty'                => $item['qty'] ?? 0,
-                    'harga'              => 0, // ditentukan admin nanti
-                    'tipe_diskon'        => null,
+                    'id_transaksi'     => $transaksi->id_transaksi,
+                    'id_layanan'       => $item['id_layanan'],
+                    'id_jenis_layanan' => $item['id_jenis_layanan'],
+                    'id_parfum'        => $item['id_parfum'],
+
+                    // online → belum ditimbang
+                    'id_satuan'        => isset($item['id_satuan'])
+                        ? (string) $item['id_satuan']
+                        : null,
+
+                    'qty'              => is_numeric($item['qty'] ?? null)
+                        ? $item['qty']
+                        : null,
+
+                    'harga'            => 0,
+                    'tipe_diskon'      => null,
                 ]);
             }
 
+            // ======================
             // DELIVERY
+            // ======================
             Delivery::create([
                 'id_transaksi'  => $transaksi->id_transaksi,
                 'jenis'         => 'pickup',
@@ -111,7 +135,7 @@ class LaundryOrderController extends Controller
     }
 
     // ======================
-    // GET ORDER BY PELANGGAN
+    // GET ORDER LIST
     // ======================
     public function getOrders(Request $request)
     {
@@ -119,8 +143,8 @@ class LaundryOrderController extends Controller
 
         if (!$id) {
             return response()->json([
-                'status' => false,
-                'message' => 'id_pelanggan wajib dikirim (?id_pelanggan=1)'
+                'status'  => false,
+                'message' => 'id_pelanggan wajib dikirim'
             ], 400);
         }
 
@@ -131,7 +155,7 @@ class LaundryOrderController extends Controller
                 'delivery'
             ])
             ->where('id_pelanggan', $id)
-            ->orderBy('id_transaksi', 'DESC')
+            ->orderByDesc('id_transaksi')
             ->get();
 
         return response()->json([

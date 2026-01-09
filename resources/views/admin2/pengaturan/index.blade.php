@@ -71,22 +71,6 @@
                   class="w-full p-4 rounded-2xl border-2 border-gray-200 bg-gray-50 text-gray-800 font-medium focus:border-yellow-400 focus:outline-none transition resize-none">{{ $pengaturan['alamat_outlet'] ?? '' }}</textarea>
     </div>
 
-    {{-- SETTING OMZET --}}
-    <button id="btnSettingOmzet" class="w-full bg-white rounded-3xl p-5 shadow-xl transition-all hover:scale-[1.02] cursor-pointer">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <i class="bi bi-calculator-fill text-white text-xl"></i>
-                </div>
-                <div class="text-left">
-                    <p class="text-lg font-bold">Berdasarkan Transaksi Selesai</p>
-                    <p class="text-sm text-gray-500">Atur perhitungan omzet</p>
-                </div>
-            </div>
-            <i class="bi bi-chevron-right text-yellow-400 text-2xl"></i>
-        </div>
-    </button>
-
     {{-- METODE PEMBAYARAN --}}
     <a href="{{ route('admin2.pengaturan.metode') }}" class="block w-full bg-white rounded-3xl p-5 shadow-xl transition-all hover:scale-[1.02] cursor-pointer">
         <div class="flex items-center justify-between">
@@ -112,18 +96,49 @@
             <span class="text-lg font-bold">Backup & Restore</span>
         </div>
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            {{-- BACKUP BUTTON - Conditional --}}
+            @if($permissions['can_backup'])
             <button id="btnBackup" class="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl shadow-lg hover:shadow-xl transition active:scale-95">
                 <i class="bi bi-cloud-upload-fill text-white text-3xl mb-2"></i>
                 <span class="text-white font-bold">Backup</span>
                 <span class="text-xs text-white opacity-90">Simpan data</span>
             </button>
+            @else
+            <div class="flex flex-col items-center justify-center p-4 bg-gray-200 rounded-2xl opacity-50 cursor-not-allowed">
+                <i class="bi bi-cloud-upload-fill text-gray-400 text-3xl mb-2"></i>
+                <span class="text-gray-500 font-bold">Backup</span>
+                <span class="text-xs text-gray-400">Tidak diizinkan</span>
+            </div>
+            @endif
             
+            {{-- RESTORE BUTTON - Conditional --}}
+            @if($permissions['can_restore'])
             <button id="btnRestore" class="flex flex-col items-center justify-center p-4 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg hover:shadow-xl transition active:scale-95">
                 <i class="bi bi-cloud-download-fill text-white text-3xl mb-2"></i>
                 <span class="text-white font-bold">Restore</span>
                 <span class="text-xs text-white opacity-90">Pulihkan data</span>
             </button>
+            @else
+            <div class="flex flex-col items-center justify-center p-4 bg-gray-200 rounded-2xl opacity-50 cursor-not-allowed">
+                <i class="bi bi-cloud-download-fill text-gray-400 text-3xl mb-2"></i>
+                <span class="text-gray-500 font-bold">Restore</span>
+                <span class="text-xs text-gray-400">Tidak diizinkan</span>
+            </div>
+            @endif
+        </div>
+        
+        {{-- LIST BACKUP FILES --}}
+        <div id="backupListContainer" class="mt-4 space-y-2 hidden">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-sm font-bold text-gray-700">Riwayat Backup:</p>
+                <button id="btnRefreshBackups" class="text-yellow-500 text-sm hover:text-yellow-600">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div id="backupList" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Will be populated by JavaScript -->
+            </div>
         </div>
         
         <div class="mt-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
@@ -151,7 +166,7 @@
             <i class="bi bi-check2 text-white text-6xl"></i>
         </div>
         <h1 class="text-2xl font-bold mb-2">Berhasil!</h1>
-        <p class="text-gray-600 mb-6">Pengaturan telah disimpan</p>
+        <p id="successMessage" class="text-gray-600 mb-6">Pengaturan telah disimpan</p>
         <button id="btnCloseSuccess" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition">
             Tutup
         </button>
@@ -162,7 +177,7 @@
 <div id="popupLoading" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center">
         <div class="w-20 h-20 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-lg font-semibold text-gray-700">Menyimpan data...</p>
+        <p id="loadingMessage" class="text-lg font-semibold text-gray-700">Menyimpan data...</p>
     </div>
 </div>
 
@@ -180,41 +195,17 @@
     </div>
 </div>
 
-{{-- MODAL SETTING OMZET --}}
-<div id="modalSettingOmzet" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate__animated animate__fadeInUp">
-        <div class="bg-yellow-400 px-5 py-4 flex items-center justify-between">
-            <h2 class="text-xl font-bold text-white">Setting Omzet</h2>
-            <button id="closeModalOmzet" class="text-white text-2xl font-bold">✕</button>
+{{-- POPUP NO ACCESS --}}
+<div id="popupNoAccess" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center animate__animated animate__shakeX">
+        <div class="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+            <i class="bi bi-shield-x text-white text-5xl"></i>
         </div>
-        
-        <div class="p-6 space-y-4">
-            <button id="optionTransaksiSelesai" class="w-full p-5 rounded-2xl border-2 border-yellow-400 bg-yellow-50 flex items-center gap-4 transition hover:bg-yellow-100">
-                <div class="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="bi bi-check-circle-fill text-white text-xl"></i>
-                </div>
-                <div class="text-left flex-1">
-                    <p class="font-bold text-lg">Berdasarkan Transaksi Selesai</p>
-                    <p class="text-sm text-gray-600">Omzet dihitung saat transaksi selesai</p>
-                </div>
-            </button>
-            
-            <button id="optionTransaksiLunas" class="w-full p-5 rounded-2xl border-2 border-gray-200 bg-white flex items-center gap-4 transition hover:bg-gray-50">
-                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i class="bi bi-circle text-white text-xl"></i>
-                </div>
-                <div class="text-left flex-1">
-                    <p class="font-bold text-lg">Berdasarkan Transaksi Lunas</p>
-                    <p class="text-sm text-gray-600">Omzet dihitung saat transaksi lunas</p>
-                </div>
-            </button>
-        </div>
-        
-        <div class="px-6 pb-6">
-            <button id="btnSimpanOmzet" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition">
-                Simpan
-            </button>
-        </div>
+        <h1 class="text-2xl font-bold mb-2 text-red-600">Akses Ditolak</h1>
+        <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk melakukan aksi ini</p>
+        <button id="btnCloseNoAccess" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
+            Tutup
+        </button>
     </div>
 </div>
 
@@ -223,6 +214,10 @@
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
+    // ✅ PASS PERMISSIONS FROM PHP TO JS
+    const permissions = @json($permissions);
+    console.log('🔐 Permissions:', permissions);
 
     /* ===============================
        FOTO OUTLET
@@ -253,12 +248,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     /* ===============================
+       NO ACCESS POPUP
+    =============================== */
+    const popupNoAccess = document.getElementById('popupNoAccess');
+    const btnCloseNoAccess = document.getElementById('btnCloseNoAccess');
+    
+    function showNoAccessPopup() {
+        popupNoAccess.classList.remove('hidden');
+    }
+    
+    btnCloseNoAccess.addEventListener('click', () => {
+        popupNoAccess.classList.add('hidden');
+    });
+
+    /* ===============================
        SIMPAN PENGATURAN
     =============================== */
     const btnSimpan = document.getElementById('btnSimpanPengaturan');
     const popupLoading = document.getElementById('popupLoading');
     const popupSuccess = document.getElementById('popupSuccess');
     const btnCloseSuccess = document.getElementById('btnCloseSuccess');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const successMessage = document.getElementById('successMessage');
 
     btnSimpan.addEventListener('click', async () => {
         const namaOutlet = document.getElementById('namaOutlet').value.trim();
@@ -269,6 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        loadingMessage.textContent = 'Menyimpan pengaturan...';
         popupLoading.classList.remove('hidden');
 
         try {
@@ -285,14 +297,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: formData
             });
 
-            if (!res.ok) throw new Error('Gagal');
+            const data = await res.json();
 
             popupLoading.classList.add('hidden');
-            popupSuccess.classList.remove('hidden');
+            
+            if (data.status) {
+                successMessage.textContent = 'Pengaturan telah disimpan';
+                popupSuccess.classList.remove('hidden');
+            } else {
+                alert('Gagal menyimpan pengaturan');
+            }
 
         } catch (e) {
             popupLoading.classList.add('hidden');
-            alert('Gagal menyimpan pengaturan');
+            alert('Gagal menyimpan pengaturan: ' + e.message);
         }
     });
 
@@ -301,32 +319,276 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     /* ===============================
-       BACKUP
+       LOAD BACKUP LIST - WITH PERMISSIONS
     =============================== */
-    document.getElementById('btnBackup').addEventListener('click', async () => {
-        popupLoading.classList.remove('hidden');
-        await fetch("{{ route('admin2.pengaturan.backup') }}", {
-            method: "POST",
-            headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-        });
-        popupLoading.classList.add('hidden');
-        document.getElementById('popupBackup').classList.remove('hidden');
-    });
+    async function loadBackupList() {
+        console.log('📡 Fetching backup list...');
+        
+        try {
+            const timestamp = new Date().getTime();
+            const res = await fetch("{{ route('admin2.pengaturan.backups.list') }}?t=" + timestamp);
+            console.log('📥 Response status:', res.status);
+            
+            const data = await res.json();
+            console.log('📦 Data received:', data);
+            
+            const container = document.getElementById('backupList');
+            const listContainer = document.getElementById('backupListContainer');
+            
+            if (!container || !listContainer) {
+                console.error('❌ Element backupList atau backupListContainer tidak ditemukan!');
+                return;
+            }
+            
+            if (data.status && data.backups && data.backups.length > 0) {
+                console.log('✅ Menampilkan', data.backups.length, 'backup');
+                
+                listContainer.style.display = 'block';
+                listContainer.classList.remove('hidden');
+                container.innerHTML = '';
+                
+                data.backups.forEach((backup, index) => {
+                    console.log(`➕ Backup ${index + 1}:`, backup.filename);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition';
+                    
+                    // ✅ BUILD HTML WITH CONDITIONAL DELETE BUTTON
+                    let actionsHTML = `
+                        <a href="{{ url('admin2/pengaturan/backups/download') }}/${backup.filename}" 
+                           class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1"
+                           download>
+                            <i class="bi bi-download"></i>
+                            Download
+                        </a>
+                    `;
+                    
+                    // ✅ ONLY SHOW DELETE BUTTON IF PERMISSION GRANTED
+                    if (permissions.can_delete_backup) {
+                        actionsHTML += `
+                            <button onclick="deleteBackup('${backup.filename}')" 
+                                    class="ml-2 px-3 py-2 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition flex items-center gap-1">
+                                <i class="bi bi-trash"></i>
+                                Hapus
+                            </button>
+                        `;
+                    }
+                    
+                    div.innerHTML = `
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-800">${backup.filename}</p>
+                            <p class="text-xs text-gray-500">${backup.date} · ${backup.size}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${actionsHTML}
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+                
+                console.log('✅ Total backup di DOM:', container.children.length);
+                
+            } else {
+                console.log('⚠️ Tidak ada backup');
+                listContainer.classList.add('hidden');
+            }
+        } catch (e) {
+            console.error('❌ Error loading backup list:', e);
+        }
+    }
 
-    document.getElementById('btnRestore').addEventListener('click', async () => {
-        if (!confirm('Restore data?')) return;
-        popupLoading.classList.remove('hidden');
-        await fetch("{{ route('admin2.pengaturan.restore') }}", {
-            method: "POST",
-            headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-        });
-        location.reload();
+   /* ===============================
+   DELETE BACKUP FUNCTION
+=============================== */
+window.deleteBackup = async function(filename) {
+    // ✅ CHECK PERMISSION
+    if (!permissions.can_delete_backup) {
+        showNoAccessPopup();
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Hapus Backup?',
+        html: `
+            <div class="text-left">
+                <p class="text-gray-600 mb-3">Apakah Anda yakin ingin menghapus file backup:</p>
+                <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4 my-4 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="bi bi-file-earmark-zip-fill text-red-600 text-xl"></i>
+                        <p class="font-bold text-red-700 text-sm break-all">${filename}</p>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-sm text-blue-700 flex items-start gap-2">
+                        <i class="bi bi-exclamation-circle text-blue-500 text-lg mt-0.5"></i>
+                        <span>File backup yang sudah dihapus tidak dapat dikembalikan.</span>
+                    </p>
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="bi bi-trash-fill me-2"></i>Ya, Hapus!',
+        cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Batal',
+        reverseButtons: true,
+        width: '550px',
+        customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
+            cancelButton: 'rounded-xl px-6 py-3 font-bold'
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            // Show loading
+            Swal.fire({
+                title: 'Menghapus...',
+                html: 'Mohon tunggu sebentar',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            try {
+                const res = await fetch("{{ url('admin2/pengaturan/backups/delete') }}/" + filename, {
+                    method: "DELETE",
+                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
+                });
+                
+                const data = await res.json();
+                
+                if (data.status) {
+                    await loadBackupList();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Backup berhasil dihapus',
+                        confirmButtonColor: '#22c55e',
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: 'Gagal menghapus backup: ' + (data.message || 'Unknown error'),
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            } catch (e) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Terjadi kesalahan: ' + e.message,
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }
     });
+};
 
-    document.getElementById('btnCloseBackup')
-        .addEventListener('click', () =>
-            document.getElementById('popupBackup').classList.add('hidden')
-        );
+    /* ===============================
+       BACKUP & RESTORE - WITH PERMISSIONS CHECK
+    =============================== */
+    const btnBackup = document.getElementById('btnBackup');
+    if (btnBackup) {
+        btnBackup.addEventListener('click', async () => {
+            // ✅ CHECK PERMISSION
+            if (!permissions.can_backup) {
+                showNoAccessPopup();
+                return;
+            }
+            
+            loadingMessage.textContent = 'Membuat backup...';
+            popupLoading.classList.remove('hidden');
+            
+            try {
+                const res = await fetch("{{ route('admin2.pengaturan.backup') }}", {
+                    method: "POST",
+                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
+                });
+                
+                const data = await res.json();
+                console.log('🔥 Backup response:', data);
+                
+                popupLoading.classList.add('hidden');
+                
+                if (data.status) {
+                    console.log('⏳ Menunggu 2 detik sebelum refresh list...');
+                    
+                    setTimeout(async () => {
+                        console.log('🔄 Memulai refresh list backup...');
+                        await loadBackupList();
+                        console.log('✅ Refresh selesai!');
+                        
+                        document.getElementById('backupTitle').textContent = 'Backup Berhasil!';
+                        document.getElementById('backupMessage').textContent = 'Data berhasil di-backup!';
+                        document.getElementById('popupBackup').classList.remove('hidden');
+                    }, 2000);
+                } else {
+                    alert('Backup gagal: ' + data.message);
+                }
+            } catch (e) {
+                popupLoading.classList.add('hidden');
+                alert('Error: ' + e.message);
+            }
+        });
+    }
+
+    const btnRestore = document.getElementById('btnRestore');
+    if (btnRestore) {
+        btnRestore.addEventListener('click', async () => {
+            // ✅ CHECK PERMISSION
+            if (!permissions.can_restore) {
+                showNoAccessPopup();
+                return;
+            }
+            
+            if (!confirm('Restore database ke backup terakhir?\n\n⚠️ Data saat ini akan diganti!')) return;
+            
+            loadingMessage.textContent = 'Melakukan restore...';
+            popupLoading.classList.remove('hidden');
+            
+            try {
+                const res = await fetch("{{ route('admin2.pengaturan.restore') }}", {
+                    method: "POST",
+                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
+                });
+                
+                const data = await res.json();
+                
+                popupLoading.classList.add('hidden');
+                
+                if (data.status) {
+                    document.getElementById('backupTitle').textContent = 'Restore Berhasil!';
+                    document.getElementById('backupMessage').textContent = 'Database berhasil dipulihkan!';
+                    document.getElementById('popupBackup').classList.remove('hidden');
+                } else {
+                    alert('Restore gagal: ' + data.message);
+                }
+            } catch (e) {
+                popupLoading.classList.add('hidden');
+                alert('Error: ' + e.message);
+            }
+        });
+    }
+
+    document.getElementById('btnCloseBackup').addEventListener('click', () => {
+        document.getElementById('popupBackup').classList.add('hidden');
+    });
+    
+    // ✅ LOAD BACKUP LIST SAAT HALAMAN DIBUKA
+    loadBackupList();
+    
+    // ✅ REFRESH BUTTON
+    document.getElementById('btnRefreshBackups')?.addEventListener('click', () => {
+        console.log('🔄 Manual refresh...');
+        loadBackupList();
+    });
 
     /* ===============================
        SETTING OMZET
@@ -348,10 +610,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('btnSimpanOmzet')
         .addEventListener('click', async () => {
+            loadingMessage.textContent = 'Menyimpan setting omzet...';
             popupLoading.classList.remove('hidden');
             modalOmzet.classList.add('hidden');
 
-            await fetch("{{ route('admin2.pengaturan.omzet') }}", {
+            const res = await fetch("{{ route('admin2.pengaturan.omzet') }}", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -359,10 +622,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 body: JSON.stringify({ hitung_omzet_dari: selectedOmzet })
             });
+            
+            const data = await res.json();
 
             popupLoading.classList.add('hidden');
-            popupSuccess.classList.remove('hidden');
+            
+            if (data.status) {
+                successMessage.textContent = 'Pengaturan omzet disimpan!';
+                popupSuccess.classList.remove('hidden');
+            }
         });
+
+    /* ===============================
+       CHANGE PASSWORD HANDLER
+    =============================== */
+    const btnChangePassword = document.getElementById('btnChangePassword');
+    if (btnChangePassword) {
+        btnChangePassword.addEventListener('click', () => {
+            // TODO: Implement change password modal/page
+            alert('Fitur ganti password akan segera ditambahkan');
+        });
+    }
+
+    /* ===============================
+       LOGOUT HANDLER
+    =============================== */
+    const btnLogout = document.getElementById('btnLogout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            if (confirm('Apakah Anda yakin ingin keluar?')) {
+                window.location.href = "{{ route('admin2.logout') }}";
+            }
+        });
+    }
 
 });
 </script>

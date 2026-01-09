@@ -7,7 +7,7 @@
 
      {{-- HEADER --}}
    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('admin.dashboard') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
+        <a href="{{ route('admin2.dashboard') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold text-white">Edit Profile</span>

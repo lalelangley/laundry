@@ -1,7 +1,5 @@
 @extends('layouts.master')
-
 @section('title', 'pengeluaran')
-
 @section('content')
 
 <!-- HEADER -->
@@ -12,7 +10,6 @@
         </a>
         <h1 class="text-xl font-bold tracking-wide">List Pengeluaran</h1>
     </div>
-
     <div class="text-sm font-semibold text-black/70 mr-2 select-none">
         Sort
     </div>
@@ -22,7 +19,7 @@
 <div class="p-5 pb-[150px] bg-gray-100 min-h-screen">
 
     {{-- SEARCH --}}
-    <div class="bg-white rounded-3xl p-4 shadow-sm flex items-center gap-3  mb-6">
+    <div class="bg-white rounded-3xl p-4 shadow-sm flex items-center gap-3 mb-6">
         <i class="bi bi-search text-yellow-500 text-xl"></i>
         <input type="text"
                class="w-full bg-transparent border-none focus:ring-0 text-gray-700 placeholder-gray-400"
@@ -41,35 +38,39 @@
 
         <div class="space-y-5">
 
-           @foreach ($pengeluaran as $item)
+            @foreach ($pengeluaran as $item)
                 <div class="bg-white p-6 rounded-3xl shadow-md relative overflow-hidden border border-gray-100 hover:shadow-lg transition">
 
                     {{-- Garis Kuning Kiri --}}
                     <div class="absolute left-0 top-0 h-full w-2 bg-yellow-400 rounded-l-3xl"></div>
 
-                    {{-- STOP CLICK BUBBLE ON DROPDOWN --}}
+                    {{-- DROPDOWN MENU --}}
                     <div class="absolute right-4 top-4 z-50 dropdown-area">
-                        <button class="dropdown-btn text-gray-700 text-2xl">
+                        <button class="dropdown-btn text-gray-700 text-2xl hover:text-yellow-600 transition">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
 
                         <ul class="dropdown-menu hidden absolute right-0 top-10 w-40 bg-yellow-400 rounded-2xl shadow-xl overflow-hidden py-1 z-50">
                             <li>
                                 <a href="{{ route('kasir.pengeluaran.edit', $item->id_pengeluaran) }}"
-                                class="flex items-center gap-2 px-4 py-3 text-black text-sm font-medium hover:bg-yellow-300">
+                                   class="flex items-center gap-2 px-4 py-3 text-black text-sm font-medium hover:bg-yellow-300">
                                     <i class="bi bi-pencil text-lg"></i> Edit
                                 </a>
                             </li>
 
                             <li>
                                 <form action="{{ route('kasir.pengeluaran.destroy', $item->id_pengeluaran) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('Yakin hapus pengeluaran ini?')">
+                                      method="POST"
+                                      class="inline">
                                     @csrf
                                     @method('DELETE')
 
-                                    <button type="submit"
-                                        class="w-full flex items-center gap-2 px-4 py-3 text-red-600 text-sm font-medium hover:bg-yellow-300">
+                                    <button type="button"
+                                            onclick="confirmDelete(this, 'pengeluaran')"
+                                            data-nama="{{ $item->nama_pengeluaran }}"
+                                            data-harga="Rp {{ number_format($item->nominal, 0, ',', '.') }}"
+                                            data-tanggal="{{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('d/m/Y') : '-' }}"
+                                            class="w-full flex items-center gap-2 px-4 py-3 text-red-600 text-sm font-medium hover:bg-yellow-300 text-left">
                                         <i class="bi bi-trash text-lg"></i> Hapus
                                     </button>
                                 </form>
@@ -109,7 +110,7 @@
                     </div>
 
                 </div>
-                @endforeach
+            @endforeach
         </div>
 
     @endif
@@ -119,23 +120,33 @@
 {{-- BUTTON TAMBAH --}}
 <div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5">
     <a href="{{ route('kasir.pengeluaran.create') }}"
-    class="w-full block text-center bg-yellow-400 text-black py-4 rounded-3xl text-lg font-bold shadow hover:bg-yellow-500 transition">
-    Tambah Pengeluaran
+       class="w-full block text-center bg-yellow-400 text-black py-4 rounded-3xl text-lg font-bold shadow hover:bg-yellow-500 transition">
+        Tambah Pengeluaran
     </a>
 </div>
 
 <script>
+// Dropdown Toggle
 document.querySelectorAll('.dropdown-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
-        e.stopPropagation(); // stop card click
+        e.stopPropagation();
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            if (menu !== this.nextElementSibling) {
+                menu.classList.add('hidden');
+            }
+        });
+        
+        // Toggle current dropdown
         this.nextElementSibling.classList.toggle('hidden');
     });
 });
 
+// Close dropdown when clicking outside
 document.addEventListener('click', function() {
     document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.add('hidden'));
 });
 </script>
-
 
 @endsection

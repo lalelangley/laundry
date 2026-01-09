@@ -1,9 +1,6 @@
 @extends('layouts.master')
-
 @section('content')
-
 <div class="min-h-screen bg-gray-50">
-    
     {{-- ========================================
          HEADER SECTION
     ======================================== --}}
@@ -16,7 +13,6 @@
     </div>
 
     <div class="px-8 py-6">
-        
         {{-- ========================================
              SEARCH BAR
         ======================================== --}}
@@ -58,7 +54,7 @@
                         ]
                     ];
                 @endphp
-                
+
                 @foreach ($tabs as $key => $data)
                     <a href="{{ route('riwayat.index', ['tab' => $key]) }}"
                        class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
@@ -76,42 +72,42 @@
              TRANSACTION LIST
         ======================================== --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
-            
             @forelse ($riwayat as $t)
-                <a href="{{ route('riwayat.detail', $t->id_transaksi) }}" 
-                   class="block group">
-                    <div class="relative bg-white shadow-sm rounded-2xl p-6 
-                                hover:shadow-md transition-all duration-300 border border-gray-200
-                                @if($t->status_transaksi == 'antrian') hover:border-slate-300
-                                @elseif($t->status_transaksi == 'proses') hover:border-blue-300
-                                @elseif($t->status_transaksi == 'siap_di_ambil') hover:border-teal-300
-                                @elseif($t->status_transaksi == 'selesai') hover:border-green-300
-                                @else hover:border-red-300
-                                @endif">
-                        
-                        {{-- Card Header --}}
-                        <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
-                            <div class="flex-1">
-                                <h2 class="font-bold text-xl text-gray-800 mb-1">
-                                    {{ $t->nama_pelanggan }}
-                                </h2>
-                                <p class="text-gray-500 text-sm flex items-center gap-1">
-                                    <i class="bi bi-receipt-cutoff"></i>
-                                    TRX/{{ $t->id_transaksi }}
-                                </p>
-                            </div>
-                            
-                            {{-- Delete Button (hover to show) --}}
-                            <button type="button"
-                                    onclick="event.preventDefault(); event.stopPropagation(); confirmDelete({{ $t->id_transaksi }}, '{{ $t->nama_pelanggan }}')"
-                                    class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-500 hover:text-white hover:scale-110 transition-all">
-                                <i class="bi bi-trash-fill"></i>
-                            </button>
-                        </div>
+                <div class="relative bg-white shadow-sm rounded-2xl p-6 
+                            hover:shadow-md transition-all duration-300 border border-gray-200 group
+                            @if($t->status_transaksi == 'antrian') hover:border-slate-300
+                            @elseif($t->status_transaksi == 'proses') hover:border-blue-300
+                            @elseif($t->status_transaksi == 'siap_di_ambil') hover:border-teal-300
+                            @elseif($t->status_transaksi == 'selesai') hover:border-green-300
+                            @else hover:border-red-300
+                            @endif">
+                    
+                    {{-- Card Header --}}
+                    <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
+                        <a href="{{ route('riwayat.detail', $t->id_transaksi) }}" class="flex-1">
+                            <h2 class="font-bold text-xl text-gray-800 mb-1 hover:text-yellow-600 transition-colors">
+                                {{ $t->nama_pelanggan }}
+                            </h2>
+                            <p class="text-gray-500 text-sm flex items-center gap-1">
+                                <i class="bi bi-receipt-cutoff"></i>
+                                TRX/{{ $t->id_transaksi }}
+                            </p>
+                        </a>
 
-                        {{-- Price Display --}}
+                        {{-- Delete Button (hover to show) --}}
+                        <button type="button"
+                                onclick="confirmDelete({{ $t->id_transaksi }}, '{{ $t->nama_pelanggan }}', '{{ number_format($t->total_harga, 0, ',', '.') }}', '{{ $t->tgl_transaksi }}')"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 
+                                       bg-red-50 text-red-600 p-2.5 rounded-lg 
+                                       hover:bg-red-500 hover:text-white hover:scale-110 transition-all">
+                            <i class="bi bi-trash-fill text-lg"></i>
+                        </button>
+                    </div>
+
+                    {{-- Price Display --}}
+                    <a href="{{ route('riwayat.detail', $t->id_transaksi) }}" class="block">
                         <div class="bg-yellow-50 border border-yellow-200 text-gray-900 
-                                    px-4 py-3 rounded-xl mb-4">
+                                    px-4 py-3 rounded-xl mb-4 hover:bg-yellow-100 transition-colors">
                             <p class="text-sm font-semibold mb-1 text-gray-600">Total Harga</p>
                             <p class="text-2xl font-bold text-gray-900">
                                 Rp {{ number_format($t->total_harga, 0, ',', '.') }}
@@ -120,7 +116,6 @@
 
                         {{-- Transaction Details --}}
                         <div class="space-y-3">
-                            
                             {{-- Tanggal Masuk --}}
                             <div class="flex items-center gap-3 text-sm">
                                 <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -157,12 +152,10 @@
                                 </div>
                             </div>
                             @endif
-                            
                         </div>
 
                         {{-- Status Badges --}}
                         <div class="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-                            
                             {{-- Transaction Status Badge --}}
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
                                          text-xs font-semibold
@@ -198,12 +191,9 @@
                                     Lunas
                                 </span>
                             @endif
-                            
                         </div>
-                        
-                    </div>
-                </a>
-            
+                    </a>
+                </div>
             @empty
                 {{-- Empty State --}}
                 <div class="col-span-full flex flex-col items-center justify-center py-16">
@@ -214,11 +204,8 @@
                     <p class="text-gray-400 text-sm mt-2">Transaksi akan muncul di sini</p>
                 </div>
             @endforelse
-            
         </div>
-        
     </div>
-    
 </div>
 
 {{-- Hidden Forms for Delete --}}
@@ -232,42 +219,62 @@
 </form>
 @endforeach
 
+<!-- SweetAlert2 CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-function confirmDelete(transaksiId, namaPelanggan) {
+function confirmDelete(transaksiId, namaPelanggan, totalHarga, tanggalTransaksi) {
     Swal.fire({
         title: 'Hapus Transaksi?',
-        html: `<div class="text-gray-600">
-                    <p class="mb-2">Anda akan menghapus transaksi:</p>
-                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-3 my-3">
+        html: `
+            <div class="text-left">
+                <p class="text-gray-600 mb-3">Anda akan menghapus transaksi berikut:</p>
+                <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4 my-4 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="bi bi-receipt-cutoff text-red-600 text-xl"></i>
                         <p class="font-bold text-red-700 text-lg">TRX/${transaksiId}</p>
-                        <p class="text-gray-700 mt-1">${namaPelanggan}</p>
                     </div>
-                    <p class="text-sm text-gray-500">
-                        <i class="bi bi-info-circle text-blue-500"></i>
-                        Data yang sudah dihapus tidak dapat dikembalikan.
+                    <div class="space-y-1.5 ml-7">
+                        <p class="text-gray-800 font-semibold">${namaPelanggan}</p>
+                        <p class="text-gray-600 text-sm">
+                            <i class="bi bi-calendar3 text-blue-500"></i> ${tanggalTransaksi}
+                        </p>
+                        <p class="text-yellow-700 font-bold text-lg">
+                            <i class="bi bi-cash-coin text-yellow-600"></i> Rp ${totalHarga}
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                    <p class="text-sm text-blue-700 flex items-start gap-2">
+                        <i class="bi bi-info-circle text-blue-500 text-lg mt-0.5"></i>
+                        <span>Data transaksi yang sudah dihapus tidak dapat dikembalikan lagi.</span>
                     </p>
-                </div>`,
+                </div>
+            </div>
+        `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#6b7280',
-        confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus!',
-        cancelButtonText: 'Batal',
+        confirmButtonText: '<i class="bi bi-trash-fill me-2"></i>Ya, Hapus Transaksi!',
+        cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Batal',
         reverseButtons: true,
+        width: '600px',
         customClass: {
             popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
+            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:shadow-xl',
             cancelButton: 'rounded-xl px-6 py-3 font-bold'
-        }
+        },
+        backdrop: true
     }).then((result) => {
         if (result.isConfirmed) {
             // Show loading
             Swal.fire({
                 title: 'Menghapus Transaksi...',
-                html: 'Mohon tunggu sebentar',
+                html: '<div class="flex flex-col items-center"><i class="bi bi-hourglass-split text-4xl text-yellow-500 animate-pulse mb-2"></i><p class="text-gray-600">Mohon tunggu sebentar</p></div>',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
+                showConfirmButton: false,
                 didOpen: () => {
                     Swal.showLoading();
                 }

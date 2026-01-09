@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -84,41 +84,68 @@ class ProfileController extends Controller
         return back()->with('success', 'Profile berhasil diperbarui');
     }
 
-    public function editKasir()
+  // ==================== KASIR METHODS ====================
+public function editKasir()
 {
-    $kasir = auth()->guard('kasir')->user();
-    return view('profile.edit', compact('kasir'));
+    // Ambil dari auth guard kasir
+    $kasir = auth('kasir')->user();
+    
+    if (!$kasir) {
+        return redirect()->route('kasir.dashboard')->with('error', 'Silakan login terlebih dahulu');
+    }
+    
+    return view('kasir.profile.edit', compact('kasir'));
 }
 
 public function updateKasir(Request $request)
 {
-    $kasir = auth()->guard('kasir')->user();
-
+    // Ambil kasir dari auth guard
+    $kasir = auth('kasir')->user();
+    
+    if (!$kasir) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Session expired'
+        ], 401);
+    }
+    
     $request->validate([
-        'nama_kasir' => 'required|string|max:100',
-        'no_hp'      => 'required|string|max:20',
-        'password'   => 'nullable|min:6|confirmed',
-        'gambar'     => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        'nama_kasir' => 'required|string|max:255',
+        'no_hp' => 'required|string|max:15',
+        'password' => 'nullable|min:6|confirmed',
+        'gambar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
     ]);
-
-    $kasir->nama_kasir = $request->nama_kasir;
-    $kasir->no_hp = $request->no_hp;
-
+    
+    $updateData = [
+        'nama_kasir' => $request->nama_kasir,
+        'no_hp' => $request->no_hp,
+        'updated_at' => now(),
+    ];
+    
+    // Upload foto jika ada
     if ($request->hasFile('gambar')) {
+        // Hapus foto lama
         if ($kasir->gambar && Storage::disk('public')->exists($kasir->gambar)) {
             Storage::disk('public')->delete($kasir->gambar);
         }
-
-        $kasir->gambar = $request->file('gambar')->store('kasir', 'public');
+        
+        $path = $request->file('gambar')->store('kasir', 'public');
+        $updateData['gambar'] = $path;
     }
-
+    
+    // Update password jika diisi
     if ($request->filled('password')) {
-        $kasir->password = Hash::make($request->password);
+        $updateData['password'] = bcrypt($request->password);
     }
-
-    $kasir->save();
-
-    return back()->with('success', 'Profil kasir berhasil diperbarui');
+    
+    // Update menggunakan model/query builder
+    DB::table('kasir')
+        ->where('id_kasir', $kasir->id_kasir)
+        ->update($updateData);
+    
+    return response()->json([
+        'status' => true,
+        'message' => 'Profile berhasil diperbarui'
+    ]);
 }
-
 }

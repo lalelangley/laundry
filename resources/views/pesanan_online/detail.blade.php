@@ -130,7 +130,7 @@
                 </div>
             </div>
 
-            {{-- RINGKASAN --}}
+{{-- RINGKASAN --}}
             <div class="bg-white rounded-xl shadow p-5">
                 <h2 class="font-bold mb-4">Ringkasan</h2>
 
@@ -154,7 +154,12 @@
                     
                     @if($pesanan->diskon > 0)
                     <div class="flex justify-between text-red-600">
-                        <span>Diskon</span>
+                        <span>
+                            Diskon
+                            @if($pesanan->tipe_diskon == 'percent' && $subtotalAll > 0)
+                                <span class="text-xs">({{ number_format(($pesanan->diskon / $subtotalAll) * 100, 1) }}%)</span>
+                            @endif
+                        </span>
                         <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
                     </div>
                     @endif
@@ -210,6 +215,29 @@
                 @php
                     $dataLengkap = $pesanan->detail_transaksi->count() > 0 && $pesanan->total_harga > 0;
                 @endphp
+@php
+    // Ambil data delivery yang pending untuk pesanan ini
+    $deliveryPending = $pesanan->delivery()->where('status', 'pending')->first();
+@endphp
+
+@if(in_array($pesanan->status_transaksi, ['pickup', 'antrian', 'menunggu_konfirmasi']) && $deliveryPending && !$deliveryPending->id_driver)
+    <div class="bg-orange-50 border border-orange-200 p-3 rounded-lg">
+        <p class="text-sm font-semibold text-orange-800 mb-2 flex items-center gap-2">
+            <i class="bi bi-truck"></i>
+            Penjemputan Cucian
+        </p>
+
+        <p class="text-xs text-orange-700 mb-3">
+            Pesanan masih di pelanggan. Silakan tentukan driver untuk menjemput cucian.
+        </p>
+
+        <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}"
+           class="block w-full text-center py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold flex items-center justify-center gap-2 shadow-md">
+            <i class="bi bi-person-check"></i>
+            Tentukan Driver Penjemputan
+        </a>
+    </div>
+@endif
 
                 {{-- BUTTON ISI DATA PESANAN --}}
                 @if(!in_array($pesanan->status_transaksi, ['selesai', 'ditolak']))
@@ -290,14 +318,13 @@
     </div>
 </div>
 
-{{-- MODAL ISI DATA PESANAN --}}
 <div id="isiDataModal" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">
     <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4 sticky top-0 bg-white pb-3 border-b">
             <h3 class="text-xl font-bold text-gray-800">
                 <i class="bi bi-pencil-square text-purple-600"></i> Isi Data Pesanan
             </h3>
-            <button onclick="closeIsiDataModal()" class="text-gray-500 hover:text-gray-700">
+            <button type="button" onclick="closeIsiDataModal()" class="text-gray-500 hover:text-gray-700">
                 <i class="bi bi-x-lg text-2xl"></i>
             </button>
         </div>
@@ -307,98 +334,81 @@
             @method('PUT')
 
             <div class="space-y-4">
-                {{-- ✅ ISI QTY PER ITEM DARI DETAIL_TRANSAKSI --}}
-                @if($pesanan->detail_transaksi && $pesanan->detail_transaksi->count() > 0)
-                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                        <p class="text-sm font-semibold text-blue-800 mb-3">
-                            <i class="bi bi-basket"></i> Isi Qty untuk Setiap Item:
-                        </p>
-                        
-                        @foreach($pesanan->detail_transaksi as $i => $d)
-                            <div class="bg-white p-3 rounded-lg mb-2 shadow-sm">
-                                <p class="font-semibold text-sm mb-2">{{ $d->layanan->nama_layanan ?? 'Layanan' }}</p>
-                                
-                                <div class="grid grid-cols-2 gap-2">
-                                    {{-- QTY --}}
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">
-                                            Qty <span class="text-red-500">*</span>
-                                        </label>
-                                        <input type="number" 
-                                               name="qty[]" 
-                                               step="0.01"
-                                               value="{{ $d->qty ?? '' }}"
-                                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                               placeholder="5" 
-                                               required>
-                                    </div>
-                                    
-                                    {{-- SATUAN --}}
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-600 mb-1">
-                                            Satuan <span class="text-red-500">*</span>
-                                        </label>
-                                        <select name="id_satuan[]" 
-                                                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                                required>
-                                            <option value="">Pilih</option>
-                                            @foreach(\App\Models\Satuan::all() as $satuan)
-                                                <option value="{{ $satuan->id_satuan }}" 
-                                                        {{ ($d->id_satuan ?? '') == $satuan->id_satuan ? 'selected' : '' }}>
-                                                    {{ $satuan->nama_satuan }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                {{-- Hidden ID Detail --}}
-                                <input type="hidden" name="id_detail[]" value="{{ $d->id_detail_transaksi }}">
-                            </div>
-                        @endforeach
+                {{-- ITEMS --}}
+                @foreach($pesanan->detail_transaksi as $i => $d)
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <p class="font-semibold text-sm text-blue-800 mb-2">
+                        {{ $d->layanan->nama_layanan ?? 'Layanan' }}
+                    </p>
+                    <p class="text-xs text-gray-600 mb-2">
+                        {{ $d->jenis->nama_jenis ?? '-' }} — 
+                        <b>Rp {{ number_format($d->jenis->harga,0,',','.') }} / {{ $d->jenis->satuan->nama_satuan ?? '' }}</b>
+                    </p>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">
+                            Qty <span class="text-red-500">*</span>
+                        </label>
+                        <input type="number" name="qty[]" step="0.01" min="0.01" value="{{ $d->qty }}"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
                     </div>
-                @else
-                    <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-center">
-                        <p class="text-sm text-yellow-800">⚠️ Tidak ada item pesanan</p>
-                    </div>
-                @endif
+                    <input type="hidden" name="id_detail[]" value="{{ $d->id_detail_transaksi }}">
+                </div>
+                @endforeach
 
-                {{-- TOTAL HARGA --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Total Harga <span class="text-red-500">*</span>
-                    </label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-500">Rp</span>
-                        <input type="number" 
-                               name="total_harga" 
-                               value="{{ $pesanan->total_harga ?? 0 }}"
-                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                               placeholder="100000" 
-                               required>
+                {{-- DISKON SECTION --}}
+                <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
+                    <h4 class="font-semibold text-sm text-red-800 mb-3 flex items-center gap-2">
+                        <i class="bi bi-percent"></i> Diskon (Opsional)
+                    </h4>
+
+                    {{-- TIPE DISKON --}}
+                    <div class="mb-3">
+                        <label class="block text-xs font-semibold text-gray-600 mb-2">Tipe Diskon</label>
+                        <div class="flex gap-3">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="tipe_diskon" value="nominal" 
+                                       {{ ($pesanan->tipe_diskon ?? 'nominal') == 'nominal' ? 'checked' : '' }}
+                                       class="mr-2 text-purple-600 focus:ring-purple-500" onchange="updateDiskonLabel()">
+                                <span class="text-sm">Nominal (Rp)</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="tipe_diskon" value="percent" 
+                                       {{ ($pesanan->tipe_diskon ?? 'nominal') == 'percent' ? 'checked' : '' }}
+                                       class="mr-2 text-purple-600 focus:ring-purple-500" onchange="updateDiskonLabel()">
+                                <span class="text-sm">Persen (%)</span>
+                            </label>
+                        </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Total harga keseluruhan pesanan</p>
+
+                    {{-- NILAI DISKON --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">
+                            <span id="diskonLabel">Nilai Diskon</span>
+                        </label>
+                        <input type="number" name="diskon" id="inputDiskon" step="0.01" min="0"
+                               value="{{ $pesanan->diskon ?? 0 }}" placeholder="0"
+                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                        <p class="text-xs text-gray-500 mt-1">
+                            <i class="bi bi-info-circle"></i> <span id="diskonInfo">Kosongkan jika tidak ada diskon</span>
+                        </p>
+                    </div>
                 </div>
 
-                {{-- KETERANGAN (OPTIONAL) --}}
+                {{-- KETERANGAN --}}
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Keterangan (Opsional)
-                    </label>
-                    <textarea name="keterangan" 
-                              rows="3"
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Keterangan (Opsional)</label>
+                    <textarea name="keterangan" rows="3"
                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                               placeholder="Tambahkan catatan jika ada...">{{ $pesanan->keterangan ?? '' }}</textarea>
                 </div>
             </div>
 
             <div class="flex gap-3 mt-6 sticky bottom-0 bg-white pt-3 border-t">
-                <button type="button" 
-                        onclick="closeIsiDataModal()"
+                <button type="button" onclick="closeIsiDataModal()"
                         class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
                     Batal
                 </button>
-                <button type="submit" 
+                <button type="submit"
                         class="flex-1 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-semibold">
                     <i class="bi bi-save"></i> Simpan
                 </button>
@@ -406,6 +416,8 @@
         </form>
     </div>
 </div>
+
+
 
 {{-- MODAL KONFIRMASI PESANAN --}}
 <div id="konfirmasiModal" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[999] hidden">

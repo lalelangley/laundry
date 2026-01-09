@@ -4,6 +4,27 @@
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
+<style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+        animation: shake 0.5s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    
+    .alert-modal {
+        animation: fadeIn 0.3s ease;
+    }
+</style>
+
 <div class="min-h-screen bg-gray-50 pb-24">
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
@@ -168,8 +189,13 @@
                 <label class="block font-bold text-gray-700 mb-2">Jumlah Kuantitas</label>
                 <div class="relative">
                     <i class="bi bi-123 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl"></i>
-                    <input id="qtyInput" type="number" step="0.01" class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" placeholder="Masukkan qty">
+                    <input id="qtyInput" 
+                           type="text" 
+                           inputmode="decimal"
+                           class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all" 
+                           placeholder="Minimal 0.01">
                 </div>
+                <p class="text-xs text-gray-500 mt-1.5 ml-1">Minimal kuantitas: 0.01 (contoh: 1, 2.5, 10.75)</p>
             </div>
 
             <div>
@@ -192,6 +218,24 @@
                     Simpan
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- CUSTOM ALERT MODAL --}}
+<div id="alertModal" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[9999] hidden">
+    <div class="alert-modal bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
+        <div id="alertHeader" class="p-6 flex items-center justify-center">
+            <div id="alertIcon" class="w-16 h-16 rounded-full flex items-center justify-center">
+                <!-- Icon will be injected here -->
+            </div>
+        </div>
+        <div class="px-6 pb-6 text-center">
+            <h3 id="alertTitle" class="text-xl font-bold text-gray-800 mb-2"></h3>
+            <p id="alertMessage" class="text-gray-600 mb-6"></p>
+            <button id="alertButton" class="w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+                OK, Mengerti
+            </button>
         </div>
     </div>
 </div>
@@ -259,12 +303,6 @@
 
 @section('scripts')
 <script>
-// ✅ DEBUGGING CONSOLE
-console.log('🔍 === PAGE LOADED DEBUG ===');
-console.log('CSRF Token:', document.querySelector('meta[name="csrf-token"]')?.content);
-console.log('User authenticated (from PHP):', {{ auth()->check() ? 'true' : 'false' }});
-console.log('Current URL:', window.location.href);
-
 document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("modalLayanan");
     const modalBox = modal.querySelector(".modal-box");
@@ -283,12 +321,101 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Data dari controller
     const jenisLayananData = {!! json_encode($jenisLayananData ?? []) !!};
-    console.log('📦 Jenis Layanan Data:', jenisLayananData);
+
+    // ================= CUSTOM ALERT FUNCTION =================
+    function showAlert(type, title, message) {
+        const alertModal = document.getElementById('alertModal');
+        const alertHeader = document.getElementById('alertHeader');
+        const alertIcon = document.getElementById('alertIcon');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
+        const alertButton = document.getElementById('alertButton');
+        
+        alertIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center';
+        alertButton.className = 'w-full py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95';
+        
+        if (type === 'warning') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-yellow-50 to-orange-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-yellow-400', 'to-orange-500', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-yellow-400', 'to-orange-500', 'text-white');
+        } else if (type === 'error') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-red-500', 'to-pink-600', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-x-circle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-red-500', 'to-pink-600', 'text-white');
+        } else if (type === 'info') {
+            alertHeader.className = 'p-6 flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50';
+            alertIcon.classList.add('bg-gradient-to-br', 'from-blue-500', 'to-cyan-600', 'shadow-lg');
+            alertIcon.innerHTML = '<i class="bi bi-info-circle-fill text-white text-3xl"></i>';
+            alertButton.classList.add('bg-gradient-to-r', 'from-blue-500', 'to-cyan-600', 'text-white');
+        }
+        
+        alertTitle.textContent = title;
+        alertMessage.textContent = message;
+        
+        alertModal.classList.remove('hidden');
+        
+        alertButton.onclick = () => {
+            alertModal.classList.add('hidden');
+            if (type === 'warning' || type === 'error') {
+                setTimeout(() => qtyInput.focus(), 100);
+            }
+        };
+        
+        alertModal.onclick = (e) => {
+            if (e.target === alertModal) {
+                alertModal.classList.add('hidden');
+            }
+        };
+    }
+
+    // ================= VALIDASI QTY INPUT =================
+    qtyInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        value = value.replace(/[^\d.,]/g, '');
+        value = value.replace(',', '.');
+        
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        if (value.length > 1 && value[0] === '0' && value[1] !== '.') {
+            value = value.replace(/^0+/, '');
+        }
+        
+        if (parts.length === 2 && parts[1].length > 2) {
+            value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+        
+        e.target.value = value;
+    });
+
+    qtyInput.addEventListener('blur', function(e) {
+        let value = parseFloat(e.target.value);
+        
+        if (isNaN(value) || value < 0.01) {
+            e.target.value = '';
+            e.target.classList.add('border-red-500');
+        } else {
+            e.target.classList.remove('border-red-500');
+        }
+    });
+
+    qtyInput.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const cleaned = paste.replace(/[^\d.,]/g, '').replace(',', '.');
+        
+        const number = parseFloat(cleaned);
+        if (!isNaN(number) && number >= 0.01) {
+            e.target.value = number.toString();
+        }
+    });
 
     /* ================= MODAL UTAMA ================= */
     function openModal(name, idLayanan, riwayatId, preselectedJenisId = null) {
-        console.log('🔓 Opening modal:', { name, idLayanan, riwayatId, preselectedJenisId });
-        
         modal.classList.remove("hidden");
         document.body.style.overflow = "hidden";
 
@@ -299,13 +426,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // Reset form
         jenisSelect.innerHTML = '<option value="">Pilih Jenis Layanan</option>';
         qtyInput.value = "";
+        qtyInput.classList.remove('border-red-500');
         parfumSelect.value = "";
         hargaInfo.classList.add("hidden");
 
         // Populate jenis layanan
         const jenisOptions = jenisLayananData[idLayanan] || [];
-        console.log('📋 Available jenis for layanan ' + idLayanan + ':', jenisOptions);
-        
         jenisOptions.forEach(jenis => {
             const option = document.createElement('option');
             option.value = jenis.id;
@@ -320,7 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
             jenisSelect.value = preselectedJenisId;
             const event = new Event('change');
             jenisSelect.dispatchEvent(event);
-            qtyInput.focus();
+            setTimeout(() => qtyInput.focus(), 100);
         } else {
             jenisSelect.focus();
         }
@@ -388,13 +514,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const idJenis = item.dataset.idJenis || item.dataset.id;
             const namaJenis = item.dataset.nama;
 
-            console.log('🟢 Jenis clicked:', {
-                idLayanan,
-                namaLayanan,
-                idJenis,
-                namaJenis
-            });
-
             openModal(
                 namaLayanan,
                 idLayanan,
@@ -404,44 +523,55 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    /* ================= SIMPAN (DENGAN SUPER DEBUG) ================= */
+    /* ================= SIMPAN ================= */
     btnSave.addEventListener("click", async e => {
         e.preventDefault();
         e.stopPropagation();
 
-        console.log('💾 === SAVE BUTTON CLICKED ===');
-
         const idJenis = jenisSelect.value;
-        const qty = qtyInput.value;
+        let qtyValue = qtyInput.value.trim();
 
-        // Validasi
+        // Validasi jenis
         if (!idJenis) {
-            console.error('❌ Jenis layanan tidak dipilih!');
-            alert("Jenis layanan wajib dipilih!");
+            jenisSelect.classList.add('border-red-500', 'shake');
+            setTimeout(() => jenisSelect.classList.remove('shake'), 500);
+            showAlert('warning', 'Jenis Belum Dipilih!', 'Mohon pilih jenis layanan terlebih dahulu.');
             jenisSelect.focus();
             return;
         }
 
-        if (!qty || qty <= 0) {
-            console.error('❌ Qty tidak valid:', qty);
-            alert("Qty wajib diisi dan harus lebih dari 0!");
-            qtyInput.focus();
+        // Validasi qty kosong
+        if (!qtyValue) {
+            qtyInput.classList.add('border-red-500', 'shake');
+            setTimeout(() => qtyInput.classList.remove('shake'), 500);
+            showAlert('warning', 'Oops! Kuantitas Belum Diisi', 'Mohon isi jumlah kuantitas terlebih dahulu. Minimal 0.01');
             return;
         }
+
+        // Parse dan validasi angka
+        const qty = parseFloat(qtyValue);
+
+        if (isNaN(qty)) {
+            qtyInput.classList.add('border-red-500', 'shake');
+            setTimeout(() => qtyInput.classList.remove('shake'), 500);
+            showAlert('error', 'Format Tidak Valid!', 'Gunakan format angka yang benar. Contoh: 1, 2.5, atau 10.75');
+            return;
+        }
+
+        if (qty < 0.01) {
+            qtyInput.classList.add('border-red-500', 'shake');
+            setTimeout(() => qtyInput.classList.remove('shake'), 500);
+            showAlert('warning', 'Kuantitas Terlalu Kecil!', 'Jumlah minimal adalah 0.01. Silakan masukkan nilai yang lebih besar.');
+            return;
+        }
+
+        qtyInput.classList.remove('border-red-500');
+        jenisSelect.classList.remove('border-red-500');
 
         const idRiwayat = btnSave.dataset.riwayat;
         const idLayanan = btnSave.dataset.layanan;
         const parfum = parfumSelect.value || '';
 
-        console.log('📤 Request data:', {
-            idRiwayat,
-            idLayanan,
-            idJenis,
-            qty,
-            parfum
-        });
-
-        // ✅ PAKAI FORMDATA
         const formData = new FormData();
         formData.append('id_layanan', idLayanan);
         formData.append('id_jenis_layanan', idJenis);
@@ -449,17 +579,11 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append('parfum', parfum);
         formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
 
-        console.log('📦 FormData contents:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`  ${key}: ${value}`);
-        }
-
         btnSave.disabled = true;
         btnSave.textContent = "Menyimpan...";
 
         try {
             const url = `/kasir/riwayat/${idRiwayat}/add-layanan`;
-            console.log('🌐 Fetch URL:', url);
 
             const res = await fetch(url, {
                 method: "POST",
@@ -467,47 +591,32 @@ document.addEventListener("DOMContentLoaded", () => {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     'Accept': 'application/json',
                 },
-                credentials: 'same-origin', // ✅ PENTING!
+                credentials: 'same-origin',
                 body: formData
             });
 
-            console.log('📡 Response status:', res.status);
-            console.log('📡 Response headers:', Object.fromEntries(res.headers));
-
             const responseText = await res.text();
-            console.log('📄 Raw response:', responseText);
 
             let data;
             try {
                 data = JSON.parse(responseText);
-                console.log('✅ Parsed JSON:', data);
             } catch (parseError) {
-                console.error('❌ JSON parse error:', parseError);
-                console.error('Response was:', responseText);
                 throw new Error('Invalid JSON response from server');
             }
 
             if (!res.ok) {
-                console.error('❌ HTTP Error:', data);
                 throw new Error(data.message || `Server error: ${res.status}`);
             }
 
             if (data.success) {
-                console.log('✅ Success! Redirecting...');
                 window.location.href = `/kasir/riwayat/${idRiwayat}/edit`;
             } else {
-                console.error('❌ Success=false:', data);
-                alert(data.message || "Gagal menambah layanan");
-                btnSave.disabled = false;
-                btnSave.textContent = "Simpan";
+                throw new Error(data.message || 'Gagal menyimpan');
             }
         } catch (err) {
-            console.error('❌ === FETCH ERROR ===');
-            console.error('Error type:', err.constructor.name);
-            console.error('Error message:', err.message);
-            console.error('Stack trace:', err.stack);
-            
-            alert("Terjadi kesalahan: " + err.message);
+            console.error('❌ Error:', err);
+            showAlert('error', 'Gagal Menyimpan!', 'Terjadi kesalahan: ' + err.message);
+
             btnSave.disabled = false;
             btnSave.textContent = "Simpan";
         }
@@ -572,8 +681,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
     }
-    
-    console.log('✅ Script loaded successfully');
 });
 </script>
 @endsection

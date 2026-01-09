@@ -31,6 +31,9 @@ class Transaksi extends Model
         'tgl_lunas',
         'tgl_estimasi',
         'tgl_transaksi',
+        'id_kasir',
+        'id_metode_bayar',
+        "id_driver",
     ];
 
     protected $casts = [
@@ -45,6 +48,10 @@ class Transaksi extends Model
 
     // ✅ Relasi - PASTIKAN NAMA TABEL & FOREIGN KEY BENAR
     public function detail()
+    {
+        return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
+    }
+    public function detail_transaksi()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
@@ -70,18 +77,10 @@ class Transaksi extends Model
         return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar', 'id_metode_bayar');
     }
 
-    // Relasi ke detail transaksi jika ada
-    public function detail_transaksi()
+    // Transaksi punya satu delivery
+    public function delivery()
     {
-        // ✅ Sesuaikan dengan nama tabel yang benar
-        // Cek di database: detail_transaksi atau transaksi_detail?
-        return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
+        return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
     }
 
-    // ✅ TAMBAHKAN: Accessor untuk detail (opsional)
-    // Jika view menggunakan $transaksi->detail
-    public function getDetailAttribute()
-    {
-        return $this->detailTransaksi;
-    }
 }

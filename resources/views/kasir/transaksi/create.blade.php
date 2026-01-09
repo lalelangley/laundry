@@ -69,7 +69,8 @@ $keterangan = session('keterangan_transaksi', '');
 
         @else
             <div class="space-y-5">
-                @foreach ($detail as $d)
+                {{-- ✅ PAKAI INDEX LOOP --}}
+                @foreach ($detail as $index => $d)
                 <div class="group bg-gray-100 p-5 rounded-3xl shadow hover:shadow-lg transition">
 
                     <div class="flex gap-4">
@@ -120,15 +121,17 @@ $keterangan = session('keterangan_transaksi', '');
                                 <p class="text-lg font-bold">{{ $d['qty'] }}</p>
                             </div>
 
+                            {{-- ✅ SWEET ALERT DELETE - PAKAI INDEX --}}
                             <form 
-                                action="{{ route('kasir.transaksi.remove', $d['id_layanan']) }}" 
+                                action="{{ route('kasir.transaksi.remove', $index) }}" 
                                 method="POST"
-                                class="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto delete-layanan-form"
                             >
                                 @csrf
-                                <button type="submit" 
-                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition"
-                                        onclick="return confirm('Hapus layanan ini?')">
+                                <button type="button" 
+                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow transition btn-delete-layanan"
+                                        data-layanan="{{ $d['nama_layanan'] }}"
+                                        data-index="{{ $index }}">
                                     <i class="bi bi-trash-fill text-lg"></i>
                                 </button>
                             </form>
@@ -372,6 +375,37 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
         closeCheckoutModal();
     }
+});
+
+// ✅ SWEET ALERT DELETE LAYANAN
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach event ke semua button delete
+    document.querySelectorAll('.btn-delete-layanan').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const namaLayanan = this.getAttribute('data-layanan');
+            const index = this.getAttribute('data-index');
+            const form = this.closest('.delete-layanan-form');
+            
+            Swal.fire({
+                title: 'Hapus Layanan?',
+                html: `Yakin ingin menghapus <b>${namaLayanan}</b> dari keranjang?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Submit form
+                    form.submit();
+                }
+            });
+        });
+    });
 });
 </script>
 @endsection

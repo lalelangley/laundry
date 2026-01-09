@@ -1,7 +1,5 @@
 @extends('layouts.master')
-
 @section('content')
-
 <div class="min-h-screen bg-gray-50">
     <!-- HEADER -->
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
@@ -64,8 +62,9 @@
                     <form action="{{ route('admin2.satuan.destroy', $s->id_satuan) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit"
-                                onclick="return confirm('Yakin ingin menghapus satuan ini?')"
+                        <button type="button"
+                                onclick="confirmDelete(this, 'satuan')"
+                                data-nama="{{ $s->nama_satuan }}"
                                 class="bg-red-700 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                             <i class="bi bi-trash-fill"></i>
                         </button>

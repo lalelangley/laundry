@@ -7,86 +7,38 @@ use Illuminate\Http\Request;
 use App\Models\Pengeluaran;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;  // ✅ TAMBAH INI
+use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TransaksiExport; 
 use Illuminate\Support\Facades\Auth;
 
 class LaporanController extends Controller
 {
-    // =========================
-    // INDEX PENGELUARAN - ADMIN
-    // =========================
+    // =========================================
+    // PENGELUARAN - ADMIN
+    // =========================================
+    
     public function index()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pengeluaran', 'view');
+        
         $pengeluaran = Pengeluaran::orderBy('id_pengeluaran', 'DESC')->get();
         return view('pengeluaran.index', compact('pengeluaran'));
     }
 
-    // =========================
-    // INDEX PENGELUARAN - KASIR
-    // =========================
-    public function indexKasir()
-    {
-        $kasir = auth('kasir')->user();
-        
-        if (!$kasir) {
-            abort(403, 'Silakan login terlebih dahulu');
-        }
-
-        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('kasir.pengeluaran.index', compact('pengeluaran'));
-    }
-
-    // =========================
-    // INDEX PENGELUARAN - ADMIN2
-    // =========================
-    public function indexAdmin2()
-    {
-        $admin2 = auth('admin')->user();
-        
-        if (!$admin2 || $admin2->role_id != 2) {
-            abort(403, 'Akses ditolak');
-        }
-
-        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('admin2.pengeluaran.index', compact('pengeluaran'));
-    }
-
-    // =========================
-    // CREATE - ADMIN
-    // =========================
     public function create()
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
         return view('pengeluaran.create');
     }
 
-    // =========================
-    // CREATE - KASIR
-    // =========================
-    public function createKasir()
-    {
-        return view('kasir.pengeluaran.create');
-    }
-
-    // =========================
-    // CREATE - ADMIN2
-    // =========================
-    public function createAdmin2()
-    {
-        return view('admin2.pengeluaran.create');
-    }
-
-    // =========================
-    // STORE - ADMIN
-    // =========================
     public function store(Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
         Pengeluaran::create([
             'nama_pengeluaran' => $request->nama_pengeluaran,
             'nominal' => $request->nominal,
@@ -97,11 +49,71 @@ class LaporanController extends Controller
         return redirect()->route('pengeluaran.index')->with('success', 'Data berhasil ditambahkan');
     }
 
-    // =========================
-    // STORE - KASIR
-    // =========================
+    public function edit($id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
+        $item = Pengeluaran::findOrFail($id);
+        return view('pengeluaran.edit', compact('item'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
+        $item = Pengeluaran::findOrFail($id);
+        $item->update([
+            'nama_pengeluaran' => $request->nama_pengeluaran,
+            'nominal' => $request->nominal,
+            'catatan' => $request->catatan,
+            'tanggal_pengeluaran' => $request->tanggal,
+        ]);
+
+        return redirect()->route('pengeluaran.index')->with('success', 'Data berhasil diupdate');
+    }
+
+    public function destroy($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pengeluaran', 'delete');
+        
+        $item = Pengeluaran::findOrFail($id);
+        $item->delete();
+
+        return redirect()->route('pengeluaran.index')->with('success', 'Data berhasil dihapus');
+    }
+
+    // =========================================
+    // PENGELUARAN - KASIR
+    // =========================================
+    
+    public function indexKasir()
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pengeluaran', 'view');
+
+        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('kasir.pengeluaran.index', compact('pengeluaran'));
+    }
+
+    public function createKasir()
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
+        return view('kasir.pengeluaran.create');
+    }
+
     public function storeKasir(Request $request)
     {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
         $request->validate([
             'nama_pengeluaran' => 'required|string|max:255',
             'nominal' => 'required|numeric',
@@ -118,75 +130,20 @@ class LaporanController extends Controller
         return redirect()->route('kasir.pengeluaran.index')->with('success', 'Data berhasil ditambahkan');
     }
 
-    // =========================
-    // STORE - ADMIN2
-    // =========================
-    public function storeAdmin2(Request $request)
-    {
-        $request->validate([
-            'nama_pengeluaran' => 'required|string|max:255',
-            'nominal' => 'required|numeric',
-            'tanggal' => 'required|date',
-        ]);
-
-        Pengeluaran::create([
-            'nama_pengeluaran' => $request->nama_pengeluaran,
-            'nominal' => $request->nominal,
-            'catatan' => $request->catatan,
-            'tanggal_pengeluaran' => $request->tanggal,
-        ]);
-
-        return redirect()->route('admin2.pengeluaran.index')->with('success', 'Data berhasil ditambahkan');
-    }
-
-    // =========================
-    // EDIT - ADMIN
-    // =========================
-    public function edit($id)
-    {
-        $item = Pengeluaran::findOrFail($id);
-        return view('pengeluaran.edit', compact('item'));
-    }
-
-    // =========================
-    // EDIT - KASIR
-    // =========================
     public function editKasir($id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
         $item = Pengeluaran::findOrFail($id);
         return view('kasir.pengeluaran.edit', compact('item'));
     }
 
-    // =========================
-    // EDIT - ADMIN2
-    // =========================
-    public function editAdmin2($id)
-    {
-        $item = Pengeluaran::findOrFail($id);
-        return view('admin2.pengeluaran.edit', compact('item'));
-    }
-
-    // =========================
-    // UPDATE - ADMIN
-    // =========================
-    public function update(Request $request, $id)
-    {
-        $item = Pengeluaran::findOrFail($id);
-        $item->update([
-            'nama_pengeluaran' => $request->nama_pengeluaran,
-            'nominal' => $request->nominal,
-            'catatan' => $request->catatan,
-            'tanggal_pengeluaran' => $request->tanggal,
-        ]);
-
-        return redirect()->route('pengeluaran.index')->with('success', 'Data berhasil diupdate');
-    }
-
-    // =========================
-    // UPDATE - KASIR
-    // =========================
     public function updateKasir(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
         $request->validate([
             'nama_pengeluaran' => 'required|string|max:255',
             'nominal' => 'required|numeric',
@@ -204,11 +161,76 @@ class LaporanController extends Controller
         return redirect()->route('kasir.pengeluaran.index')->with('success', 'Data berhasil diupdate');
     }
 
-    // =========================
-    // UPDATE - ADMIN2
-    // =========================
+    public function destroyKasir($id)
+    {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pengeluaran', 'delete');
+        
+        $item = Pengeluaran::findOrFail($id);
+        $item->delete();
+
+        return redirect()->route('kasir.pengeluaran.index')->with('success', 'Data berhasil dihapus');
+    }
+
+    // =========================================
+    // PENGELUARAN - ADMIN2
+    // =========================================
+    
+    public function indexAdmin2()
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('pengeluaran', 'view');
+
+        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('admin2.pengeluaran.index', compact('pengeluaran'));
+    }
+
+    public function createAdmin2()
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
+        return view('admin2.pengeluaran.create');
+    }
+
+    public function storeAdmin2(Request $request)
+    {
+        // ✅ CHECK PERMISSION ADD
+        requirePermission('pengeluaran', 'add');
+        
+        $request->validate([
+            'nama_pengeluaran' => 'required|string|max:255',
+            'nominal' => 'required|numeric',
+            'tanggal' => 'required|date',
+        ]);
+
+        Pengeluaran::create([
+            'nama_pengeluaran' => $request->nama_pengeluaran,
+            'nominal' => $request->nominal,
+            'catatan' => $request->catatan,
+            'tanggal_pengeluaran' => $request->tanggal,
+        ]);
+
+        return redirect()->route('admin2.pengeluaran.index')->with('success', 'Data berhasil ditambahkan');
+    }
+
+    public function editAdmin2($id)
+    {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
+        $item = Pengeluaran::findOrFail($id);
+        return view('admin2.pengeluaran.edit', compact('item'));
+    }
+
     public function updateAdmin2(Request $request, $id)
     {
+        // ✅ CHECK PERMISSION EDIT
+        requirePermission('pengeluaran', 'edit');
+        
         $request->validate([
             'nama_pengeluaran' => 'required|string|max:255',
             'nominal' => 'required|numeric',
@@ -226,187 +248,163 @@ class LaporanController extends Controller
         return redirect()->route('admin2.pengeluaran.index')->with('success', 'Data berhasil diupdate');
     }
 
-    // =========================
-    // DESTROY - ADMIN
-    // =========================
-    public function destroy($id)
-    {
-        $item = Pengeluaran::findOrFail($id);
-        $item->delete();
-
-        return redirect()->route('pengeluaran.index')->with('success', 'Data berhasil dihapus');
-    }
-
-    // =========================
-    // DESTROY - KASIR
-    // =========================
-    public function destroyKasir($id)
-    {
-        $item = Pengeluaran::findOrFail($id);
-        $item->delete();
-
-        return redirect()->route('kasir.pengeluaran.index')->with('success', 'Data berhasil dihapus');
-    }
-
-    // =========================
-    // DESTROY - ADMIN2
-    // =========================
     public function destroyAdmin2($id)
     {
+        // ✅ CHECK PERMISSION DELETE
+        requirePermission('pengeluaran', 'delete');
+        
         $item = Pengeluaran::findOrFail($id);
         $item->delete();
 
         return redirect()->route('admin2.pengeluaran.index')->with('success', 'Data berhasil dihapus');
     }
 
-    // ===============================
-    // LAPORAN INDEX - ADMIN
-    // ===============================
+    // =========================================
+    // LAPORAN INDEX (Dashboard Laporan)
+    // =========================================
+    
     public function laporanIndex()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         return view('laporan.index');
     }
 
-    // ===============================
-    // LAPORAN INDEX - KASIR
-    // ===============================
     public function laporanIndexKasir()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         return view('kasir.laporan.index');
     }
 
-    // ===============================
-    // LAPORAN INDEX - ADMIN2
-    // ===============================
     public function laporanIndexAdmin2()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         return view('admin2.laporan.index');
     }
 
-    // ===============================
-    // LAPORAN TRANSAKSI - ADMIN
-    // ===============================
-   public function transaksiIndex(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
+    // =========================================
+    // LAPORAN TRANSAKSI
+    // =========================================
+    
+    public function transaksiIndex(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    // ✅ FIXED: Hapus 'detail.jenis.satuan'
-    $query = Transaksi::with([
-        'pelanggan',
-        'metodeBayar',
-    ])
-        ->where('status_transaksi', 'selesai')
-        ->whereBetween('tgl_transaksi', [
-            $tglAwal.' 00:00:00',
-            $tglAkhir.' 23:59:59'
+        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
+            ->where('status_transaksi', 'selesai')
+            ->whereBetween('tgl_transaksi', [
+                $tglAwal.' 00:00:00',
+                $tglAkhir.' 23:59:59'
+            ]);
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nama_pelanggan', 'like', "%$q%")
+                    ->orWhere('no_hp', 'like', "%$q%")
+                    ->orWhere('id_transaksi', 'like', "%$q%");
+            });
+        }
+
+        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+
+        return view('laporan.transaksi.index', [
+            'transaksi'  => $transaksi,
+            'tglAwal'    => $tglAwal,
+            'tglAkhir'   => $tglAkhir,
+            'totalOmzet' => $transaksi->sum('total_bayar'),
+            'jumlah'     => $transaksi->count(),
         ]);
-
-    if ($request->filled('q')) {
-        $q = $request->q;
-        $query->where(function ($sub) use ($q) {
-            $sub->where('nama_pelanggan', 'like', "%$q%")
-                ->orWhere('no_hp', 'like', "%$q%")
-                ->orWhere('id_transaksi', 'like', "%$q%");
-        });
     }
 
-    $transaksi = $query
-        ->orderBy('tgl_transaksi', 'DESC')
-        ->get();
-
-    return view('laporan.transaksi.index', [
-        'transaksi'  => $transaksi,
-        'tglAwal'    => $tglAwal,
-        'tglAkhir'   => $tglAkhir,
-        'totalOmzet' => $transaksi->sum('total_bayar'),
-        'jumlah'     => $transaksi->count(),
-    ]);
-}
-
-    // ===============================
-    // LAPORAN TRANSAKSI - KASIR
-    // ===============================
     public function transaksiIndexKasir(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    // ✅ FIXED: Hapus 'detail.jenis.satuan'
-    $query = Transaksi::with([
-        'pelanggan',
-        'metodeBayar',
-    ])
-        ->where('status_transaksi', 'selesai')
-        ->whereBetween('tgl_transaksi', [
-            $tglAwal.' 00:00:00',
-            $tglAkhir.' 23:59:59'
+        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
+            ->where('status_transaksi', 'selesai')
+            ->whereBetween('tgl_transaksi', [
+                $tglAwal.' 00:00:00',
+                $tglAkhir.' 23:59:59'
+            ]);
+
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nama_pelanggan', 'like', "%$q%")
+                    ->orWhere('no_hp', 'like', "%$q%")
+                    ->orWhere('id_transaksi', 'like', "%$q%");
+            });
+        }
+
+        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+
+        return view('kasir.laporan.transaksi.index', [
+            'transaksi'  => $transaksi,
+            'tglAwal'    => $tglAwal,
+            'tglAkhir'   => $tglAkhir,
+            'totalOmzet' => $transaksi->sum('total_bayar'),
+            'jumlah'     => $transaksi->count(),
         ]);
-
-    if ($request->filled('q')) {
-        $q = $request->q;
-        $query->where(function ($sub) use ($q) {
-            $sub->where('nama_pelanggan', 'like', "%$q%")
-                ->orWhere('no_hp', 'like', "%$q%")
-                ->orWhere('id_transaksi', 'like', "%$q%");
-        });
     }
 
-    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+    public function transaksiIndexAdmin2(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    return view('kasir.laporan.transaksi.index', [
-        'transaksi'  => $transaksi,
-        'tglAwal'    => $tglAwal,
-        'tglAkhir'   => $tglAkhir,
-        'totalOmzet' => $transaksi->sum('total_bayar'),
-        'jumlah'     => $transaksi->count(),
-    ]);
-}
+        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
+            ->where('status_transaksi', 'selesai')
+            ->whereBetween('tgl_transaksi', [
+                $tglAwal.' 00:00:00',
+                $tglAkhir.' 23:59:59'
+            ]);
 
-    // ===============================
-    // LAPORAN TRANSAKSI - ADMIN2
-    // ===============================
-   public function transaksiIndexAdmin2(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nama_pelanggan', 'like', "%$q%")
+                    ->orWhere('no_hp', 'like', "%$q%")
+                    ->orWhere('id_transaksi', 'like', "%$q%");
+            });
+        }
 
-    // ✅ FIXED: Hapus 'detail.jenis.satuan'
-    $query = Transaksi::with([
-        'pelanggan',
-        'metodeBayar',
-    ])
-        ->where('status_transaksi', 'selesai')
-        ->whereBetween('tgl_transaksi', [
-            $tglAwal.' 00:00:00',
-            $tglAkhir.' 23:59:59'
+        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
+
+        return view('admin2.laporan.transaksi.index', [
+            'transaksi'  => $transaksi,
+            'tglAwal'    => $tglAwal,
+            'tglAkhir'   => $tglAkhir,
+            'totalOmzet' => $transaksi->sum('total_bayar'),
+            'jumlah'     => $transaksi->count(),
         ]);
-
-    if ($request->filled('q')) {
-        $q = $request->q;
-        $query->where(function ($sub) use ($q) {
-            $sub->where('nama_pelanggan', 'like', "%$q%")
-                ->orWhere('no_hp', 'like', "%$q%")
-                ->orWhere('id_transaksi', 'like', "%$q%");
-        });
     }
 
-    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-    return view('admin2.laporan.transaksi.index', [
-        'transaksi'  => $transaksi,
-        'tglAwal'    => $tglAwal,
-        'tglAkhir'   => $tglAkhir,
-        'totalOmzet' => $transaksi->sum('total_bayar'),
-        'jumlah'     => $transaksi->count(),
-    ]);
-}
-
-    // ===============================
-    // LAPORAN KASIR - ADMIN (FIXED QUERY)
-    // ===============================
+    // =========================================
+    // LAPORAN KASIR
+    // =========================================
+    
     public function kasirIndex(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -444,11 +442,11 @@ class LaporanController extends Controller
         return view('laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN KASIR - ADMIN2
-    // ===============================
     public function kasirIndexAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -486,11 +484,15 @@ class LaporanController extends Controller
         return view('admin2.laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN METODE BAYAR - ADMIN
-    // ===============================
+    // =========================================
+    // LAPORAN METODE BAYAR
+    // =========================================
+    
     public function bayarIndex(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -515,11 +517,11 @@ class LaporanController extends Controller
         return view('laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN METODE BAYAR - KASIR
-    // ===============================
     public function bayarIndexKasir(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -544,11 +546,11 @@ class LaporanController extends Controller
         return view('kasir.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN METODE BAYAR - ADMIN2
-    // ===============================
     public function bayarIndexAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -573,11 +575,15 @@ class LaporanController extends Controller
         return view('admin2.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN PENGELUARAN - ADMIN
-    // ===============================
+    // =========================================
+    // LAPORAN PENGELUARAN
+    // =========================================
+    
     public function pengeluaranIndex(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
         if ($request->filled('dari') && $request->filled('sampai')) {
@@ -592,11 +598,11 @@ class LaporanController extends Controller
         return view('laporan.pengeluaran.index', compact('pengeluaran'));
     }
 
-    // ===============================
-    // LAPORAN PENGELUARAN - KASIR
-    // ===============================
     public function pengeluaranIndexKasir(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
         if ($request->filled('dari') && $request->filled('sampai')) {
@@ -611,11 +617,11 @@ class LaporanController extends Controller
         return view('kasir.laporan.pengeluaran.index', compact('pengeluaran'));
     }
 
-    // ===============================
-    // LAPORAN PENGELUARAN - ADMIN2
-    // ===============================
     public function pengeluaranIndexAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
         if ($request->filled('dari') && $request->filled('sampai')) {
@@ -630,11 +636,15 @@ class LaporanController extends Controller
         return view('admin2.laporan.pengeluaran.index', compact('pengeluaran'));
     }
 
-    // ===============================
-    // LAPORAN PELANGGAN - ADMIN
-    // ===============================
+    // =========================================
+    // LAPORAN PELANGGAN
+    // =========================================
+    
     public function pelangganIndex()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $data = Transaksi::selectRaw('
                 id_pelanggan,
                 nama_pelanggan,
@@ -650,11 +660,11 @@ class LaporanController extends Controller
         return view('laporan.pelanggan.index', compact('data'));
     }
 
-    // ===============================
-    // LAPORAN PELANGGAN - KASIR
-    // ===============================
     public function pelangganIndexKasir()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $data = Transaksi::selectRaw('
                 id_pelanggan,
                 nama_pelanggan,
@@ -670,11 +680,11 @@ class LaporanController extends Controller
         return view('kasir.laporan.pelanggan.index', compact('data'));
     }
 
-    // ===============================
-    // LAPORAN PELANGGAN - ADMIN2
-    // ===============================
     public function pelangganIndexAdmin2()
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $data = Transaksi::selectRaw('
                 id_pelanggan,
                 nama_pelanggan,
@@ -690,11 +700,15 @@ class LaporanController extends Controller
         return view('admin2.laporan.pelanggan.index', compact('data'));
     }
 
-    // ===============================
-    // LAPORAN SATUAN - ADMIN
-    // ===============================
+    // =========================================
+    // LAPORAN SATUAN
+    // =========================================
+    
     public function satuanIndex(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -720,11 +734,11 @@ class LaporanController extends Controller
         return view('laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN SATUAN - KASIR
-    // ===============================
     public function satuanIndexKasir(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -750,11 +764,11 @@ class LaporanController extends Controller
         return view('kasir.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
 
-    // ===============================
-    // LAPORAN SATUAN - ADMIN2
-    // ===============================
     public function satuanIndexAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
@@ -779,155 +793,163 @@ class LaporanController extends Controller
 
         return view('admin2.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
     }
-   // ===============================
-// LAPORAN DRIVER - ADMIN
-// ===============================
-public function driver(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-    // Query data driver dari tabel delivery
-    $data = DB::table('delivery')
-        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-        ->select(
-            'driver.id_driver',
-            'driver.nama_driver',
-            'driver.no_telp',
-            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-        )
-        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-        ->orderByDesc('total_pengiriman')
-        ->get();
-
-    // Hitung statistik untuk cards
-    $stats = [
-        'total_driver_aktif' => $data->count(),
-        'total_pengiriman' => $data->sum('total_pengiriman'),
-        'total_pickup' => $data->sum('total_pickup'),
-        'total_antar' => $data->sum('total_antar'),
-        'total_terkirim' => $data->sum('terkirim'),
-        'total_gagal' => $data->sum('gagal'),
-        'total_proses' => $data->sum('dalam_proses'),
-    ];
-
-    return view('laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
-}
-
-// ===============================
-// LAPORAN DRIVER - KASIR
-// ===============================
-public function driverKasir(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
-
-    // Query data driver dari tabel delivery
-    $data = DB::table('delivery')
-        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-        ->select(
-            'driver.id_driver',
-            'driver.nama_driver',
-            'driver.no_telp',
-            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-        )
-        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-        ->orderByDesc('total_pengiriman')
-        ->get();
-
-    // Hitung statistik untuk cards
-    $stats = [
-        'total_driver_aktif' => $data->count(),
-        'total_pengiriman' => $data->sum('total_pengiriman'),
-        'total_pickup' => $data->sum('total_pickup'),
-        'total_antar' => $data->sum('total_antar'),
-        'total_terkirim' => $data->sum('terkirim'),
-        'total_gagal' => $data->sum('gagal'),
-        'total_proses' => $data->sum('dalam_proses'),
-    ];
-
-    return view('kasir.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
-}
-
-// ===============================
-// LAPORAN DRIVER - ADMIN2
-// ===============================
-public function driverAdmin2(Request $request)
-{
-    $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-    $tglAkhir = $request->sampai ?? now()->toDateString();
-
-    // Query data driver dari tabel delivery
-    $data = DB::table('delivery')
-        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-        ->select(
-            'driver.id_driver',
-            'driver.nama_driver',
-            'driver.no_telp',
-            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-        )
-        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-        ->orderByDesc('total_pengiriman')
-        ->get();
-
-    // Hitung statistik untuk cards
-    $stats = [
-        'total_driver_aktif' => $data->count(),
-        'total_pengiriman' => $data->sum('total_pengiriman'),
-        'total_pickup' => $data->sum('total_pickup'),
-        'total_antar' => $data->sum('total_antar'),
-        'total_terkirim' => $data->sum('terkirim'),
-        'total_gagal' => $data->sum('gagal'),
-        'total_proses' => $data->sum('dalam_proses'),
-    ];
-
-    return view('admin2.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
-}
- // ✅ METHOD BARU: Export Excel
-public function exportTransaksi(Request $request)
-{
-    $request->validate([
-        'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
-        'tanggal_awal' => 'required|date',
-        'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
-        'status_bayar' => 'in:semua,belum_lunas,DP,lunas'
-    ]);
-
-    $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
-    $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
-
-    return Excel::download(
-        new TransaksiExport(
-            $request->filter_type,
-            $request->tanggal_awal,
-            $request->tanggal_akhir,
-            $request->status_bayar
-        ),
-        $namaFile
-    );
-}
-
-     // ✅ METHOD BARU: Export Excel
-    public function exportTransaksiAdmin2(Request $request)
+    // =========================================
+    // LAPORAN DRIVER
+    // =========================================
+    
+    public function driver(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
+
+        $data = DB::table('delivery')
+            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+            ->select(
+                'driver.id_driver',
+                'driver.nama_driver',
+                'driver.no_telp',
+                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+            )
+            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+            ->orderByDesc('total_pengiriman')
+            ->get();
+
+        $stats = [
+            'total_driver_aktif' => $data->count(),
+            'total_pengiriman' => $data->sum('total_pengiriman'),
+            'total_pickup' => $data->sum('total_pickup'),
+            'total_antar' => $data->sum('total_antar'),
+            'total_terkirim' => $data->sum('terkirim'),
+            'total_gagal' => $data->sum('gagal'),
+            'total_proses' => $data->sum('dalam_proses'),
+        ];
+
+        return view('laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
+    }
+
+    public function driverKasir(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
+
+        $data = DB::table('delivery')
+            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+            ->select(
+                'driver.id_driver',
+                'driver.nama_driver',
+                'driver.no_telp',
+                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+            )
+            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+            ->orderByDesc('total_pengiriman')
+            ->get();
+
+        $stats = [
+            'total_driver_aktif' => $data->count(),
+            'total_pengiriman' => $data->sum('total_pengiriman'),
+            'total_pickup' => $data->sum('total_pickup'),
+            'total_antar' => $data->sum('total_antar'),
+            'total_terkirim' => $data->sum('terkirim'),
+            'total_gagal' => $data->sum('gagal'),
+            'total_proses' => $data->sum('dalam_proses'),
+        ];
+
+        return view('kasir.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
+    }
+
+    public function driverAdmin2(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
+
+        $data = DB::table('delivery')
+            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+            ->select(
+                'driver.id_driver',
+                'driver.nama_driver',
+                'driver.no_telp',
+                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+            )
+            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+            ->orderByDesc('total_pengiriman')
+            ->get();
+
+        $stats = [
+            'total_driver_aktif' => $data->count(),
+            'total_pengiriman' => $data->sum('total_pengiriman'),
+            'total_pickup' => $data->sum('total_pickup'),
+            'total_antar' => $data->sum('total_antar'),
+            'total_terkirim' => $data->sum('terkirim'),
+            'total_gagal' => $data->sum('gagal'),
+            'total_proses' => $data->sum('dalam_proses'),
+        ];
+
+        return view('admin2.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
+    }
+
+    // =========================================
+    // EXPORT EXCEL
+    // =========================================
+    
+    public function exportTransaksi(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
+        $request->validate([
+            'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
+            'tanggal_awal' => 'required|date',
+            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
+            'status_bayar' => 'in:semua,belum_lunas,DP,lunas'
+        ]);
+
+        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
+        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
+
+        return Excel::download(
+            new TransaksiExport(
+                $request->filter_type,
+                $request->tanggal_awal,
+                $request->tanggal_akhir,
+                $request->status_bayar
+            ),
+            $namaFile
+        );
+    }
+
+    public function exportTransaksiKasir(Request $request)
+    {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $request->validate([
             'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
             'tanggal_awal' => 'required|date',
@@ -948,9 +970,12 @@ public function exportTransaksi(Request $request)
             $namaFile
         );
     }
-     // ✅ METHOD BARU: Export Excel
-    public function exportTransaksiKasir(Request $request)
+
+    public function exportTransaksiAdmin2(Request $request)
     {
+        // ✅ CHECK PERMISSION VIEW
+        requirePermission('laporan', 'view');
+        
         $request->validate([
             'filter_type' => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
             'tanggal_awal' => 'required|date',

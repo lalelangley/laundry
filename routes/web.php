@@ -17,6 +17,11 @@ use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Models\Satuan;
 
+
+Route::post('/pesanan-online/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
+    ->name('pesanan.online.assign-driver-pickup');
+
+
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES - Authentication
@@ -41,6 +46,14 @@ Route::post('/kasir/logout', function (): RedirectResponse {
     return redirect('/login')->with('success', 'Berhasil logout');
 })->name('kasir.logout');
 
+// ✅ KASIR LOGOUT (Outside middleware group, accessible for all kasir)
+Route::post('/admin2/logout', function (): RedirectResponse {
+    Auth::guard('admin2')->logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/login')->with('success', 'Berhasil logout');
+})->name('admin2.logout');
+
 /*
 |--------------------------------------------------------------------------
 | KASIR ROUTES - With Authentication
@@ -52,32 +65,32 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
     Route::get('/dashboard', [AuthWebController::class, 'kasirDashboard'])
         ->name('kasir.dashboard');
 
-   // ================= TRANSAKSI (Minimal Permission) =================
+// ================= TRANSAKSI (KASIR) =================
 Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
+    // View
     Route::get('/pelanggan', [TransaksiController::class, 'pelangganKasir'])->name('pelanggan');
-    Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])->name('setPelanggan');
     Route::get('/create', [TransaksiController::class, 'createKasir'])->name('create');
-    
-    // ✅ PERBAIKAN - Ganti path jadi /confirm
     Route::get('/confirm', [TransaksiController::class, 'confirmKasir'])->name('confirm');
+    Route::get('/print/{id}', [TransaksiController::class, 'printKasir'])->name('print');
     
+    // Add/Create
+    Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])->name('setPelanggan');
+    Route::post('/checkout', [TransaksiController::class, 'checkoutKasir'])->name('checkout');
+    Route::post('/bayar', [TransaksiController::class, 'bayarKasir'])->name('bayar');
     Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananKasir'])->name('addLayanan');
+    Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisKasir'])->name('addJenis');
     Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananKasir'])->name('temp_store_layanan');
     Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganKasir'])->name('updateKeterangan');
-    Route::post('/bayar', [TransaksiController::class, 'bayarKasir'])->name('bayar');
-    Route::get('/print/{id}', [TransaksiController::class, 'printKasir'])->name('print');
+    
+    // Delete
     Route::post('/remove/{id}', [TransaksiController::class, 'removeKasir'])->name('remove');
-    Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisKasir'])->name('addJenis');
     
-    // ✅ POST - Proses checkout transaksi
-    Route::post('/checkout', [TransaksiController::class, 'checkoutKasir'])->name('checkout');
-    
+    // Reset (no permission needed)
     Route::get('/reset', function () {
         session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
         return redirect()->route('kasir.dashboard');
     })->name('reset');
 });
-
     // ================= PELANGGAN (With Permission) =================
     Route::prefix('pelanggan')->name('kasir.pelanggan.')->group(function () {
         Route::get('/', [AuthWebController::class, 'pelangganIndexKasir'])
@@ -181,7 +194,9 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         })->middleware('permission:add')->name('jenis.tambah');
     });
 
-    Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function () {
+    // ================= PESANAN ONLINE (KASIR) - FIXED =================
+Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function () {
+    // View
     Route::get('/', [PesananOnlineController::class, 'indexKasir'])
         ->middleware('permission:view')
         ->name('index');
@@ -190,6 +205,17 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         ->middleware('permission:view')
         ->name('detail');
 
+    // ✅ TAMBAH INI - UPDATE DATA PESANAN
+    Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateDataKasir'])
+        ->middleware('permission:edit')
+        ->name('updateData');
+
+    // ✅ TAMBAH INI - KONFIRMASI PESANAN
+    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiKasir'])
+        ->middleware('permission:edit')
+        ->name('konfirmasi');
+
+    // Status Management
     Route::get('/{id}/terima', [PesananOnlineController::class, 'terimaKasir'])
         ->middleware('permission:edit')
         ->name('terima');
@@ -210,6 +236,7 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         ->middleware('permission:edit')
         ->name('selesai');
 
+    // Payment & Delete
     Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayarKasir'])
         ->middleware('permission:edit')
         ->name('bayar');
@@ -218,12 +245,22 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         ->middleware('permission:delete')
         ->name('destroy');
 
+    // Delivery - Assign Driver
     Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriverKasir'])
         ->name('assign-driver');
 
-    Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateDataKasir'])
-        ->whereNumber('id')
-        ->name('updateData');
+    // Pickup - List & Assign Driver
+    Route::get('/{id}/pickup/driver', [PesananOnlineController::class, 'listDriverPickupKasir'])
+        ->name('pickup.driver');
+
+    Route::post('/{id}/pickup/assign-driver', [PesananOnlineController::class, 'assignDriverPickupKasir'])
+        ->name('pickup.assign');
+
+    // List Driver untuk Antar
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriverKasir'])
+        ->middleware('permission:edit')
+        ->name('list-driver');
+});
 
     Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiKasir'])
         ->whereNumber('id')
@@ -371,32 +408,21 @@ Route::prefix('riwayat')->name('kasir.riwayat.')->group(function () {
         
     });
 
-    // ================= PENGATURAN (No Permission - Everyone Can Access) =================
-    Route::prefix('pengaturan')->name('kasir.pengaturan.')->group(function () {
-        Route::get('/', [PengaturanController::class, 'indexKasir'])
-            ->name('index');
-
-        Route::post('/update', [PengaturanController::class, 'updateKasir'])
-            ->name('update');
-
-        Route::post('/omzet', [PengaturanController::class, 'updateOmzetKasir'])
-            ->name('omzet');
-
-        Route::post('/backup', [PengaturanController::class, 'backupKasir'])
-            ->name('backup');
-
-        Route::post('/restore', [PengaturanController::class, 'restoreKasir'])
-            ->name('restore');
-
-        Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarKasir'])
-            ->name('metode');
-
-        Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarKasir'])
-            ->name('metode.store');
-
-        Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarKasir'])
-            ->name('metode.delete');
-    });
+Route::prefix('pengaturan')->name('kasir.pengaturan.')->group(function () {
+    Route::get('/', [PengaturanController::class, 'indexKasir'])->name('index');
+    Route::post('/update', [PengaturanController::class, 'updateKasir'])->name('update');
+    Route::post('/omzet', [PengaturanController::class, 'updateOmzetKasir'])->name('omzet');
+    Route::post('/backup', [PengaturanController::class, 'backupKasir'])->name('backup');
+    Route::post('/restore', [PengaturanController::class, 'restoreKasir'])->name('restore');
+    
+    Route::get('/backups/list', [PengaturanController::class, 'listBackupsKasir'])->name('backups.list');
+    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupKasir'])->name('backup.download');
+    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupKasir'])->name('backups.delete');  // ← TAMBAH INI
+    
+    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarKasir'])->name('metode');
+    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarKasir'])->name('metode.store');
+    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarKasir'])->name('metode.delete');
+});
 
     // ================= LAPORAN (View Permission Only) =================
     Route::prefix('laporan')->name('kasir.laporan.')->group(function () {
@@ -431,6 +457,10 @@ Route::prefix('riwayat')->name('kasir.riwayat.')->group(function () {
         Route::get('/driver/index', [LaporanController::class, 'driverKasir'])
         ->middleware('permission:view')
         ->name('driver.index');
+
+         // ✅ TAMBAH INI - Export Excel
+       Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiKasir'])->name('transaksi.export');
+        
     });
 
     // ================= CHANGE PASSWORD (No Permission) =================
@@ -439,18 +469,13 @@ Route::prefix('riwayat')->name('kasir.riwayat.')->group(function () {
 
     Route::post('/change-password', [ChangePasswordController::class, 'updateKasir'])
         ->name('kasir.password.update');
-
-     Route::get('/profile', [ProfileController::class, 'editKasir'])
+    // ================= PROFILE (No Permission) =================
+    Route::get('/profile', [ProfileController::class, 'editKasir'])
         ->name('profile.kasir.edit');
 
     Route::post('/profile', [ProfileController::class, 'updateKasir'])
         ->name('profile.kasir.update');
-});
-/*
-|--------------------------------------------------------------------------
-| ADMIN AREA (Super Admin & Admin)
-|--------------------------------------------------------------------------
-*/
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN AREA (Super Admin & Admin)
@@ -466,56 +491,56 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         ->name('admin.logout');
 
     // ================= USER MANAGER (Super Admin Only) =================
-Route::prefix('manager')
-    ->name('manager.')
-    ->middleware(['auth:admin'])
-    ->group(function () {
-        Route::get('/', [UserManagerController::class, 'index'])->name('index');
-        Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
-        
-        // ✅ ADMIN ROUTES
-        Route::prefix('admin')->name('admin.')->group(function() {
-            Route::get('/create', function () {
-                $roles = \App\Models\Role::all();
-                return view('manager.admin.create', compact('roles'));
-            })->name('create');
-            Route::post('/', [AuthWebController::class, 'storeAdmin'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editAdmin'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateAdmin'])->name('update');
+    Route::prefix('manager')
+        ->name('manager.')
+        ->middleware(['auth:admin'])
+        ->group(function () {
+            Route::get('/', [UserManagerController::class, 'index'])->name('index');
+            Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
+            
+            // ✅ ADMIN ROUTES
+            Route::prefix('admin')->name('admin.')->group(function() {
+                Route::get('/create', function () {
+                    $roles = \App\Models\Role::all();
+                    return view('manager.admin.create', compact('roles'));
+                })->name('create');
+                Route::post('/', [AuthWebController::class, 'storeAdmin'])->name('store');
+                Route::get('/{id}/edit', [UserManagerController::class, 'editAdmin'])->name('edit');
+                Route::put('/{id}', [UserManagerController::class, 'updateAdmin'])->name('update');
+            });
+            
+            // ✅ KASIR ROUTES
+            Route::prefix('kasir')->name('kasir.')->group(function() {
+                Route::get('/create', function () {
+                    return view('manager.kasir.create');
+                })->name('create');
+                Route::post('/', [UserManagerController::class, 'storeKasir'])->name('store');
+                Route::get('/{id}/edit', [UserManagerController::class, 'editKasir'])->name('edit');
+                Route::put('/{id}', [UserManagerController::class, 'updateKasir'])->name('update');
+            });
+            
+            // ✅ DRIVER ROUTES
+            Route::prefix('driver')->name('driver.')->group(function() {
+                Route::get('/create', [UserManagerController::class, 'createDriver'])->name('create');
+                Route::post('/', [UserManagerController::class, 'storeDriver'])->name('store');
+                Route::get('/{id}/edit', [UserManagerController::class, 'editDriver'])->name('edit');
+                Route::put('/{id}', [UserManagerController::class, 'updateDriver'])->name('update');
+                Route::delete('/{id}', [UserManagerController::class, 'destroyDriver'])->name('destroy');
+            });
+            
+            // ✅ UPDATE STATUS (untuk Admin, Kasir, Driver)
+            Route::post('/status', [UserManagerController::class, 'updateStatus'])->name('update.status');
+            
+            // ✅ PERMISSION & ROLE
+            Route::post('/permission/user', [UserManagerController::class, 'saveUserPermission'])
+                ->name('permission.save.user');
+            Route::get('/menu-role/create', [UserManagerController::class, 'create'])->name('create');
+            Route::post('/menu-role', [UserManagerController::class, 'store'])->name('store');
+            Route::put('/menu-role/{id}', [UserManagerController::class, 'update'])->name('update');
+            Route::delete('/menu-role/{id}', [UserManagerController::class, 'destroy'])->name('destroy');
+            Route::get('/role/hak-akses', [UserManagerController::class, 'hakRole'])->name('role.hak');
+            Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRole'])->name('role.hak.save');
         });
-        
-        // ✅ KASIR ROUTES
-        Route::prefix('kasir')->name('kasir.')->group(function() {
-            Route::get('/create', function () {
-                return view('manager.kasir.create');
-            })->name('create');
-            Route::post('/', [UserManagerController::class, 'storeKasir'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editKasir'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateKasir'])->name('update');
-        });
-        
-        // ✅ DRIVER ROUTES
-        Route::prefix('driver')->name('driver.')->group(function() {
-            Route::get('/create', [UserManagerController::class, 'createDriver'])->name('create');
-            Route::post('/', [UserManagerController::class, 'storeDriver'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editDriver'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateDriver'])->name('update');
-            Route::delete('/{id}', [UserManagerController::class, 'destroyDriver'])->name('destroy');
-        });
-        
-        // ✅ UPDATE STATUS (untuk Admin, Kasir, Driver)
-        Route::post('/status', [UserManagerController::class, 'updateStatus'])->name('update.status');
-        
-        // ✅ PERMISSION & ROLE
-        Route::post('/permission/user', [UserManagerController::class, 'saveUserPermission'])
-            ->name('permission.save.user');
-        Route::get('/menu-role/create', [UserManagerController::class, 'create'])->name('create');
-        Route::post('/menu-role', [UserManagerController::class, 'store'])->name('store');
-        Route::put('/menu-role/{id}', [UserManagerController::class, 'update'])->name('update');
-        Route::delete('/menu-role/{id}', [UserManagerController::class, 'destroy'])->name('destroy');
-        Route::get('/role/hak-akses', [UserManagerController::class, 'hakRole'])->name('role.hak');
-        Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRole'])->name('role.hak.save');
-    });
 
     // ================= PELANGGAN (With Permission) =================
     Route::prefix('pelanggan')->name('pelanggan.')->group(function () {
@@ -546,59 +571,27 @@ Route::prefix('manager')
 
     // ================= TRANSAKSI (ADMIN) =================
     Route::prefix('transaksi')->name('transaksi.')->group(function () {
-
-        // ================= CORE =================
-        Route::get('/pelanggan', [TransaksiController::class, 'pilihPelanggan'])
-            ->name('pelanggan');
-
-        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelanggan'])
-            ->name('setPelanggan');
-
-        Route::get('/create', [TransaksiController::class, 'create'])
-            ->name('create');
-
-        // ✅ HALAMAN KONFIRMASI (GET)
-        Route::get('/checkout', [TransaksiController::class, 'confirm'])
-            ->name('confirm');
-
-        // ✅ PROSES SIMPAN TRANSAKSI (POST)
-        Route::post('/checkout', [TransaksiController::class, 'checkout'])
-            ->name('checkout');
-            
-        // ================= PEMBAYARAN =================
-        Route::post('/bayar', [TransaksiController::class, 'bayar'])
-            ->name('bayar');
-
-        Route::get('/print/{id}', [TransaksiController::class, 'print'])
-            ->name('print');
-
-        // ================= SESSION =================
-        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayanan'])
-            ->name('temp_store_layanan');
-
-        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeterangan'])
-            ->name('updateKeterangan');
-
-        // ================= EDIT / DELETE =================
-        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayanan'])
-            ->middleware('permission:edit')
-            ->name('addLayanan');
-
-        Route::post('/remove/{id}', [TransaksiController::class, 'remove'])
-            ->middleware('permission:delete')
-            ->name('remove');
-
-        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenis'])
-            ->name('addJenis');
-
-        // ================= RESET =================
+        // View
+        Route::get('/pelanggan', [TransaksiController::class, 'pilihPelanggan'])->name('pelanggan');
+        Route::get('/create', [TransaksiController::class, 'create'])->name('create');
+        Route::get('/checkout', [TransaksiController::class, 'confirm'])->name('confirm');
+        Route::get('/print/{id}', [TransaksiController::class, 'print'])->name('print');
+        
+        // Add/Create
+        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelanggan'])->name('setPelanggan');
+        Route::post('/checkout', [TransaksiController::class, 'checkout'])->name('checkout');
+        Route::post('/bayar', [TransaksiController::class, 'bayar'])->name('bayar');
+        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayanan'])->name('addLayanan');
+        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenis'])->name('addJenis');
+        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayanan'])->name('temp_store_layanan');
+        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeterangan'])->name('updateKeterangan');
+        
+        // Delete
+        Route::post('/remove/{id}', [TransaksiController::class, 'remove'])->name('remove');
+        
+        // Reset
         Route::get('/reset', function () {
-            session()->forget([
-                'detail_transaksi',
-                'pelanggan',
-                'keterangan_transaksi'
-            ]);
-
+            session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
             return redirect()->route('admin.dashboard');
         })->name('reset');
     });
@@ -607,7 +600,6 @@ Route::prefix('manager')
     Route::prefix('layanan')
         ->name('layanan.')
         ->group(function () {
-
             Route::get('/', [LayananController::class, 'index'])->name('index');
             Route::get('/create', [LayananController::class, 'create'])->name('create');
             Route::post('/store', [LayananController::class, 'store'])->name('store');
@@ -616,36 +608,16 @@ Route::prefix('manager')
             Route::delete('/{id}', [LayananController::class, 'destroy'])->name('destroy');
             Route::get('/{id}/duplicate', [LayananController::class, 'duplicate'])->name('duplicate');
 
-            // ================= JENIS LAYANAN =================
-            Route::get(
-                '/{id_layanan}/jenis/create',
-                [LayananController::class, 'createJenis']
-            )->name('jenis.create');
-
-            Route::post(
-                '/{id_layanan}/jenis/store',
-                [LayananController::class, 'storeJenis']
-            )->name('jenis.store');
-
-            Route::get(
-                '/jenis/{id_jenis}/edit',
-                [LayananController::class, 'editJenis']
-            )->name('jenis.edit');
-
-            Route::put(
-                '/jenis/{id_jenis}',
-                [LayananController::class, 'updateJenis']
-            )->name('jenis.update');
-
-            Route::delete(
-                '/jenis/{id_jenis}',
-                [LayananController::class, 'destroyJenis']
-            )->name('jenis.destroy');
+            // JENIS LAYANAN
+            Route::get('/{id_layanan}/jenis/create', [LayananController::class, 'createJenis'])->name('jenis.create');
+            Route::post('/{id_layanan}/jenis/store', [LayananController::class, 'storeJenis'])->name('jenis.store');
+            Route::get('/jenis/{id_jenis}/edit', [LayananController::class, 'editJenis'])->name('jenis.edit');
+            Route::put('/jenis/{id_jenis}', [LayananController::class, 'updateJenis'])->name('jenis.update');
+            Route::delete('/jenis/{id_jenis}', [LayananController::class, 'destroyJenis'])->name('jenis.destroy');
         });
 
-    // ================= PESANAN ONLINE (With Permission) =================
+    // ================= PESANAN ONLINE (With Permission) - ✅ CLEANED =================
     Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
-        
         // Index & Detail
         Route::get('/', [PesananOnlineController::class, 'index'])
             ->middleware('permission:view')
@@ -655,17 +627,16 @@ Route::prefix('manager')
             ->middleware('permission:view')
             ->name('detail');
         
-        // 🔥 UPDATE DATA PESANAN (ISI DATA)
+        // Update & Konfirmasi
         Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateData'])
             ->middleware('permission:edit')
             ->name('updateData');
         
-        // 🔥 KONFIRMASI PESANAN (KIRIM WA/SMS)
         Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiPesanan'])
             ->middleware('permission:edit')
             ->name('konfirmasi');
         
-        // Status Management - PAKAI GET (karena pakai <a href> di view)
+        // Status Management
         Route::get('/{id}/proses', [PesananOnlineController::class, 'proses'])
             ->middleware('permission:edit')
             ->name('proses');
@@ -678,6 +649,14 @@ Route::prefix('manager')
             ->middleware('permission:edit')
             ->name('siap_di_ambil');
         
+        Route::get('/{id}/siap-di-antar', [PesananOnlineController::class, 'siapDiAntar'])
+            ->middleware('permission:edit')
+            ->name('siap_di_antar');
+        
+        Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolak'])
+            ->middleware('permission:edit')
+            ->name('tolak');
+        
         // Payment & Delete
         Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayar'])
             ->middleware('permission:edit')
@@ -687,18 +666,25 @@ Route::prefix('manager')
             ->middleware('permission:delete')
             ->name('destroy');
         
-        // ✅ DELIVERY
+        // Delivery
+        Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
+            ->name('delivery');
+        
         Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])
-            ->middleware('permission:edit')
             ->name('list-driver');
         
         Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
-            ->middleware('permission:edit')
             ->name('assign-driver');
         
-        Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
-            ->middleware('permission:view')
-            ->name('delivery');
+        // Pickup
+        Route::get('/{id}/pickup/list-driver', [PesananOnlineController::class, 'listDriverPickup'])
+            ->name('pickup.list_driver');
+        
+        Route::post('/{id}/pickup/assign-driver', [PesananOnlineController::class, 'assignDriverPickup'])
+            ->name('pickup.assign_driver');
+        
+        Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArrive'])
+            ->name('driver_arrive');
     });
 
     // ================= RIWAYAT (With Permission) =================
@@ -727,7 +713,7 @@ Route::prefix('manager')
             ->middleware('permission:delete')
             ->name('destroy');
         
-        // Status changes - need edit permission
+        // Status changes
         Route::get('/{id}/proses', [RiwayatController::class, 'prosesOrder'])
             ->middleware('permission:edit')
             ->name('proses');
@@ -744,7 +730,7 @@ Route::prefix('manager')
             ->middleware('permission:edit')
             ->name('siap_di_ambil');
         
-        // Layanan dalam riwayat
+        // Layanan
         Route::get('/{id}/add-layanan', [RiwayatController::class, 'addLayananPage'])
             ->middleware('permission:add')
             ->name('add_layanan_page');
@@ -861,13 +847,18 @@ Route::prefix('manager')
             ->name('destroy');
     });
 
-    // ================= PENGATURAN (No Permission - Everyone Can Access) =================
+    // ================= PENGATURAN =================
     Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
         Route::get('/', [PengaturanController::class, 'index'])->name('index');
         Route::post('/update', [PengaturanController::class, 'update'])->name('update');
         Route::post('/omzet', [PengaturanController::class, 'updateOmzet'])->name('omzet');
         Route::post('/backup', [PengaturanController::class, 'backup'])->name('backup');
         Route::post('/restore', [PengaturanController::class, 'restore'])->name('restore');
+        
+        Route::get('/backups/list', [PengaturanController::class, 'listBackups'])->name('backups.list');
+        Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackup'])->name('backups.download');
+        Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackup'])->name('backups.delete');
+                
         Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayar'])->name('metode');
         Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayar'])->name('metode.store');
         Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayar'])->name('metode.delete');
@@ -911,14 +902,15 @@ Route::prefix('manager')
             ->name('transaksi.export');
     });
 
-    // ================= CHANGE PASSWORD (No Permission) =================
+    // ================= CHANGE PASSWORD =================
     Route::get('/change-password', [ChangePasswordController::class, 'index'])
         ->name('change.password');
     
     Route::post('/change-password', [ChangePasswordController::class, 'update'])
         ->name('password.update');
 
-     Route::get('/profile', [ProfileController::class, 'editAdmin'])
+    // ================= PROFILE =================
+    Route::get('/profile', [ProfileController::class, 'editAdmin'])
         ->name('profile.admin.edit');
 
     Route::post('/profile', [ProfileController::class, 'updateAdmin'])
@@ -1206,55 +1198,33 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         ->middleware('permission:delete')
         ->name('admin2.pelanggan.destroy');
 
-    // ================= TRANSAKSI =================
-    Route::prefix('transaksi')->group(function () {
-        Route::get('/create', [TransaksiController::class, 'createAdmin2'])
-            ->name('admin2.transaksi.create');
-        
-        Route::get('/pelanggan', [TransaksiController::class, 'pelangganAdmin2'])
-            ->name('admin2.transaksi.pelanggan');
-        
-        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.transaksi.setPelanggan');
-        
-        Route::post('/checkout', [TransaksiController::class, 'checkoutAdmin2'])
-            ->name('admin2.transaksi.checkout');
-        
-        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananAdmin2'])
-            ->whereNumber('id')
-            ->middleware('permission:layanan,add')
-            ->name('admin2.transaksi.addLayanan');
-        
-        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.transaksi.addJenis');
-        
-        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananAdmin2'])
-            ->name('admin2.transaksi.temp_store_layanan');
-        
-        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganAdmin2'])
-            ->name('admin2.transaksi.updateKeterangan');
-        
-        Route::post('/bayar', [TransaksiController::class, 'bayarAdmin2'])
-            ->name('admin2.transaksi.bayar');
-        
-        Route::get('/print/{id}', [TransaksiController::class, 'printAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.transaksi.print');
-        
-        Route::post('/remove/{id}', [TransaksiController::class, 'removeAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.transaksi.remove');
-        
-        Route::get('/reset', function () {
-            session()->forget(['detail_transaksi', 'pelanggan_transaksi', 'keterangan_transaksi']);
-            return redirect()->route('admin2.transaksi.create');
-        })->name('admin2.transaksi.reset');
+// ================= TRANSAKSI (ADMIN2) =================
+Route::prefix('transaksi')->name('admin2.transaksi.')->group(function () {
+    // View
+    Route::get('/pelanggan', [TransaksiController::class, 'pelangganAdmin2'])->name('pelanggan');
+    Route::get('/create', [TransaksiController::class, 'createAdmin2'])->name('create');
+    Route::get('/checkout', [TransaksiController::class, 'confirmAdmin2'])->name('confirm');
+    Route::get('/print/{id}', [TransaksiController::class, 'printAdmin2'])->whereNumber('id')->name('print');
+    
+    // Add/Create
+    Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganAdmin2'])->whereNumber('id')->name('setPelanggan');
+    Route::post('/checkout', [TransaksiController::class, 'checkoutAdmin2'])->name('checkout');
+    Route::post('/bayar', [TransaksiController::class, 'bayarAdmin2'])->name('bayar');
+    Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananAdmin2'])->whereNumber('id')->name('addLayanan');
+    Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisAdmin2'])->whereNumber('id')->name('addJenis');
+    Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananAdmin2'])->name('temp_store_layanan');
+    Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganAdmin2'])->name('updateKeterangan');
+    
+    // Delete
+    Route::post('/remove/{id}', [TransaksiController::class, 'removeAdmin2'])->whereNumber('id')->name('remove');
+    
+    // Reset (no permission needed)
+    Route::get('/reset', function () {
+        session()->forget(['detail_transaksi', 'pelanggan_transaksi', 'keterangan_transaksi']);
+        return redirect()->route('admin2.dashboard');
+    })->name('reset');
+});
 
-        Route::get('/checkout', [TransaksiController::class, 'confirmAdmin2'])
-            ->name('admin2.transaksi.confirm');
-    });
 
     // ================= PENGELUARAN =================
     Route::prefix('pengeluaran')->group(function () {
@@ -1365,30 +1335,39 @@ Route::prefix('manager')
         });
     });
 
-
     // ================= LAPORAN =================
-    Route::prefix('laporan')->name('laporan.')->group(function () {
-        Route::get('/', [LaporanController::class, 'laporanIndexAdmin2'])->name('index');
-        Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndexAdmin2'])->name('transaksi.index');
-        Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
-        Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
-        Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
-        Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
-        Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
-        Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
-    });
+Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
+    // ✅ nama route jadi: admin2.laporan.index
+    Route::get('/', [LaporanController::class, 'laporanIndexAdmin2'])->name('index');
+    Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndexAdmin2'])->name('transaksi.index');
+    Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
+    Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
+    Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
+    Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
+    Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
+    Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
 
-    // ================= PENGATURAN =================
-    Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
-        Route::get('/', [PengaturanController::class, 'indexAdmin2'])->name('index');
-        Route::post('/update', [PengaturanController::class, 'updateAdmin2'])->name('update');
-        Route::post('/omzet', [PengaturanController::class, 'updateOmzetAdmin2'])->name('omzet');
-        Route::post('/backup', [PengaturanController::class, 'backupAdmin2'])->name('backup');
-        Route::post('/restore', [PengaturanController::class, 'restoreAdmin2'])->name('restore');
-        Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarAdmin2'])->name('metode');
-        Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarAdmin2'])->name('metode.store');
-        Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarADmin2'])->name('metode.delete');
-    });
+    // ✅ TAMBAH INI - Export Excel
+       Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiAdmin2'])->name('transaksi.export');
+});
+
+   // ================= PENGATURAN ADMIN2 =================
+Route::prefix('pengaturan')->name('admin2.pengaturan.')->group(function () {
+    Route::get('/', [PengaturanController::class, 'indexAdmin2'])->name('index');
+    Route::post('/update', [PengaturanController::class, 'updateAdmin2'])->name('update');
+    Route::post('/omzet', [PengaturanController::class, 'updateOmzetAdmin2'])->name('omzet');
+    Route::post('/backup', [PengaturanController::class, 'backupAdmin2'])->name('backup');
+    Route::post('/restore', [PengaturanController::class, 'restoreAdmin2'])->name('restore');
+    
+    // ✅ TAMBAHKAN 3 ROUTE INI
+    Route::get('/backups/list', [PengaturanController::class, 'listBackupsAdmin2'])->name('backups.list');
+    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupAdmin2'])->name('backup.download');
+    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupAdmin2'])->name('backups.delete');  // ← PENTING
+    
+    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarAdmin2'])->name('metode');
+    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarAdmin2'])->name('metode.store');
+    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarAdmin2'])->name('metode.delete');
+});
 
     // ================= CHANGE PASSWORD =================
     Route::get('/change-password', [ChangePasswordController::class, 'indexAdmin2'])

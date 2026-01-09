@@ -68,7 +68,7 @@
     @endif
 
     {{-- BUTTON TAMBAH JENIS BARU --}}
-    <a href="{{ route('kasir.session.create', $layanan_id) }}" 
+    <a href="{{ route('kasir.layanan.jenis.session.create', $layanan_id) }}" 
     class="block mt-6 mb-6 bg-yellow-400 text-white text-center py-3 rounded-2xl font-semibold shadow">
         <i class="bi bi-plus-circle"></i> Tambah Jenis Layanan Baru
     </a>
