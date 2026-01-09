@@ -26,6 +26,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/detail/{id}', [LaundryOrderController::class, 'getOrderDetail']);
     });
 
+    Route::get('/invoices', [LaundryOrderController::class, 'getInvoiceList']);
+    Route::get('/invoice/{id}', [LaundryOrderController::class, 'getInvoice']);
+
+
     Route::prefix('driver')->group(function () {
         Route::get('/{id_driver}/history', [DriverTaskController::class, 'getDriverHistory']);
         Route::get('/{id_driver}/tasks', [DriverTaskController::class, 'getPendingTasks']); // task list
@@ -36,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/arrived-at-laundry', [DriverTaskController::class, 'arrivedAtLaundry']);
         Route::post('/on-the-way-to-customer', [DriverTaskController::class, 'onTheWayToCustomer']);
         Route::post('/complete-delivery', [DriverTaskController::class, 'completeDelivery']);
+        Route::get('{driverId}/antar', [DriverTaskController::class, 'getAntarTasks']);
+        Route::post('antar/start', [DriverTaskController::class, 'startAntar']);
+        Route::post('antar/complete', [DriverTaskController::class, 'completeAntar']);
     });
 
 });

@@ -190,4 +190,89 @@ class LaundryOrderController extends Controller
             'data'   => $order
         ]);
     }
+
+    // ======================
+// GET INVOICE (ORDER SUDAH ADA HARGA)
+// ======================
+public function getInvoice($id)
+{
+    $order = Transaksi::with([
+        'detail.layanan',
+        'detail.jenis',
+        'detail.parfum',
+        'delivery'
+    ])
+    ->where('id_transaksi', $id)
+    ->whereNotNull('total_harga')
+    ->where('total_harga', '>', 0)
+    ->first();
+
+    if (!$order) {
+        return response()->json([
+            'status'  => false,
+            'message' => 'Invoice belum tersedia atau order tidak ditemukan'
+        ], 404);
+    }
+
+    return response()->json([
+        'status' => true,
+        'data'   => [
+            'invoice_no'   => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT),
+            'tanggal'      => $order->tgl_transaksi,
+            'pelanggan'    => [
+                'nama' => $order->nama_pelanggan,
+                'hp'   => $order->no_hp,
+            ],
+            'items'        => $order->detail,
+            'total_harga'  => $order->total_harga,
+            'diskon'       => $order->diskon,
+            'tipe_diskon'  => $order->tipe_diskon,
+            'total_bayar'  => $order->total_bayar,
+            'dp'           => $order->dp,
+            'status_bayar' => $order->status_bayar,
+            'delivery'     => $order->delivery,
+        ]
+    ]);
+}
+// ======================
+// GET LIST INVOICE (SUDAH ADA HARGA)
+// ======================
+public function getInvoiceList(Request $request)
+{
+    $idPelanggan = $request->query('id_pelanggan');
+
+    if (!$idPelanggan) {
+        return response()->json([
+            'status'  => false,
+            'message' => 'id_pelanggan wajib dikirim'
+        ], 400);
+    }
+
+    $invoices = Transaksi::select(
+            'id_transaksi',
+            'tgl_transaksi',
+            'total_bayar',
+            'status_bayar'
+        )
+        ->where('id_pelanggan', $idPelanggan)
+        ->whereNotNull('total_harga')
+        ->where('total_harga', '>', 0)
+        ->orderByDesc('id_transaksi')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id_transaksi' => $item->id_transaksi,
+                'invoice_no'   => 'INV-' . str_pad($item->id_transaksi, 6, '0', STR_PAD_LEFT),
+                'tanggal'      => $item->tgl_transaksi,
+                'total_bayar'  => $item->total_bayar,
+                'status_bayar' => $item->status_bayar,
+            ];
+        });
+
+    return response()->json([
+        'status' => true,
+        'data'   => $invoices
+    ]);
+}
+
 }

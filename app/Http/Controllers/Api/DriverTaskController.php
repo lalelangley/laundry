@@ -101,4 +101,92 @@ class DriverTaskController extends Controller
             'history' => $history,
         ]);
     }
+
+
+    // ======================================================
+// GET TASK ANTAR (READY TO DELIVER)
+// ======================================================
+public function getAntarTasks($driverId)
+{
+    $tasks = Delivery::with([
+        'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+        'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+        'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
+        'transaksi.detail.layanan:id_layanan,nama_layanan',
+        'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+        'transaksi.detail.parfum:id_parfum,nama_parfum',
+    ])
+    ->where('id_driver', $driverId)
+    ->where('jenis', 'antar')        // 🔥 KHUSUS ANTAR
+    ->where('status', 'accepted')    // 🔥 SIAP DIANTAR
+    ->get();
+
+    return response()->json([
+        'success' => true,
+        'tasks' => $tasks,
+    ]);
+}
+// ======================================================
+// START DELIVERY (ANTAR)
+// ======================================================
+public function startAntar(Request $request)
+{
+    $request->validate([
+        'id_delivery' => 'required',
+        'id_driver'   => 'required',
+    ]);
+
+    $delivery = Delivery::where('id_delivery', $request->id_delivery)
+        ->where('id_driver', $request->id_driver)
+        ->where('jenis', 'antar')
+        ->where('status', 'accepted')
+        ->first();
+
+    if (!$delivery) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Task not found or invalid status'
+        ]);
+    }
+
+    $delivery->status = 'on_the_way_to_customer';
+    $delivery->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Driver on the way to customer'
+    ]);
+}
+// ======================================================
+// COMPLETE DELIVERY (ANTAR)
+// ======================================================
+public function completeAntar(Request $request)
+{
+    $request->validate([
+        'id_delivery' => 'required',
+        'id_driver'   => 'required',
+    ]);
+
+    $delivery = Delivery::where('id_delivery', $request->id_delivery)
+        ->where('id_driver', $request->id_driver)
+        ->where('jenis', 'antar')
+        ->where('status', 'on_the_way_to_customer')
+        ->first();
+
+    if (!$delivery) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Task not found or invalid status'
+        ]);
+    }
+
+    $delivery->status = 'delivered';
+    $delivery->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Delivery completed'
+    ]);
+}
+
 }
