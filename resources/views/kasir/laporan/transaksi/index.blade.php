@@ -96,8 +96,22 @@
 
             {{-- INFO --}}
             <div class="flex-1">
-                <div class="flex justify-between">
-                    <h3 class="text-xl font-bold">{{ $t->nama_pelanggan }}</h3>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-bold">{{ $t->nama_pelanggan }}</h3>
+                        {{-- ✅ BADGE JENIS TRANSAKSI --}}
+                        @if($t->jenis_transaksi === 'online')
+                            <span class="inline-flex items-center gap-1 mt-1 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                <i class="bi bi-globe"></i>
+                                Online
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1 mt-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                <i class="bi bi-shop"></i>
+                                Offline
+                            </span>
+                        @endif
+                    </div>
                     <span class="text-xl font-bold">
                         Rp {{ number_format($t->total_bayar,0,',','.') }}
                     </span>

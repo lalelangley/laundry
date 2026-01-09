@@ -6,7 +6,7 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
-    <a href="{{ route('pengaturan.index') }}" class="text-black text-3xl font-bold">
+    <a href="{{ route('pengaturan.index') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-2xl font-bold">Metode Pembayaran</span>
@@ -14,100 +14,97 @@
 
 <div class="p-4 space-y-4 pb-24">
 
-    {{-- FORM TAMBAH METODE --}}
-    <div class="bg-white rounded-3xl p-5 shadow-xl">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
-                <i class="bi bi-plus-circle-fill text-white text-2xl"></i>
-            </div>
-            <span class="text-lg font-bold">Tambah Metode Baru</span>
-        </div>
-        
-        <div class="flex gap-3">
-            <input type="text" id="inputMetodeBayar" placeholder="Masukkan nama metode pembayaran"
-                   class="flex-1 p-4 rounded-2xl border-2 border-gray-200 bg-gray-50 text-gray-800 font-medium focus:border-yellow-400 focus:outline-none transition">
-            <button id="btnTambahMetode" class="px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-2xl transition shadow-lg active:scale-95 flex items-center gap-2">
-                <i class="bi bi-plus-lg text-xl"></i>
-                Tambah
-            </button>
-        </div>
+    {{-- BUTTON TAMBAH - Conditional --}}
+    @if($permissions['can_add'] ?? true)
+    <button id="btnTambahMetode" class="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold rounded-2xl text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+        <i class="bi bi-plus-circle-fill text-xl"></i>
+        Tambah Metode Pembayaran
+    </button>
+    @else
+    <div class="w-full py-4 bg-gray-300 text-gray-500 font-bold rounded-2xl text-lg shadow-lg opacity-50 cursor-not-allowed flex items-center justify-center gap-2">
+        <i class="bi bi-plus-circle-fill text-xl"></i>
+        Tambah Metode Pembayaran
     </div>
+    @endif
 
     {{-- LIST METODE PEMBAYARAN --}}
-    <div class="bg-white rounded-3xl p-5 shadow-xl">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
-                <i class="bi bi-credit-card-fill text-white text-xl"></i>
-            </div>
-            <span class="text-lg font-bold">Daftar Metode Pembayaran</span>
-        </div>
-
-        <ul id="listMetode" class="space-y-3">
-            @forelse($metode as $m)
-            <li class="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-2xl border-2 border-gray-200 hover:border-yellow-400 transition group">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <i class="bi bi-credit-card text-white"></i>
-                    </div>
-                    <span class="font-semibold text-gray-800 group-hover:text-yellow-600 transition">{{ $m->nama_metode_bayar }}</span>
+    <div class="space-y-3">
+        @forelse($metode as $item)
+        <div class="bg-white rounded-2xl p-4 shadow-lg flex items-center justify-between hover:shadow-xl transition">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
+                    <i class="bi bi-credit-card-fill text-white text-xl"></i>
                 </div>
-                <button data-id="{{ $m->id_metode_bayar }}" class="hapusMetode p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition active:scale-95 shadow">
+                <div>
+                    <p class="font-bold text-lg">{{ $item->nama_metode_bayar }}</p>
+                    <p class="text-xs text-gray-500">ID: {{ $item->id_metode_bayar }}</p>
+                </div>
+            </div>
+            
+            {{-- DELETE BUTTON - Conditional --}}
+            @if($permissions['can_delete'] ?? false)
+            <form action="{{ route('pengaturan.metode.delete', $item->id_metode_bayar) }}" method="POST" class="inline">
+                @csrf
+                @method('DELETE')
+                <button type="button"
+                        onclick="confirmDeleteMetode(this, '{{ $item->nama_metode_bayar }}')"
+                        data-nama="{{ $item->nama_metode_bayar }}"
+                        data-id="{{ $item->id_metode_bayar }}"
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition active:scale-95 hover:scale-110">
                     <i class="bi bi-trash-fill"></i>
                 </button>
-            </li>
-            @empty
-            <li class="text-center p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
-                <i class="bi bi-inbox text-5xl text-gray-300 mb-2"></i>
-                <p class="text-gray-500 font-semibold">Belum ada metode pembayaran</p>
-                <p class="text-sm text-gray-400">Tambahkan metode pembayaran di atas</p>
-            </li>
-            @endforelse
-        </ul>
+            </form>
+            @else
+            <button onclick="showNoAccessPopup()" 
+                    class="px-4 py-2 bg-gray-300 text-gray-500 font-bold rounded-xl cursor-not-allowed opacity-50">
+                <i class="bi bi-trash-fill"></i>
+            </button>
+            @endif
+        </div>
+        @empty
+        <div class="bg-white rounded-2xl p-8 shadow-lg text-center">
+            <i class="bi bi-inbox text-6xl text-gray-300 mb-3"></i>
+            <p class="text-gray-500 font-semibold">Belum ada metode pembayaran</p>
+        </div>
+        @endforelse
     </div>
 
 </div>
 
-{{-- POPUP SUCCESS --}}
-<div id="popupSuccess" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center animate__animated animate__zoomIn">
-        <div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-5">
-            <i class="bi bi-check2 text-white text-6xl"></i>
+{{-- MODAL TAMBAH METODE --}}
+<div id="modalTambah" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate__animated animate__fadeInUp">
+        <div class="bg-yellow-400 px-5 py-4 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-white">Tambah Metode Pembayaran</h2>
+            <button id="closeModal" class="text-white text-2xl font-bold hover:scale-110 transition">✕</button>
         </div>
-        <h1 class="text-2xl font-bold mb-2">Berhasil!</h1>
-        <p id="successMessage" class="text-gray-600 mb-6">Metode pembayaran berhasil ditambahkan</p>
-        <button id="btnCloseSuccess" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition">
+        
+        <div class="p-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">Nama Metode</label>
+            <input type="text" id="inputNamaMetode" 
+                   placeholder="Contoh: Transfer Bank, QRIS, Gopay" 
+                   class="w-full p-4 rounded-2xl border-2 border-gray-200 bg-gray-50 text-gray-800 font-medium focus:border-yellow-400 focus:outline-none transition">
+        </div>
+        
+        <div class="px-6 pb-6">
+            <button id="btnSimpan" class="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl transition active:scale-95">
+                Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- POPUP NO ACCESS --}}
+<div id="popupNoAccess" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center animate__animated animate__shakeX">
+        <div class="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
+            <i class="bi bi-shield-x text-white text-5xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold mb-2 text-red-600">Akses Ditolak</h1>
+        <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk melakukan aksi ini</p>
+        <button id="btnCloseNoAccess" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
             Tutup
         </button>
-    </div>
-</div>
-
-{{-- POPUP LOADING --}}
-<div id="popupLoading" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center">
-        <div class="w-20 h-20 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-lg font-semibold text-gray-700">Memproses...</p>
-    </div>
-</div>
-
-{{-- POPUP KONFIRMASI HAPUS --}}
-<div id="popupKonfirmasi" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center animate__animated animate__shakeX">
-        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="bi bi-exclamation-triangle-fill text-red-500 text-4xl"></i>
-        </div>
-        <h3 class="text-xl font-bold text-gray-800 mb-2">Hapus Metode?</h3>
-        <p class="text-gray-600 mb-1">Apakah Anda yakin ingin menghapus:</p>
-        <p id="namaMetodeHapus" class="text-lg font-bold text-red-600 mb-6"></p>
-        <input type="hidden" id="idMetodeHapus">
-        
-        <div class="flex gap-3">
-            <button id="btnBatalHapus" class="flex-1 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold rounded-2xl transition">
-                Batal
-            </button>
-            <button id="btnKonfirmasiHapus" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
-                Hapus
-            </button>
-        </div>
     </div>
 </div>
 
@@ -115,176 +112,197 @@
 
 @section('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    
+document.addEventListener("DOMContentLoaded", () => {
+    // ✅ Show success/error message if exists
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: '{{ session('success') }}',
+            confirmButtonColor: '#22c55e',
+            timer: 3000,
+            timerProgressBar: true
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: '{{ session('error') }}',
+            confirmButtonColor: '#ef4444'
+        });
+    @endif
+
+    // ✅ PASS PERMISSIONS FROM PHP TO JS
+    const permissions = @json($permissions ?? []);
+    console.log('🔐 Permissions:', permissions);
+
     /* ===============================
-       ELEMENTS
+       POPUPS
     =============================== */
-    const inputMetode = document.getElementById('inputMetodeBayar');
-    const btnTambah = document.getElementById('btnTambahMetode');
-    const listMetode = document.getElementById('listMetode');
-    
-    const popupSuccess = document.getElementById('popupSuccess');
-    const successMessage = document.getElementById('successMessage');
-    const btnCloseSuccess = document.getElementById('btnCloseSuccess');
-    const popupLoading = document.getElementById('popupLoading');
-    
-    const popupKonfirmasi = document.getElementById('popupKonfirmasi');
-    const namaMetodeHapus = document.getElementById('namaMetodeHapus');
-    const idMetodeHapus = document.getElementById('idMetodeHapus');
-    const btnBatalHapus = document.getElementById('btnBatalHapus');
-    const btnKonfirmasiHapus = document.getElementById('btnKonfirmasiHapus');
+    const modalTambah = document.getElementById('modalTambah');
+    const popupNoAccess = document.getElementById('popupNoAccess');
+
+    // Show No Access Popup
+    window.showNoAccessPopup = function() {
+        popupNoAccess.classList.remove('hidden');
+    };
+
+    document.getElementById('btnCloseNoAccess').addEventListener('click', () => {
+        popupNoAccess.classList.add('hidden');
+    });
 
     /* ===============================
        TAMBAH METODE
     =============================== */
-    btnTambah.addEventListener('click', async () => {
-        const nama = inputMetode.value.trim();
-        
-        if (!nama) {
-            alert('Nama metode wajib diisi!');
-            inputMetode.focus();
+    const btnTambahMetode = document.getElementById('btnTambahMetode');
+    if (btnTambahMetode) {
+        btnTambahMetode.addEventListener('click', () => {
+            // ✅ CHECK PERMISSION
+            if (!permissions.can_add) {
+                showNoAccessPopup();
+                return;
+            }
+            modalTambah.classList.remove('hidden');
+        });
+    }
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+        modalTambah.classList.add('hidden');
+        document.getElementById('inputNamaMetode').value = '';
+    });
+
+    document.getElementById('btnSimpan').addEventListener('click', async () => {
+        const namaMetode = document.getElementById('inputNamaMetode').value.trim();
+
+        if (!namaMetode) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: 'Nama metode pembayaran wajib diisi',
+                confirmButtonColor: '#EAB308'
+            });
             return;
         }
 
-        popupLoading.classList.remove('hidden');
+        // Show loading
+        Swal.fire({
+            title: 'Menyimpan...',
+            html: 'Mohon tunggu sebentar',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        modalTambah.classList.add('hidden');
 
         try {
             const res = await fetch("{{ route('pengaturan.metode.store') }}", {
                 method: "POST",
                 headers: {
-                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
                 },
-                body: JSON.stringify({ nama_metode_bayar: nama })
+                body: JSON.stringify({ nama_metode_bayar: namaMetode })
             });
 
             const data = await res.json();
-            
-            popupLoading.classList.add('hidden');
 
             if (data.status) {
-                // Tambahkan ke list
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-2xl border-2 border-gray-200 hover:border-yellow-400 transition group';
-                li.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
-                            <i class="bi bi-credit-card text-white"></i>
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Metode pembayaran berhasil ditambahkan',
+                    confirmButtonColor: '#22c55e'
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Gagal menambahkan metode pembayaran',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+
+        } catch (e) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Terjadi kesalahan: ' + e.message,
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    });
+
+    /* ===============================
+       HAPUS METODE - Using Reusable Function
+    =============================== */
+    window.confirmDeleteMetode = function(button, namaMetode) {
+        // ✅ CHECK PERMISSION
+        if (!permissions.can_delete) {
+            showNoAccessPopup();
+            return;
+        }
+
+        const form = button.closest('form');
+        const idMetode = button.getAttribute('data-id');
+
+        Swal.fire({
+            title: 'Hapus Metode Pembayaran?',
+            html: `
+                <div class="text-left">
+                    <p class="text-gray-600 mb-3">Apakah Anda yakin ingin menghapus metode pembayaran:</p>
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4 my-4 shadow-sm">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="bi bi-credit-card-fill text-red-600 text-xl"></i>
+                            <p class="font-bold text-red-700 text-lg">${namaMetode}</p>
                         </div>
-                        <span class="font-semibold text-gray-800 group-hover:text-yellow-600 transition">${nama}</span>
+                        <p class="text-sm text-gray-600 ml-7">ID: ${idMetode}</p>
                     </div>
-                    <button data-id="${data.id || ''}" class="hapusMetode p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition active:scale-95 shadow">
-                        <i class="bi bi-trash-fill"></i>
-                    </button>
-                `;
-                
-                // Hapus empty state jika ada
-                const emptyState = listMetode.querySelector('.border-dashed');
-                if (emptyState) {
-                    emptyState.remove();
-                }
-                
-                listMetode.appendChild(li);
-                inputMetode.value = '';
-                
-                successMessage.textContent = 'Metode pembayaran berhasil ditambahkan!';
-                popupSuccess.classList.remove('hidden');
-            } else {
-                alert('Gagal menambahkan metode pembayaran!');
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p class="text-sm text-blue-700 flex items-start gap-2">
+                            <i class="bi bi-exclamation-circle text-blue-500 text-lg mt-0.5"></i>
+                            <span>Data yang sudah dihapus tidak dapat dikembalikan.</span>
+                        </p>
+                    </div>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i class="bi bi-trash-fill me-2"></i>Ya, Hapus!',
+            cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Batal',
+            reverseButtons: true,
+            width: '550px',
+            customClass: {
+                popup: 'rounded-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
+                cancelButton: 'rounded-xl px-6 py-3 font-bold'
             }
-        } catch (err) {
-            popupLoading.classList.add('hidden');
-            console.error(err);
-            alert('Terjadi kesalahan saat menambahkan metode!');
-        }
-    });
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Menghapus...',
+                    html: 'Mohon tunggu sebentar',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-    /* ===============================
-       HAPUS METODE (dengan konfirmasi)
-    =============================== */
-    listMetode.addEventListener('click', (e) => {
-        if (!e.target.closest('.hapusMetode')) return;
-        
-        const btn = e.target.closest('.hapusMetode');
-        const id = btn.dataset.id;
-        const nama = btn.closest('li').querySelector('span').textContent;
-        
-        namaMetodeHapus.textContent = nama;
-        idMetodeHapus.value = id;
-        popupKonfirmasi.classList.remove('hidden');
-    });
-
-    btnBatalHapus.addEventListener('click', () => {
-        popupKonfirmasi.classList.add('hidden');
-    });
-
-    btnKonfirmasiHapus.addEventListener('click', async () => {
-        const id = idMetodeHapus.value;
-        
-        popupKonfirmasi.classList.add('hidden');
-        popupLoading.classList.remove('hidden');
-
-        try {
-            const res = await fetch(`/pengaturan/metode-bayar/${id}`, {
-                method: 'DELETE',
-                headers: { 
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const data = await res.json();
-            
-            popupLoading.classList.add('hidden');
-
-            if (data.status) {
-                // Hapus dari DOM
-                const btn = document.querySelector(`.hapusMetode[data-id="${id}"]`);
-                if (btn) {
-                    btn.closest('li').remove();
-                }
-                
-                // Jika list kosong, tampilkan empty state
-                if (listMetode.children.length === 0) {
-                    const emptyLi = document.createElement('li');
-                    emptyLi.className = 'text-center p-8 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300';
-                    emptyLi.innerHTML = `
-                        <i class="bi bi-inbox text-5xl text-gray-300 mb-2"></i>
-                        <p class="text-gray-500 font-semibold">Belum ada metode pembayaran</p>
-                        <p class="text-sm text-gray-400">Tambahkan metode pembayaran di atas</p>
-                    `;
-                    listMetode.appendChild(emptyLi);
-                }
-                
-                successMessage.textContent = 'Metode pembayaran berhasil dihapus!';
-                popupSuccess.classList.remove('hidden');
-            } else {
-                alert(data.message || 'Gagal menghapus metode pembayaran!');
+                // Submit form
+                form.submit();
             }
-        } catch (err) {
-            popupLoading.classList.add('hidden');
-            console.error(err);
-            alert('Terjadi kesalahan saat menghapus metode!');
-        }
-    });
-
-    /* ===============================
-       CLOSE SUCCESS
-    =============================== */
-    btnCloseSuccess.addEventListener('click', () => {
-        popupSuccess.classList.add('hidden');
-    });
-
-    /* ===============================
-       ENTER KEY SUBMIT
-    =============================== */
-    inputMetode.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            btnTambah.click();
-        }
-    });
-
+        });
+    };
 });
 </script>
 @endsection

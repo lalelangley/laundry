@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transaksi extends Model
 {
-    protected $table = "transaksi";
-    protected $primaryKey = "id_transaksi";
-    public $incrementing = true;
-    protected $keyType = "int";
-    
+    use HasFactory;
+
+    protected $table = 'transaksi';
+    protected $primaryKey = 'id_transaksi';
+
     protected $fillable = [
         'id_pelanggan',
+        'id_kasir',
+        'id_driver',
+        'id_metode_bayar',
         'nama_pelanggan',
         'no_hp',
         'total_harga',
@@ -22,7 +26,7 @@ class Transaksi extends Model
         'tipe_diskon',
         'status_bayar',
         'status_transaksi',
-        'jenis_transaksi',     // 🔥 TAMBAHKAN INI
+        'jenis_transaksi',
         'keterangan',
         'tgl_lunas',
         'tgl_estimasi',
@@ -32,46 +36,51 @@ class Transaksi extends Model
         "id_driver",
     ];
 
-    // Relasi
+    protected $casts = [
+        'total_harga' => 'double',
+        'total_bayar' => 'double',
+        'dp' => 'double',
+        'diskon' => 'double',
+        'tgl_lunas' => 'date',
+        'tgl_estimasi' => 'date',
+        'tgl_transaksi' => 'date',
+    ];
+
+    // ✅ Relasi - PASTIKAN NAMA TABEL & FOREIGN KEY BENAR
     public function detail()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
-
-    public function detail_transaksi()  // 🔥 ALIAS untuk controller pesanan online
+    public function detail_transaksi()
     {
-        return $this->hasMany(DetailTransaksi::class, 'id_transaksi', 'id_transaksi');
+        return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
-
     public function pelanggan()
     {
         return $this->belongsTo(Pelanggan::class, 'id_pelanggan', 'id_pelanggan');
     }
 
-    public function parfum()
-    {
-        return $this->belongsTo(Parfum::class, 'id_parfum', 'id_satuan_parfum');
-    }
-
     public function kasir()
     {
-        return $this->belongsTo(User::class, 'id_kasir');
+        // ⚠️ GANTI 'users' dengan nama tabel kasir yang benar
+        // Misal: 'kasir', 'pegawai', atau 'karyawan'
+        return $this->belongsTo(Kasir::class, 'id_kasir', 'id_kasir');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'id_driver', 'id_driver');
     }
 
     public function metodeBayar()
     {
-        return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar');
+        return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar', 'id_metode_bayar');
     }
-     public function driver()
-    {
-        return $this->belongsTo(Driver::class, 'id_driver', 'id_driver');
-    }
+
     // Transaksi punya satu delivery
-public function delivery()
-{
-    return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
-}
-
-
+    public function delivery()
+    {
+        return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
+    }
 
 }

@@ -1,11 +1,9 @@
 @extends('layouts.master')
-
 @section('content')
-
 <div class="min-h-screen bg-gray-50">
     <!-- HEADER -->
     <div class="bg-yellow-400 px-8 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
+        <a href="{{ route('admin2.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold">Kelola Satuan</span>
@@ -56,16 +54,17 @@
 
                 <!-- ACTIONS -->
                 <div class="flex items-center gap-2">
-                    <a href="{{ route('satuan.edit', $s->id_satuan) }}" 
+                    <a href="{{ route('admin2.satuan.edit', $s->id_satuan) }}" 
                        class="bg-green-700 hover:bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                         <i class="bi bi-pencil-fill"></i>
                     </a>
 
-                    <form action="{{ route('satuan.destroy', $s->id_satuan) }}" method="POST" class="inline">
+                    <form action="{{ route('admin2.satuan.destroy', $s->id_satuan) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit"
-                                onclick="return confirm('Yakin ingin menghapus satuan ini?')"
+                        <button type="button"
+                                onclick="confirmDelete(this, 'satuan')"
+                                data-nama="{{ $s->nama_satuan }}"
                                 class="bg-red-700 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                             <i class="bi bi-trash-fill"></i>
                         </button>
@@ -97,7 +96,7 @@
         }
         @endphp
 
-        <a href="{{ route('satuan.create', $params) }}"
+        <a href="{{ route('admin2.satuan.create', $params) }}"
            class="block bg-yellow-400 hover:bg-yellow-500 py-4 rounded-2xl font-bold text-black text-center shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2">
             <i class="bi bi-plus-circle-fill text-xl"></i>
             Tambah Satuan

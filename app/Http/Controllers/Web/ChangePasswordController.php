@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Validator;
 
 class ChangePasswordController extends Controller
 {
+    // =========================
+    // ADMIN (SUPER ADMIN)
+    // =========================
+    
     /**
      * Display the change password form
      */
@@ -76,6 +80,11 @@ class ChangePasswordController extends Controller
             'message' => 'Password berhasil diubah'
         ]);
     }
+
+    // =========================
+    // KASIR
+    // =========================
+
     public function indexKasir()
     {
         return view('kasir.password.index');
@@ -104,7 +113,7 @@ class ChangePasswordController extends Controller
             ], 422);
         }
 
-        // Get authenticated admin
+        // Get authenticated kasir
         $kasir = Auth::guard('kasir')->user();
 
         if (!$kasir) {
@@ -139,14 +148,18 @@ class ChangePasswordController extends Controller
             'message' => 'Password berhasil diubah'
         ]);
     }
-    
+
+    // =========================
+    // ADMIN2 (ADMIN BIASA)
+    // =========================
+
     public function indexAdmin2()
     {
         return view('admin2.password.index');
     }
 
     /**
-     * Update the password
+     * Update the password - ADMIN2
      */
     public function updateAdmin2(Request $request)
     {
@@ -168,18 +181,26 @@ class ChangePasswordController extends Controller
             ], 422);
         }
 
-        // Get authenticated admin
-        $kasir = Auth::guard('kasir')->user();
+        // ✅ FIX: Ganti guard admin2 → admin
+        $admin2 = Auth::guard('admin')->user();
 
-        if (!$kasir) {
+        if (!$admin2) {
             return response()->json([
                 'status' => false,
                 'message' => 'User tidak ditemukan'
             ], 401);
         }
 
+        // ✅ OPTIONAL: Pastikan yang login adalah admin biasa (role_id = 2)
+        if ($admin2->role_id != 2) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Hanya admin biasa yang bisa mengakses halaman ini'
+            ], 403);
+        }
+
         // Check if old password is correct
-        if (!Hash::check($request->old_password, $kasir->password)) {
+        if (!Hash::check($request->old_password, $admin2->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Password lama tidak sesuai'
@@ -187,7 +208,7 @@ class ChangePasswordController extends Controller
         }
 
         // Check if new password is same as old password
-        if (Hash::check($request->new_password, $kasir->password)) {
+        if (Hash::check($request->new_password, $admin2->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Password baru tidak boleh sama dengan password lama'
@@ -195,8 +216,8 @@ class ChangePasswordController extends Controller
         }
 
         // Update password
-        $kasir->password = Hash::make($request->new_password);
-        $kasir->save();
+        $admin2->password = Hash::make($request->new_password);
+        $admin2->save();
 
         return response()->json([
             'status' => true,

@@ -18,7 +18,7 @@ class CheckPermission
     {
         // Get authenticated user (support both admin and kasir guard)
         $user = auth('admin')->user() ?? auth('kasir')->user();
-        
+
         if (!$user) {
             abort(403, 'Unauthorized access');
         }
@@ -30,10 +30,22 @@ class CheckPermission
 
         // Get current route name
         $routeName = $request->route()->getName();
-        
+
+        // ✅ BYPASS ROUTES - Allow access without checking permissions
+        $bypassPatterns = [
+            'kasir.laporan',      // Bypass semua route laporan kasir
+            'admin2.laporan',     // Bypass semua route laporan admin2
+        ];
+
+        foreach ($bypassPatterns as $pattern) {
+            if (str_contains($routeName, $pattern)) {
+                return $next($request); // ✅ Allow access
+            }
+        }
+
         // Extract menu identifier from route (e.g., 'kasir.layanan.create' -> 'layanan')
         $menuIdentifier = $this->extractMenuFromRoute($routeName);
-        
+
         if (!$menuIdentifier) {
             return $next($request); // No specific menu found, allow access
         }
@@ -50,7 +62,6 @@ class CheckPermission
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'Anda tidak memiliki akses untuk melakukan aksi ini'], 403);
             }
-            
             abort(403, 'Anda tidak memiliki hak akses untuk melakukan aksi ini');
         }
 

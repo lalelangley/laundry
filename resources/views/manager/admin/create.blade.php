@@ -83,7 +83,7 @@
                             </div>
                         </div>
 
-                        {{-- Role --}}
+                        {{-- Role - ✅ FIXED: CUMA Super Admin & Admin --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 Role <span class="text-red-500">*</span>
@@ -97,7 +97,10 @@
                                         required>
                                     <option value="">Pilih Role</option>
                                     @foreach($roles as $role)
-                                        <option value="{{ $role->id }}">{{ $role->nama_role }}</option>
+                                        {{-- ✅ ONLY SHOW SUPER ADMIN (1) & ADMIN (2) --}}
+                                        @if(in_array($role->id, [1, 2]))
+                                            <option value="{{ $role->id }}">{{ $role->nama_role }}</option>
+                                        @endif
                                     @endforeach
                                 </select>
                                 <div class="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">

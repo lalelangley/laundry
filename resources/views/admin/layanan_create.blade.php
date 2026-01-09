@@ -68,10 +68,11 @@
     @endif
 
 
-    {{-- BUTTON TAMBAH JENIS BARU --}}
-    <a href="{{ route('session.create', $layanan_id) }}" 
-       class="block mt-6 mb-6 bg-yellow-400 text-white text-center py-3 rounded-2xl font-semibold shadow">
-        <i class="bi bi-plus-circle"></i> Tambah Jenis Layanan Baru
+ {{-- BUTTON TAMBAH JENIS BARU --}}
+    <a href="{{ route('layanan.jenis.create', ['id_layanan' => $layanan_id]) }}" 
+       class="block mt-6 mb-6 bg-yellow-400 hover:bg-yellow-500 text-black text-center py-3 rounded-2xl font-semibold shadow transition inline-flex items-center justify-center gap-2">
+        <i class="bi bi-plus-circle"></i> 
+        <span>Tambah Jenis Layanan Baru</span>
     </a>
 
 

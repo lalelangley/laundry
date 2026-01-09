@@ -2,233 +2,304 @@
 
 @section('content')
 
-{{-- DEBUG INFO (Remove after testing) --}}
-@if(config('app.debug'))
-<div class="bg-blue-100 border-2 border-blue-300 p-4 rounded-xl mb-5 mx-5">
-    <h4 class="font-bold text-blue-900 mb-2">🔍 DEBUG INFO:</h4>
-    <div class="text-sm text-blue-800 space-y-1">
-        <p><strong>Jenis ID:</strong> {{ isset($jenis) ? $jenis->id_jenis_layanan : '❌ Variable $jenis NOT SET' }}</p>
-        <p><strong>Nama Jenis:</strong> {{ isset($jenis) ? $jenis->nama_jenis : '❌ NOT SET' }}</p>
-        <p><strong>Harga:</strong> {{ isset($jenis) ? 'Rp ' . number_format($jenis->harga) : '❌ NOT SET' }}</p>
-        <p><strong>Satuan ID:</strong> {{ isset($jenis) ? $jenis->id_satuan : '❌ NOT SET' }}</p>
-        <p><strong>From:</strong> {{ request('from') ?? '❌ NOT SET' }}</p>
-        <p><strong>Satuan Count:</strong> {{ isset($satuan) ? count($satuan) : '❌ Variable $satuan NOT SET' }}</p>
-    </div>
-</div>
-@endif
-
 {{-- HEADER --}}
-<div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('admin2.layanan.edit', request('from', 0)) }}" class="text-black text-3xl font-bold">
+<div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow sticky top-0 z-10">
+    @php
+        $idLayanan = isset($jenis) ? $jenis->id_layanan : ($id_layanan ?? request()->route('id_layanan') ?? request('from'));
+    @endphp
+    <a href="{{ route('admin2.layanan.edit', ['id' => $idLayanan]) }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <span class="text-xl font-bold">Ubah Jenis Layanan</span>
+    <span class="text-xl font-bold">{{ isset($jenis) ? 'Ubah' : 'Tambah' }} Jenis Layanan</span>
 </div>
 
-<div class="px-5 mt-6 mb-10">
-
-    @if(session('success'))
-        <div class="bg-green-500 text-white p-3 rounded-xl mb-5">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="bg-red-500 text-white p-3 rounded-xl mb-5">
-            <ul class="list-disc ml-5">
-                @foreach($errors->all() as $error)
+<div class="px-5 mt-6 pb-8">
+    
+    {{-- ERROR MESSAGES --}}
+    @if ($errors->any())
+        <div class="bg-red-500 text-white p-4 rounded-xl mb-5 shadow-md">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="bi bi-exclamation-triangle-fill text-xl"></i>
+                <span class="font-bold">Terdapat kesalahan:</span>
+            </div>
+            <ul class="ml-6 list-disc text-sm">
+                @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
 
-    {{-- Check if $jenis exists --}}
-    @if(!isset($jenis))
-        <div class="bg-red-500 text-white p-4 rounded-xl mb-5">
-            <h4 class="font-bold mb-2">❌ ERROR: Variable $jenis tidak ditemukan!</h4>
-            <p>Pastikan method controller mengirim variable 'jenis' ke view.</p>
+    {{-- SUCCESS MESSAGE --}}
+    @if (session('success'))
+        <div class="bg-green-500 text-white p-4 rounded-xl mb-5 shadow-md flex items-center gap-2">
+            <i class="bi bi-check-circle-fill text-xl"></i>
+            <span>{{ session('success') }}</span>
         </div>
-    @else
+    @endif
 
-    <form action="{{ route('admin2.layanan.jenis.update', $jenis->id_jenis_layanan ?? 0) }}" 
+    <form action="{{ isset($jenis) ? route('admin2.layanan.jenis.update', $jenis->id_jenis_layanan) : route('admin2.ayanan.jenis.store', $idLayanan) }}" 
           method="POST" 
           enctype="multipart/form-data"
-          class="bg-white p-6 rounded-2xl shadow-lg space-y-5">
+          class="bg-white p-6 rounded-2xl shadow-lg space-y-6">
+        
         @csrf
-        @method('PUT')
+        @if(isset($jenis))
+            @method('PUT')
+        @endif
 
-        <input type="hidden" name="from" value="{{ request('from', $jenis->id_layanan ?? 0) }}">
+        <input type="hidden" name="from" value="{{ $idLayanan }}">
 
-        {{-- Upload Gambar --}}
+        {{-- GAMBAR SECTION --}}
         <div>
-            <label class="font-semibold text-gray-700 block mb-2">
-                <i class="bi bi-image me-1"></i>Gambar Jenis Layanan
+            <label class="font-bold text-gray-700 block mb-3">
+                <i class="bi bi-image text-yellow-500 mr-1"></i>
+                Gambar Jenis Layanan
             </label>
 
-            {{-- Preview Container --}}
-            <div class="mb-3">
-                @if(!empty($jenis->gambar))
-                    <img id="preview" 
-                         src="{{ asset('images/jenis/' . $jenis->gambar) }}"
-                         alt="Preview" 
-                         class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200"
-                         onerror="this.src='{{ asset('images/default.png') }}'">
-                @else
-                    <img id="preview" 
-                         src="{{ asset('images/default.png') }}"
-                         alt="Preview" 
-                         class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200">
-                @endif
-            </div>
+            <div class="flex items-start gap-4">
 
-            {{-- Upload Button --}}
-            <div class="relative">
-                <input type="file" 
-                       name="gambar" 
-                       id="gambar"
-                       accept="image/*"
-                       class="hidden"
-                       onchange="previewImage(event)">
-                
-                <label for="gambar" 
-                       class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 rounded-xl cursor-pointer transition">
-                    <i class="bi bi-camera-fill text-xl"></i>
-                    <span class="font-semibold">Ganti Gambar</span>
-                </label>
-                <span id="fileName" class="ml-3 text-sm text-gray-600"></span>
+                {{-- PREVIEW BOX --}}
+                <div id="previewBox" class="w-28 h-28 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-md overflow-hidden border-2 border-gray-300 flex-shrink-0">
+                    @if (isset($jenis) && $jenis->gambar)
+                        <img id="preview" 
+                             src="{{ asset('storage/' . $jenis->gambar) }}"
+                             alt="Preview"
+                             class="w-full h-full object-cover"
+                             onerror="this.onerror=null; this.style.display='none'; document.getElementById('previewIcon').style.display='flex';">
+                        <i id="previewIcon" class="bi bi-image text-gray-400 text-4xl" style="display: none;"></i>
+                    @else
+                        <img id="preview" 
+                             src="" 
+                             alt="Preview"
+                             class="w-full h-full object-cover hidden">
+                        <i id="previewIcon" class="bi bi-image text-gray-400 text-4xl"></i>
+                    @endif
+                </div>
+
+                {{-- UPLOAD BUTTON & INFO --}}
+                <div class="flex-1">
+                    <label class="bg-yellow-400 hover:bg-yellow-500 px-6 py-3 rounded-xl text-black font-bold cursor-pointer inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg active:scale-95">
+                        <i class="bi bi-camera-fill text-xl"></i>
+                        {{ isset($jenis) && $jenis->gambar ? 'Ganti Gambar' : 'Pilih Gambar' }}
+                        <input type="file" 
+                               name="gambar" 
+                               id="inputGambar"
+                               class="hidden" 
+                               accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                               onchange="loadPreview(event)">
+                    </label>
+                    
+                    <div class="mt-3 space-y-1">
+                        <p class="text-xs text-gray-500">
+                            <i class="bi bi-info-circle"></i>
+                            Format: JPG, PNG, GIF, WEBP (Maksimal 2MB)
+                        </p>
+                        @if(isset($jenis) && $jenis->gambar)
+                            <p class="text-xs text-green-600 font-semibold flex items-center gap-1">
+                                <i class="bi bi-check-circle-fill"></i>
+                                Gambar saat ini: {{ basename($jenis->gambar) }}
+                            </p>
+                        @endif
+                        <p id="selectedFileName" class="text-xs text-blue-600 font-semibold hidden">
+                            <i class="bi bi-file-image"></i>
+                            File baru: <span id="fileName"></span>
+                        </p>
+                    </div>
+                </div>
             </div>
-            <p class="text-xs text-gray-500 mt-2">Format: JPG, PNG, JPEG, GIF, WEBP (Max: 2MB)</p>
         </div>
 
-        {{-- Nama Jenis --}}
+        {{-- NAMA JENIS --}}
         <div>
-            <label class="font-semibold text-gray-700 block mb-2">
-                <i class="bi bi-tag me-1"></i>Nama Jenis Layanan *
+            <label class="font-bold text-gray-700 block mb-2">
+                <i class="bi bi-tag text-yellow-500 mr-1"></i>
+                Nama Jenis Layanan
             </label>
             <input type="text" 
                    name="nama_jenis" 
                    value="{{ old('nama_jenis', $jenis->nama_jenis ?? '') }}"
-                   class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
-                   placeholder="Contoh: Cuci Kering"
+                   class="w-full bg-gray-50 border-2 border-gray-200 p-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all" 
+                   placeholder="Contoh: Cuci Kering Lipat"
                    required>
         </div>
 
-        {{-- Satuan --}}
+        {{-- SATUAN --}}
         <div>
-            <label class="font-semibold text-gray-700 block mb-2">
-                <i class="bi bi-rulers me-1"></i>Satuan *
+            <label class="font-bold text-gray-700 block mb-2">
+                <i class="bi bi-box text-yellow-500 mr-1"></i>
+                Satuan
             </label>
-            <select name="id_satuan"
-                    class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
-                    required>
-                <option value="">-- Pilih Satuan --</option>
-                @if(isset($satuan))
+            <div class="flex items-center gap-3">
+                <select name="id_satuan" 
+                        class="flex-1 bg-gray-50 border-2 border-gray-200 p-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all"
+                        required>
                     @foreach($satuan as $s)
-                        <option value="{{ $s->id_satuan }}" 
-                                {{ old('id_satuan', $jenis->id_satuan ?? '') == $s->id_satuan ? 'selected' : '' }}>
+                        <option value="{{ $s->id_satuan }}"
+                            @if(old('id_satuan', request('new_satuan', $jenis->id_satuan ?? '')) == $s->id_satuan) selected @endif>
                             {{ $s->nama_satuan }}
                         </option>
                     @endforeach
-                @else
-                    <option value="" disabled>❌ Data satuan tidak tersedia</option>
-                @endif
-            </select>
+                </select>
+
+                <a href="{{ route('admin2.satuan.create', [
+                    'from' => isset($jenis) ? 'edit-jenis' : 'create-jenis',
+                    'id_layanan' => $idLayanan,
+                    'id_jenis' => $jenis->id_jenis_layanan ?? null
+                ]) }}" 
+                   class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg whitespace-nowrap active:scale-95">
+                    <i class="bi bi-plus-circle-fill mr-1"></i>
+                    Tambah
+                </a>
+            </div>
         </div>
 
-        {{-- Harga --}}
+        {{-- HARGA --}}
         <div>
-            <label class="font-semibold text-gray-700 block mb-2">
-                <i class="bi bi-currency-dollar me-1"></i>Harga *
+            <label class="font-bold text-gray-700 block mb-2">
+                <i class="bi bi-cash-coin text-yellow-500 mr-1"></i>
+                Harga
             </label>
             <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">Rp</span>
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">Rp</span>
                 <input type="number" 
-                       name="harga"
-                       value="{{ old('harga', $jenis->harga ?? 0) }}"
-                       class="w-full p-3 pl-12 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                       name="harga" 
+                       value="{{ old('harga', $jenis->harga ?? '') }}"
+                       class="w-full bg-gray-50 border-2 border-gray-200 pl-14 pr-4 py-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all" 
                        placeholder="0"
                        min="0"
                        required>
             </div>
         </div>
 
-        {{-- Lama Pengerjaan --}}
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="font-semibold text-gray-700 block mb-2">
-                    <i class="bi bi-clock me-1"></i>Lama Pengerjaan *
-                </label>
+        {{-- LAMA PENGERJAAN --}}
+        <div>
+            <label class="font-bold text-gray-700 block mb-2">
+                <i class="bi bi-clock text-yellow-500 mr-1"></i>
+                Lama Pengerjaan
+            </label>
+            <div class="flex items-center gap-3">
                 <input type="number" 
-                       name="lama"
-                       value="{{ old('lama', $jenis->lama ?? 0) }}"
-                       class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                       name="lama" 
+                       value="{{ old('lama', $jenis->lama ?? '') }}"
+                       class="flex-1 bg-gray-50 border-2 border-gray-200 p-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all" 
                        placeholder="0"
                        min="0"
                        required>
-            </div>
-            <div>
-                <label class="font-semibold text-gray-700 block mb-2">Satuan Waktu *</label>
-                <select name="lama_satuan"
-                        class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                
+                <select name="lama_satuan" 
+                        class="bg-gray-50 border-2 border-gray-200 px-6 py-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all"
                         required>
-                    <option value="">-- Pilih --</option>
+                    <option value="Hari" {{ old('lama_satuan', $jenis->lama_satuan ?? 'Hari') == 'Hari' ? 'selected' : '' }}>Hari</option>
                     <option value="Jam" {{ old('lama_satuan', $jenis->lama_satuan ?? '') == 'Jam' ? 'selected' : '' }}>Jam</option>
-                    <option value="Hari" {{ old('lama_satuan', $jenis->lama_satuan ?? '') == 'Hari' ? 'selected' : '' }}>Hari</option>
-                    <option value="Minggu" {{ old('lama_satuan', $jenis->lama_satuan ?? '') == 'Minggu' ? 'selected' : '' }}>Minggu</option>
                 </select>
             </div>
         </div>
 
-        {{-- Keterangan --}}
+        {{-- KETERANGAN --}}
         <div>
-            <label class="font-semibold text-gray-700 block mb-2">
-                <i class="bi bi-chat-left-text me-1"></i>Keterangan (Opsional)
+            <label class="font-bold text-gray-700 block mb-2">
+                <i class="bi bi-journal-text text-yellow-500 mr-1"></i>
+                Keterangan (Opsional)
             </label>
             <textarea name="keterangan"
-                      rows="3"
-                      class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                      rows="4"
+                      class="w-full bg-gray-50 border-2 border-gray-200 p-4 rounded-xl text-lg focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none transition-all resize-none"
                       placeholder="Tambahkan keterangan jika diperlukan">{{ old('keterangan', $jenis->keterangan ?? '') }}</textarea>
         </div>
 
-        {{-- Buttons --}}
-        <div class="flex justify-between items-center mt-6">
-            <a href="{{ route('admin2.layanan.edit', request('from', $jenis->id_layanan ?? 0)) }}"
-               class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
-                <i class="bi bi-x-circle"></i>
-                <span>Batal</span>
+        {{-- BUTTONS --}}
+        <div class="flex gap-3 pt-4">
+            <a href="{{ route('admin2.layanan.edit', ['id' => $idLayanan]) }}"
+               class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-4 rounded-xl text-lg font-bold text-center transition-all shadow-md hover:shadow-lg active:scale-95">
+                <i class="bi bi-x-circle mr-1"></i>
+                Batal
             </a>
+            
             <button type="submit"
-                    class="px-8 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold transition inline-flex items-center gap-2 shadow-lg">
-                <i class="bi bi-check-circle-fill"></i>
-                <span>Update Jenis</span>
+                    class="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl text-lg font-bold transition-all shadow-lg hover:shadow-xl active:scale-95">
+                <i class="bi bi-check-circle-fill mr-1"></i>
+                {{ isset($jenis) ? 'Perbarui' : 'Simpan' }} Jenis
             </button>
         </div>
     </form>
-
-    @endif
-
 </div>
 
+{{-- PREVIEW SCRIPT --}}
 <script>
-function previewImage(event) {
+function loadPreview(event) {
     const file = event.target.files[0];
+    
+    if (!file) return;
+    
     const preview = document.getElementById('preview');
+    const icon = document.getElementById('previewIcon');
+    const previewBox = document.getElementById('previewBox');
+    const selectedFileName = document.getElementById('selectedFileName');
     const fileName = document.getElementById('fileName');
     
-    if (file) {
-        const reader = new FileReader();
+    // Validasi ukuran file (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        alert('❌ Ukuran file maksimal 2MB!\n\nFile Anda: ' + (file.size / 1024 / 1024).toFixed(2) + ' MB');
+        event.target.value = '';
+        return;
+    }
+    
+    // Validasi tipe file
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        alert('❌ Format file tidak valid!\n\nHanya menerima: JPG, PNG, GIF, WEBP');
+        event.target.value = '';
+        return;
+    }
+    
+    // Tampilkan nama file yang dipilih
+    fileName.textContent = file.name;
+    selectedFileName.classList.remove('hidden');
+    
+    // Load preview
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        preview.style.display = 'block';
         
-        reader.onload = function(e) {
-            preview.src = e.target.result;
+        if (icon) {
+            icon.style.display = 'none';
         }
         
-        reader.readAsDataURL(file);
-        fileName.textContent = file.name;
-    } else {
-        fileName.textContent = '';
-    }
+        // Ubah gradient box jadi putih
+        previewBox.classList.remove('from-gray-100', 'to-gray-200');
+        previewBox.classList.add('bg-white');
+        
+        // Animasi smooth
+        preview.style.opacity = '0';
+        setTimeout(() => {
+            preview.style.transition = 'opacity 0.3s ease-in-out';
+            preview.style.opacity = '1';
+        }, 10);
+    };
+    
+    reader.onerror = function() {
+        alert('❌ Gagal membaca file!\n\nSilakan coba lagi.');
+        event.target.value = '';
+    };
+    
+    reader.readAsDataURL(file);
 }
+
+// Auto-hide success message after 5 seconds
+window.addEventListener('DOMContentLoaded', function() {
+    const successMsg = document.querySelector('.bg-green-500');
+    if (successMsg) {
+        setTimeout(() => {
+            successMsg.style.transition = 'opacity 0.5s ease-out';
+            successMsg.style.opacity = '0';
+            setTimeout(() => successMsg.remove(), 500);
+        }, 5000);
+    }
+});
 </script>
 
 @endsection

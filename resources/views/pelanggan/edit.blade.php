@@ -28,14 +28,20 @@
     <input type="hidden" name="from" value="{{ request('from') }}">
         
     {{-- FOTO --}}
-    <div class="flex flex-col items-center">
-        <div class="w-28 h-28 bg-gray-200 rounded-full overflow-hidden shadow flex items-center justify-center">
-            @if($pelanggan->gambar)
-                <img id="previewImg" class="w-full h-full object-cover" src="{{ asset('storage/'.$pelanggan->gambar) }}" />
-                <i id="iconDefault" class="hidden bi bi-person text-5xl text-gray-500"></i>
+<div class="flex flex-col items-center">
+    <div class="w-28 h-28 bg-gray-200 rounded-full overflow-hidden shadow flex items-center justify-center relative">
+            {{-- ✅ FIX: Ganti $item jadi $pelanggan --}}
+            @if ($pelanggan->gambar)
+                <img id="previewImg" 
+                    src="{{ asset('images/' . $pelanggan->gambar) }}"
+                    alt="{{ $pelanggan->nama_pelanggan }}"
+                    class="w-full h-full object-cover">
             @else
-                <img id="previewImg" class="hidden w-full h-full object-cover" />
-                <i id="iconDefault" class="bi bi-person text-5xl text-gray-500"></i>
+                <img id="previewImg" 
+                    src="{{ asset('images/default-user.png') }}"
+                    alt="Default"
+                    class="w-full h-full object-cover hidden">
+                <i id="iconDefault" class="bi bi-camera text-5xl text-gray-400"></i>
             @endif
         </div>
 

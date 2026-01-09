@@ -3,22 +3,25 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('manager.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+        <a href="{{ route('admin2.manager.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <span class="text-2xl font-bold text-gray-900">Hak Akses User</span>
+        <span class="text-2xl font-bold text-gray-900">Hak Akses Kasir</span>
     </div>
 
-    {{-- USER INFO --}}
+    {{-- KASIR INFO --}}
     <div class="px-8 py-6">
         <div class="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-5 inline-flex items-center gap-4">
             <div class="w-14 h-14 bg-yellow-400 rounded-full flex items-center justify-center">
                 <i class="bi bi-person-fill text-white text-2xl"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-gray-900">{{ $user->nama ?? $user->nama_kasir }}</h3>
+                <h3 class="text-lg font-bold text-gray-900">{{ $kasir->nama_kasir }}</h3>
                 <p class="text-sm text-gray-500">
-                    Role: <span class="font-semibold text-gray-700">{{ strtoupper($role->nama_role ?? 'UNKNOWN') }}</span>
+                    No HP: <span class="font-semibold text-gray-700">{{ $kasir->no_hp ?? '-' }}</span>
+                </p>
+                <p class="text-sm text-gray-500">
+                    Role: <span class="font-semibold text-gray-700">KASIR</span>
                 </p>
             </div>
         </div>
@@ -26,10 +29,10 @@
 
     {{-- FORM --}}
     <div class="px-8 pb-10">
-        <form method="POST" action="{{ route('manager.permission.save.user') }}">
+        <form method="POST" action="{{ route('admin2.manager.menu-role.akses.save', $kasir->id_kasir) }}">
             @csrf
-            {{-- ROLE USER (FIX) --}}
-            <input type="hidden" name="role_id" value="{{ $role->id }}">
+            {{-- ROLE KASIR --}}
+            <input type="hidden" name="role_id" value="3">
 
             {{-- TABLE CARD --}}
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -41,7 +44,7 @@
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-gray-900">Pengaturan Hak Akses Menu</h2>
-                            <p class="text-sm text-gray-500">Centang menu yang aktif dan atur permission-nya</p>
+                            <p class="text-sm text-gray-500">Centang menu yang aktif dan atur permission untuk kasir ini</p>
                         </div>
                     </div>
                 </div>
@@ -74,10 +77,14 @@
                                 @php
                                     $permData  = $permissions[$menu->id] ?? null;
                                     $menuAktif = (bool) $permData;
+                                    $allowedActions = $menuActions[$menu->slug] ?? ['view','add','edit','delete'];
                                 @endphp
                                 <tr class="hover:bg-gray-50 transition">
                                     <td class="px-8 py-4">
-                                        <span class="font-medium text-gray-900">{{ $menu->nama_menu }}</span>
+                                        <div class="flex items-center gap-2">
+                                            <i class="bi bi-{{ $menu->icon ?? 'circle' }} text-gray-400"></i>
+                                            <span class="font-medium text-gray-900">{{ $menu->nama_menu }}</span>
+                                        </div>
                                     </td>
                                     {{-- MENU AKTIF --}}
                                     <td class="px-6 py-4 text-center">
@@ -91,12 +98,16 @@
                                     {{-- PERMISSION --}}
                                     @foreach(['view','add','edit','delete'] as $perm)
                                         <td class="px-6 py-4 text-center">
-                                            <input type="checkbox"
-                                                   name="permissions[{{ $menu->id }}][]"
-                                                   value="{{ $perm }}"
-                                                   class="perm-{{ $menu->id }} w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                                   @checked($permData && $permData->{'can_'.$perm})
-                                                   @disabled(!$menuAktif)>
+                                            @if(in_array($perm, $allowedActions))
+                                                <input type="checkbox"
+                                                       name="permissions[{{ $menu->id }}][]"
+                                                       value="{{ $perm }}"
+                                                       class="perm-{{ $menu->id }} w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                       @checked($permData && $permData->{'can_'.$perm})
+                                                       @disabled(!$menuAktif)>
+                                            @else
+                                                <span class="text-gray-300">-</span>
+                                            @endif
                                         </td>
                                     @endforeach
                                 </tr>
@@ -108,7 +119,7 @@
 
             {{-- BUTTON --}}
             <div class="mt-8 flex items-center justify-between">
-                <a href="{{ route('manager.index') }}"
+                <a href="{{ route('admin2.manager.index') }}"
                    class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                     <i class="bi bi-x-circle"></i>
                     <span>Batal</span>
@@ -122,6 +133,13 @@
         </form>
     </div>
 </div>
+
+{{-- SUCCESS MESSAGE --}}
+@if(session('success'))
+<script>
+    alert("{{ session('success') }}");
+</script>
+@endif
 
 {{-- JS CONTROL --}}
 <script>

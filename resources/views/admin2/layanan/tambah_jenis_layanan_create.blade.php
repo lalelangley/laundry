@@ -4,7 +4,9 @@
 
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('admin2.layanan_create') }}" class="text-black text-3xl font-bold">←</a>
+    <a href="{{ route('admin2.layanan.create') }}" class="text-black text-3xl font-bold">
+        <i class="bi bi-arrow-left"></i>
+    </a>
     <span class="text-xl font-bold">Tambah Jenis Layanan</span>
 </div>
 
@@ -26,19 +28,22 @@
         </div>
     @endif
 
-    <form action="{{ route('admin2.jenis.store', ['id_layanan' => $id_layanan ?? 0]) }}" 
+    <form action="{{ route('admin2.layanan.jenis.store', ['id_layanan' => $id_layanan ?? 0]) }}" 
           method="POST" 
           enctype="multipart/form-data"
-          class="bg-white p-6 rounded-2xl shadow-lg">
+          class="bg-white p-6 rounded-2xl shadow-lg space-y-5">
         @csrf
 
         {{-- Upload Gambar --}}
-        <div class="mb-5">
+        <div>
             <label class="font-semibold text-gray-700 block mb-2">Gambar Jenis Layanan</label>
             
             {{-- Preview Container --}}
             <div id="imagePreview" class="mb-3 hidden">
-                <img id="previewImg" src="" alt="Preview" class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200">
+                <img id="previewImg" 
+                     src="" 
+                     alt="Preview" 
+                     class="w-full max-w-xs h-48 object-cover rounded-xl border-2 border-gray-200">
             </div>
 
             {{-- Upload Button --}}
@@ -61,20 +66,21 @@
         </div>
 
         {{-- Nama Jenis --}}
-        <div class="mb-5">
-            <label class="font-semibold text-gray-700">Nama Jenis Layanan</label>
-            <input type="text" name="nama_jenis"
+        <div>
+            <label class="font-semibold text-gray-700 block mb-1">Nama Jenis Layanan</label>
+            <input type="text" 
+                   name="nama_jenis"
                    value="{{ old('nama_jenis') }}"
-                   class="w-full p-3 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                   class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
                    placeholder="Contoh: Cuci Kering"
                    required>
         </div>
 
         {{-- Satuan --}}
-        <div class="mb-5">
-            <label class="font-semibold text-gray-700">Satuan</label>
+        <div>
+            <label class="font-semibold text-gray-700 block mb-1">Satuan</label>
             <select name="id_satuan"
-                    class="w-full p-3 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                    class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
                     required>
                 <option value="">-- Pilih Satuan --</option>
                 @foreach($satuan as $s)
@@ -86,13 +92,14 @@
         </div>
 
         {{-- Harga --}}
-        <div class="mb-5">
-            <label class="font-semibold text-gray-700">Harga</label>
+        <div>
+            <label class="font-semibold text-gray-700 block mb-1">Harga</label>
             <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">Rp</span>
-                <input type="number" name="harga"
+                <input type="number" 
+                       name="harga"
                        value="{{ old('harga') }}"
-                       class="w-full p-3 pl-12 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                       class="w-full p-3 pl-12 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
                        placeholder="0"
                        min="0"
                        required>
@@ -100,41 +107,43 @@
         </div>
 
         {{-- Lama Pengerjaan --}}
-        <div class="grid grid-cols-2 gap-4 mb-5">
-            <div>
-                <label class="font-semibold text-gray-700">Lama Pengerjaan</label>
-                <input type="number" name="lama"
-                       value="{{ old('lama') }}"
-                       class="w-full p-3 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
-                       placeholder="0"
-                       min="0"
-                       required>
-            </div>
-            <div>
-                <label class="font-semibold text-gray-700">Satuan Waktu</label>
-                <select name="lama_satuan"
-                        class="w-full p-3 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
-                        required>
-                    <option value="">-- Pilih --</option>
-                    <option value="Jam" {{ old('lama_satuan') == 'Jam' ? 'selected' : '' }}>Jam</option>
-                    <option value="Hari" {{ old('lama_satuan') == 'Hari' ? 'selected' : '' }}>Hari</option>
-                    <option value="Minggu" {{ old('lama_satuan') == 'Minggu' ? 'selected' : '' }}>Minggu</option>
-                </select>
+        <div>
+            <label class="font-semibold text-gray-700 block mb-1">Lama Pengerjaan</label>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <input type="number" 
+                           name="lama"
+                           value="{{ old('lama') }}"
+                           class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                           placeholder="0"
+                           min="0"
+                           required>
+                </div>
+                <div>
+                    <select name="lama_satuan"
+                            class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                            required>
+                        <option value="">-- Pilih --</option>
+                        <option value="Jam" {{ old('lama_satuan') == 'Jam' ? 'selected' : '' }}>Jam</option>
+                        <option value="Hari" {{ old('lama_satuan') == 'Hari' ? 'selected' : '' }}>Hari</option>
+                        <option value="Minggu" {{ old('lama_satuan') == 'Minggu' ? 'selected' : '' }}>Minggu</option>
+                    </select>
+                </div>
             </div>
         </div>
 
         {{-- Keterangan --}}
-        <div class="mb-5">
-            <label class="font-semibold text-gray-700">Keterangan (Opsional)</label>
+        <div>
+            <label class="font-semibold text-gray-700 block mb-1">Keterangan (Opsional)</label>
             <textarea name="keterangan"
                       rows="3"
-                      class="w-full p-3 border-2 border-gray-300 rounded-xl mt-1 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
+                      class="w-full p-3 border-2 border-gray-300 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 outline-none"
                       placeholder="Tambahkan keterangan jika diperlukan">{{ old('keterangan') }}</textarea>
         </div>
 
         {{-- Buttons --}}
-        <div class="flex justify-between items-center mt-6">
-            <a href="{{ route('admin2.layanan_create') }}"
+        <div class="flex justify-between items-center pt-4">
+            <a href="{{ route('admin2.layanan.create') }}"
                class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                 <i class="bi bi-x-circle"></i>
                 <span>Batal</span>
@@ -156,13 +165,26 @@ function previewImage(event) {
     const fileName = document.getElementById('fileName');
     
     if (file) {
+        // Validasi ukuran file (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Ukuran file terlalu besar! Maksimal 2MB');
+            event.target.value = '';
+            return;
+        }
+
+        // Validasi tipe file
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Format file tidak didukung! Gunakan JPG, PNG, GIF, atau WEBP');
+            event.target.value = '';
+            return;
+        }
+
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             preview.classList.remove('hidden');
         }
-        
         reader.readAsDataURL(file);
         fileName.textContent = file.name;
     } else {

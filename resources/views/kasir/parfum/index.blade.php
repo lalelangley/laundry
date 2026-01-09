@@ -64,8 +64,9 @@
                     <form action="{{ route('kasir.parfum.destroy', $p->id_parfum) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit"
-                                onclick="return confirm('Yakin ingin menghapus parfum ini?')"
+                        <button type="button"
+                                onclick="confirmDelete(this, 'parfum')"
+                                data-nama="{{ $p->nama_parfum }}"
                                 class="bg-red-700 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
                             <i class="bi bi-trash-fill"></i>
                         </button>

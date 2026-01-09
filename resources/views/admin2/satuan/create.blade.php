@@ -4,13 +4,13 @@
 
 {{-- HEADER --}}
 <div class="w-full bg-yellow-400 p-4 flex items-center">
-    <a href="{{ route('satuan.index') }}" class="text-2xl mr-3">←</a>
+    <a href="{{ route('admin2.satuan.index') }}" class="text-2xl mr-3">←</a>
     <h1 class="text-xl font-bold">Tambah Satuan</h1>
 </div>
 
 <div class="p-4 bg-white min-h-screen">
 
-    <form action="{{ route('satuan.store') }}" method="POST">
+    <form action="{{ route('admin2.satuan.store') }}" method="POST">
         @csrf
 
         {{-- Hidden input --}}

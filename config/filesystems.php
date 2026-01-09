@@ -59,6 +59,13 @@ return [
             'throw' => false,
             'report' => false,
         ],
+        
+         // TAMBAHKAN INI
+        'backup' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/Laravel'),
+        ],
+
 
     ],
 
