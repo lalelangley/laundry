@@ -41,6 +41,10 @@
                             'label' => 'Pickup',
                             'icon'  => 'truck'
                         ],
+                        'menunggu_konfirmasi' => [
+                            'label' => 'Antrian',
+                            'icon'  => 'hourglass-split'
+                        ],
                         'proses' => [
                             'label' => 'Proses',
                             'icon'  => 'arrow-repeat'
@@ -90,6 +94,7 @@
                         <div class="relative bg-white shadow-sm rounded-2xl p-6 
                                     hover:shadow-md transition-all duration-300 border border-gray-200
                                     @if($p->status_transaksi == 'pick_up') hover:border-yellow-300
+                                    @elseif($p->status_transaksi == 'antrian') hover:border-orange-300
                                     @elseif($p->status_transaksi == 'proses') hover:border-purple-300
                                     @elseif($p->status_transaksi == 'siap_di_ambil') hover:border-teal-300
                                     @elseif($p->status_transaksi == 'siap_di_antar') hover:border-indigo-300
@@ -173,6 +178,7 @@
                                 <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
                                              text-xs font-semibold
                                              @if ($p->status_transaksi == 'pick_up') bg-yellow-100 text-yellow-700
+                                             @elseif ($p->status_transaksi == 'antrian') bg-orange-100 text-orange-700
                                              @elseif ($p->status_transaksi == 'proses') bg-purple-100 text-purple-700
                                              @elseif ($p->status_transaksi == 'siap_di_ambil') bg-teal-100 text-teal-700
                                              @elseif ($p->status_transaksi == 'siap_di_antar') bg-indigo-100 text-indigo-700
