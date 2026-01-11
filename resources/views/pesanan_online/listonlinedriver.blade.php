@@ -7,7 +7,7 @@
         <i class="bi bi-arrow-left"></i>
     </a>
     <div>
-        <span class="text-2xl font-bold">Pilih Driver Delivery</span>
+        <span class="text-2xl font-bold">Pilih Driver {{ $isPickup ? 'Pickup' : 'Delivery' }}</span>
         <p class="text-sm text-gray-800">ORDER #{{ $pesanan->id_transaksi }}</p>
     </div>
 </div>
@@ -40,8 +40,27 @@
             <div class="flex items-start gap-3">
                 <i class="bi bi-geo-alt-fill text-red-500 text-xl"></i>
                 <div>
-                    <p class="text-gray-500 text-xs">Alamat Pengiriman</p>
+                    <p class="text-gray-500 text-xs">Alamat {{ $isPickup ? 'Pickup' : 'Pengiriman' }}</p>
                     <p class="font-semibold text-base">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
+                </div>
+            </div>
+
+            {{-- INFO JENIS DELIVERY --}}
+            <div class="flex items-start gap-3">
+                <i class="bi bi-truck text-yellow-600 text-xl"></i>
+                <div>
+                    <p class="text-gray-500 text-xs">Jenis Layanan</p>
+                    <p class="font-semibold text-base">
+                        @if($isPickup)
+                            <span class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm">
+                                <i class="bi bi-arrow-down-circle"></i> Pickup (Jemput Cucian)
+                            </span>
+                        @else
+                            <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm">
+                                <i class="bi bi-arrow-up-circle"></i> Delivery (Antar Cucian)
+                            </span>
+                        @endif
+                    </p>
                 </div>
             </div>
         </div>
@@ -78,7 +97,7 @@
                     <div class="flex-1">
                         <div class="text-xl font-semibold">{{ $driver->nama_driver }}</div>
                         <div class="flex items-center text-gray-600 text-base">
-                            <i class="bi bi-telephone me-2"></i>{{ $driver->no_telp }}
+                            <i class="bi bi-telephone me-2"></i>{{ $driver->no_telp ?? $driver->no_hp ?? '-' }}
                         </div>
                         @if($driver->alamat)
                         <div class="flex items-center text-gray-600 text-sm">
@@ -124,14 +143,37 @@
             <p class="font-bold text-lg" id="selectedDriverName"></p>
         </div>
 
-        {{-- ✅ PASTIKAN FORM METHOD POST --}}
+        <div class="mb-4 bg-blue-50 p-3 rounded-xl">
+            <p class="text-sm text-gray-600">Jenis Layanan:</p>
+            <p class="font-bold text-lg">
+                @if($isPickup)
+                    <i class="bi bi-arrow-down-circle text-orange-600"></i> Pickup (Jemput Cucian)
+                @else
+                    <i class="bi bi-arrow-up-circle text-blue-600"></i> Delivery (Antar Cucian)
+                @endif
+            </p>
+        </div>
+
+        {{-- ✅ FORM DENGAN ROUTE DINAMIS BERDASARKAN JENIS DELIVERY --}}
         <form id="assignDriverForm" 
-              action="{{ route('pesanan.online.assign-driver-pickup', $pesanan->id_transaksi) }}" 
+              action="{{ $isPickup ? route('pesanan.online.assign-driver-pickup', $pesanan->id_transaksi) : route('pesanan.online.assign-driver-antar', $pesanan->id_transaksi) }}" 
               method="POST"
               onsubmit="return confirmAssign(event)">
             @csrf
             <input type="hidden" name="id_driver" id="selectedDriverId">
             
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Catatan (Opsional)
+                </label>
+                <textarea name="catatan_driver" 
+                          rows="3"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+                          placeholder="Tambahkan catatan untuk driver jika ada..."></textarea>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="bi bi-info-circle"></i> Contoh: "Tolong telpon dulu sebelum berangkat"
+                </p>
+            </div>
 
             <div class="flex gap-3">
                 <button type="button" 
@@ -168,12 +210,18 @@ function closeCatatanModal() {
 // ✅ TAMBAHKAN KONFIRMASI SEBELUM SUBMIT
 function confirmAssign(event) {
     const driverName = document.getElementById('selectedDriverName').textContent;
-    const confirmation = confirm(`Yakin pilih driver ${driverName}?`);
+    const jenisLayanan = '{{ $isPickup ? "Pickup (Jemput Cucian)" : "Delivery (Antar Cucian)" }}';
+    const confirmation = confirm(`Yakin pilih driver ${driverName} untuk ${jenisLayanan}?`);
     
     if (!confirmation) {
         event.preventDefault();
         return false;
     }
+    
+    // Show loading
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Memproses...';
     
     return true;
 }
@@ -192,3 +240,5 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+
+@endsection
