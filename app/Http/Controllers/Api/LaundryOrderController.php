@@ -10,6 +10,7 @@ use App\Models\Pelanggan;
 use App\Models\Layanan;
 use App\Models\Parfum;
 use App\Models\Delivery;
+use App\Models\BiayaTambahan;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
@@ -67,7 +68,7 @@ class LaundryOrderController extends Controller
                 'no_hp'            => $pelanggan->no_hp,
 
                 'jenis_transaksi'  => 'online',
-                'status_transaksi' => 'antrian',
+                'status_transaksi' => 'pick_up',
 
                 'total_harga'      => 0,
                 'total_bayar'      => 0,
@@ -137,32 +138,25 @@ class LaundryOrderController extends Controller
     // ======================
     // GET ORDER LIST
     // ======================
-    public function getOrders(Request $request)
-    {
-        $id = $request->query('id_pelanggan');
+    public function getOrders()
+{
+    $user = auth()->user();
 
-        if (!$id) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'id_pelanggan wajib dikirim'
-            ], 400);
-        }
+    $orders = Transaksi::with([
+            'detail.layanan',
+            'detail.jenis',
+            'detail.parfum',
+            'delivery'
+        ])
+        ->where('id_pelanggan', $user->id_pelanggan)
+        ->orderByDesc('id_transaksi')
+        ->get();
 
-        $orders = Transaksi::with([
-                'detail.layanan',
-                'detail.jenis',
-                'detail.parfum',
-                'delivery'
-            ])
-            ->where('id_pelanggan', $id)
-            ->orderByDesc('id_transaksi')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data'   => $orders
-        ]);
-    }
+    return response()->json([
+        'status' => true,
+        'data'   => $orders
+    ]);
+}
 
     // ======================
     // GET ORDER DETAIL
@@ -173,7 +167,8 @@ class LaundryOrderController extends Controller
             'detail.layanan:id_layanan,nama_layanan',
             'detail.jenis:id_jenis_layanan,nama_jenis',
             'detail.parfum:id_parfum,nama_parfum',
-            'delivery'
+            'delivery',
+            'biayaTambahan' // ✅ TAMBAHKAN RELASI BIAYA TAMBAHAN (ONGKIR)
         ])
         ->where('id_transaksi', $id)
         ->first();
@@ -185,94 +180,200 @@ class LaundryOrderController extends Controller
             ], 404);
         }
 
+        // ✅ HITUNG SUBTOTAL DARI DETAIL
+        $subtotal = $order->detail->sum(function($item) {
+            return $item->harga * ($item->qty ?? 1);
+        });
+
+        // ✅ AMBIL BIAYA ONGKIR
+        $biayaOngkir = $order->biayaTambahan ? $order->biayaTambahan->biaya : 0;
+
         return response()->json([
             'status' => true,
-            'data'   => $order
+            'data'   => [
+                'order' => $order,
+                'subtotal' => $subtotal,
+                'biaya_ongkir' => $biayaOngkir,
+                'diskon' => $order->diskon ?? 0,
+                'tipe_diskon' => $order->tipe_diskon,
+                'total_bayar' => $order->total_bayar,
+                'total_item' => $order->detail->sum('qty') ?? $order->detail->count(),
+                'tgl_estimasi' => $order->tgl_estimasi, // ✅ TAMBAHKAN ESTIMASI
+            ]
         ]);
     }
 
     // ======================
-// GET INVOICE (ORDER SUDAH ADA HARGA)
-// ======================
-public function getInvoice($id)
-{
-    $order = Transaksi::with([
-        'detail.layanan',
-        'detail.jenis',
-        'detail.parfum',
-        'delivery'
-    ])
-    ->where('id_transaksi', $id)
-    ->whereNotNull('total_harga')
-    ->where('total_harga', '>', 0)
-    ->first();
+    // GET INVOICE (ORDER SUDAH ADA HARGA)
+    // ======================
+    public function getInvoice($id)
+    {
+        $order = Transaksi::with([
+            'detail.layanan',
+            'detail.jenis',
+            'detail.parfum',
+            'delivery',
+            'biayaTambahan' // ✅ TAMBAHKAN ONGKIR
+        ])
+        ->where('id_transaksi', $id)
+        ->whereNotNull('total_harga')
+        ->where('total_harga', '>', 0)
+        ->first();
 
-    if (!$order) {
+        if (!$order) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Invoice belum tersedia atau order tidak ditemukan'
+            ], 404);
+        }
+
+        // ✅ HITUNG SUBTOTAL
+        $subtotal = $order->detail->sum(function($item) {
+            return $item->harga * ($item->qty ?? 1);
+        });
+
+        // ✅ BIAYA ONGKIR
+        $biayaOngkir = $order->biayaTambahan ? $order->biayaTambahan->biaya : 0;
+
+        return response()->json([
+            'status' => true,
+            'data'   => [
+                'invoice_no'   => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT),
+                'tanggal'      => $order->tgl_transaksi,
+                'pelanggan'    => [
+                    'nama' => $order->nama_pelanggan,
+                    'hp'   => $order->no_hp,
+                ],
+                'items'        => $order->detail,
+                'subtotal'     => $subtotal, // ✅ TAMBAHKAN
+                'biaya_ongkir' => $biayaOngkir, // ✅ TAMBAHKAN
+                'diskon'       => $order->diskon,
+                'tipe_diskon'  => $order->tipe_diskon,
+                'total_bayar'  => $order->total_bayar,
+                'dp'           => $order->dp,
+                'status_bayar' => $order->status_bayar,
+                'delivery'     => $order->delivery,
+                'total_item'   => $order->detail->sum('qty') ?? $order->detail->count(),
+                'tgl_estimasi' => $order->tgl_estimasi, // ✅ TAMBAHKAN ESTIMASI
+            ]
+        ]);
+    }
+
+    // ======================
+    // GET LIST INVOICE (SUDAH ADA HARGA)
+    // ======================
+    public function getInvoiceList(Request $request)
+    {
+        $idPelanggan = $request->query('id_pelanggan');
+
+        if (!$idPelanggan) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'id_pelanggan wajib dikirim'
+            ], 400);
+        }
+
+        $invoices = Transaksi::select(
+                'id_transaksi',
+                'tgl_transaksi',
+                'total_bayar',
+                'status_bayar'
+            )
+            ->where('id_pelanggan', $idPelanggan)
+            ->whereNotNull('total_harga')
+            ->where('total_harga', '>', 0)
+            ->orderByDesc('id_transaksi')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id_transaksi' => $item->id_transaksi,
+                    'invoice_no'   => 'INV-' . str_pad($item->id_transaksi, 6, '0', STR_PAD_LEFT),
+                    'tanggal'      => $item->tgl_transaksi,
+                    'total_bayar'  => $item->total_bayar,
+                    'status_bayar' => $item->status_bayar,
+                ];
+            });
+
+        return response()->json([
+            'status' => true,
+            'data'   => $invoices
+        ]);
+    }
+
+    // ✅ PERBAIKAN METHOD pilihMetodePengambilan
+// ✅ FINAL FIX - Delivery record hanya untuk 'antar', pickup tidak buat record
+
+public function pilihMetodePengambilan(Request $request, $id_transaksi)
+{
+    // ================= VALIDASI =================
+    $request->validate([
+        'jenis_transaksi' => 'required|in:pickup,antar',
+        'alamat_tujuan'   => 'required_if:jenis_transaksi,antar|string|max:255',
+    ]);
+
+    // ================= AMBIL TRANSAKSI =================
+    $transaksi = Transaksi::where('id_transaksi', $id_transaksi)
+        ->where('id_pelanggan', auth()->user()->id_pelanggan)
+        ->where('status_transaksi', 'selesai_dicuci')
+        ->first();
+
+    if (!$transaksi) {
         return response()->json([
             'status'  => false,
-            'message' => 'Invoice belum tersedia atau order tidak ditemukan'
+            'message' => 'Transaksi tidak ditemukan atau belum selesai dicuci',
         ], 404);
     }
 
-    return response()->json([
-        'status' => true,
-        'data'   => [
-            'invoice_no'   => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT),
-            'tanggal'      => $order->tgl_transaksi,
-            'pelanggan'    => [
-                'nama' => $order->nama_pelanggan,
-                'hp'   => $order->no_hp,
-            ],
-            'items'        => $order->detail,
-            'total_harga'  => $order->total_harga,
-            'diskon'       => $order->diskon,
-            'tipe_diskon'  => $order->tipe_diskon,
-            'total_bayar'  => $order->total_bayar,
-            'dp'           => $order->dp,
-            'status_bayar' => $order->status_bayar,
-            'delivery'     => $order->delivery,
-        ]
-    ]);
-}
-// ======================
-// GET LIST INVOICE (SUDAH ADA HARGA)
-// ======================
-public function getInvoiceList(Request $request)
-{
-    $idPelanggan = $request->query('id_pelanggan');
+    // ================= TENTUKAN STATUS =================
+    if ($request->jenis_transaksi === 'pickup') {
 
-    if (!$idPelanggan) {
+        // ---------- PICKUP ----------
+        $transaksi->update([
+            'status_transaksi' => 'siap_di_ambil',
+        ]);
+
         return response()->json([
-            'status'  => false,
-            'message' => 'id_pelanggan wajib dikirim'
-        ], 400);
+            'status'  => true,
+            'message' => 'Metode ambil sendiri berhasil dipilih',
+            'data'    => [
+                'id_transaksi'      => $transaksi->id_transaksi,
+                'status_transaksi'  => 'siap_di_ambil',
+                'metode'            => 'pickup',
+                'delivery'          => null,
+            ]
+        ], 200);
     }
 
-    $invoices = Transaksi::select(
-            'id_transaksi',
-            'tgl_transaksi',
-            'total_bayar',
-            'status_bayar'
-        )
-        ->where('id_pelanggan', $idPelanggan)
-        ->whereNotNull('total_harga')
-        ->where('total_harga', '>', 0)
-        ->orderByDesc('id_transaksi')
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id_transaksi' => $item->id_transaksi,
-                'invoice_no'   => 'INV-' . str_pad($item->id_transaksi, 6, '0', STR_PAD_LEFT),
-                'tanggal'      => $item->tgl_transaksi,
-                'total_bayar'  => $item->total_bayar,
-                'status_bayar' => $item->status_bayar,
-            ];
-        });
+    // ================= ANTAR (DELIVERY) =================
+
+    // Update status transaksi
+    $transaksi->update([
+        'status_transaksi' => 'siap_di_antar',
+    ]);
+
+    // BUAT DELIVERY BARU (TANPA UPDATE / DELETE DATA LAMA)
+    $delivery = Delivery::create([
+        'id_transaksi'  => $transaksi->id_transaksi,
+        'jenis'         => 'antar',
+        'alamat_tujuan' => $request->alamat_tujuan,
+        'status'        => 'pending',
+        'waktu'         => null, // diisi admin saat assign driver
+    ]);
 
     return response()->json([
-        'status' => true,
-        'data'   => $invoices
-    ]);
+        'status'  => true,
+        'message' => 'Metode antar berhasil dipilih',
+        'data'    => [
+            'id_transaksi'     => $transaksi->id_transaksi,
+            'status_transaksi' => 'siap_di_antar',
+            'metode'           => 'antar',
+            'delivery'         => [
+                'id_delivery'   => $delivery->id,
+                'alamat_tujuan' => $delivery->alamat_tujuan,
+                'status'        => $delivery->status,
+            ],
+        ]
+    ], 200);
 }
 
 }
