@@ -31,51 +31,78 @@
         </div>
 
         {{-- ========================================
-             STATUS TABS
+            STATUS TABS
         ======================================== --}}
         <div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
             <div class="flex gap-2 justify-between">
                 @php
+                    // ✅ DEFINISIKAN $tabs DULU DI AWAL
                     $tabs = [
                         'pickup' => [
                             'label' => 'Pickup',
-                            'icon'  => 'truck'
+                            'icon'  => 'truck',
+                            'badge_color' => 'bg-yellow-500'
                         ],
-                        'menunggu_konfirmasi' => [
+                        'antrian' => [
                             'label' => 'Antrian',
-                            'icon'  => 'hourglass-split'
+                            'icon'  => 'hourglass-split',
+                            'badge_color' => 'bg-orange-500'
                         ],
                         'proses' => [
                             'label' => 'Proses',
-                            'icon'  => 'arrow-repeat'
+                            'icon'  => 'arrow-repeat',
+                            'badge_color' => 'bg-purple-500'
                         ],
                         'siap_di_ambil' => [
                             'label' => 'Siap Diambil',
-                            'icon'  => 'check-circle'
+                            'icon'  => 'check-circle',
+                            'badge_color' => 'bg-teal-500'
                         ],
                         'siap_di_antar' => [
                             'label' => 'Siap Diantar',
-                            'icon'  => 'truck'
+                            'icon'  => 'bicycle',
+                            'badge_color' => 'bg-indigo-500'
                         ],
                         'selesai' => [
                             'label' => 'Selesai',
-                            'icon'  => 'check-all'
+                            'icon'  => 'check-all',
+                            'badge_color' => 'bg-green-500'
                         ],
                         'ditolak' => [
                             'label' => 'Ditolak',
-                            'icon'  => 'x-circle'
+                            'icon'  => 'x-circle',
+                            'badge_color' => 'bg-red-500'
                         ],
                     ];
+
+                    // ✅ HITUNG PICKUP YANG BUTUH DRIVER
+                    if(!isset($pickupNeedDriver)) {
+                        $pickupNeedDriver = $pesanan->where('status_transaksi', 'pick_up')
+                            ->filter(function($p) {
+                                $delivery = $p->delivery ? $p->delivery->where('jenis', 'pickup')->first() : null;
+                                return !$delivery || !$delivery->id_driver;
+                            })
+                            ->count();
+                    }
                 @endphp
-                
+
                 @foreach ($tabs as $key => $data)
                     <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
-                       class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
-                              {{ $tab == $key 
-                                  ? 'bg-yellow-400 text-gray-900 shadow-sm' 
-                                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
+                    class="relative flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
+                            {{ $tab == $key 
+                                ? 'bg-yellow-400 text-gray-900 shadow-sm' 
+                                : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
                         <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
                         <span class="hidden sm:inline">{{ $data['label'] }}</span>
+                        
+                        {{-- 🔔 ALERT BADGE untuk Pickup --}}
+                        @if($key == 'pickup' && $pickupNeedDriver > 0)
+                            <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
+                                        bg-red-500 text-white text-xs font-bold rounded-full 
+                                        shadow-lg animate-pulse border-2 border-white">
+                                {{ $pickupNeedDriver }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             </div>
@@ -85,8 +112,38 @@
              PESANAN LIST
         ======================================== --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5" id="pesananList">
-            
             @forelse ($pesanan as $p)
+                @php
+                    // ✅ DELIVERY DATA - AMBIL SEKALI DI AWAL
+                    $deliveryPickup = $p->delivery ? $p->delivery->where('jenis', 'pickup')->first() : null;
+                    $deliveryAntar = $p->delivery ? $p->delivery->where('jenis', 'antar')->first() : null;
+                    
+                    // ✅ TERLAMBAT CHECK
+                    $terlambat = false;
+                    if ($p->tgl_estimasi) {
+                        $estimasi = \Carbon\Carbon::parse($p->tgl_estimasi);
+                        $today = \Carbon\Carbon::today();
+                        $terlambat = $today->greaterThan($estimasi);
+                    }
+                    
+                    // ✅ PAYMENT DATA
+                    $totalHarga = $p->total_harga ?? 0;
+                    $totalBayar = $p->total_bayar ?? 0;
+                    $sisaBayar = $totalHarga - $totalBayar;
+                    
+                    $isPaid = false;
+                    $isDP = false;
+                    $isUnpaid = false;
+                    
+                    if ($totalBayar >= $totalHarga && $totalHarga > 0) {
+                        $isPaid = true;
+                    } elseif ($totalBayar > 0 && $totalBayar < $totalHarga) {
+                        $isDP = true;
+                    } else {
+                        $isUnpaid = true;
+                    }
+                @endphp
+                
                 <div data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
                      data-id="{{ $p->id_transaksi }}">
                     <a href="{{ route('pesanan.online.detail', $p->id_transaksi) }}" 
@@ -101,22 +158,7 @@
                                     @elseif($p->status_transaksi == 'selesai') hover:border-green-300
                                     @else hover:border-red-300
                                     @endif">
-                                    {{-- Di bagian card pesanan, tambahkan setelah status transaksi --}}
-                                    @php
-                                        $terlambat = false;
-                                        if ($p->tgl_estimasi) {
-                                            $estimasi = \Carbon\Carbon::parse($p->tgl_estimasi);
-                                            $today = \Carbon\Carbon::today();
-                                            $terlambat = $today->greaterThan($estimasi);
-                                        }
-                                    @endphp
-
-                                    @if($terlambat)
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold ml-2">
-                                            <i class="bi bi-exclamation-triangle-fill"></i>
-                                            Terlambat
-                                        </span>
-                                    @endif
+                                    
                             {{-- Card Header --}}
                             <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-100">
                                 <div class="flex-1">
@@ -183,15 +225,9 @@
                                         </p>
                                     </div>
                                 </div>
-
-                                {{-- ✅ DELIVERY INFO (JIKA ADA) --}}
-                                @php
-                                    $deliveryPickup = $p->delivery ? $p->delivery->where('jenis', 'pickup')->first() : null;
-                                    $deliveryAntar = $p->delivery ? $p->delivery->where('jenis', 'antar')->first() : null;
-                                @endphp
                                 
-                                {{-- DELIVERY PICKUP INFO --}}
-                                @if($deliveryPickup && $deliveryPickup->driver && $deliveryPickup->id_driver)
+                                {{-- ✅ DRIVER PICKUP INFO (HANYA JIKA SUDAH ADA DRIVER) --}}
+                                @if($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->driver)
                                 <div class="flex items-center gap-3 text-sm">
                                     <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <i class="bi bi-person-badge text-orange-500"></i>
@@ -203,8 +239,8 @@
                                 </div>
                                 @endif
 
-                                {{-- DELIVERY ANTAR INFO --}}
-                                @if($deliveryAntar && $deliveryAntar->driver && $deliveryAntar->id_driver)
+                                {{-- ✅ DRIVER DELIVERY INFO (HANYA JIKA SUDAH ADA DRIVER) --}}
+                                @if($deliveryAntar && $deliveryAntar->id_driver && $deliveryAntar->driver)
                                 <div class="flex items-center gap-3 text-sm">
                                     <div class="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <i class="bi bi-person-badge text-indigo-500"></i>
@@ -239,76 +275,122 @@
                                         {{ ucfirst(str_replace('_', ' ', $p->status_transaksi)) }}
                                     </span>
 
-                                    {{-- ✅ PICKUP: BELUM ADA DRIVER --}}
-                                    @if($p->status_transaksi == 'pick_up' && (!$deliveryPickup || !$deliveryPickup->id_driver))
-                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                                bg-red-500 text-white shadow-md animate-pulse">
+                                    {{-- ✅ TERLAMBAT BADGE --}}
+                                    @if($terlambat && !in_array($p->status_transaksi, ['selesai', 'ditolak']))
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                                         <i class="bi bi-exclamation-triangle-fill"></i>
-                                        Perlu Driver Pickup!
+                                        Terlambat
                                     </span>
                                     @endif
 
-                                    {{-- ✅ PICKUP STATUS BADGE --}}
-                                    @if($deliveryPickup && $deliveryPickup->id_driver)
-                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                                @if($deliveryPickup->status == 'pending') bg-orange-100 text-orange-700
-                                                @elseif($deliveryPickup->status == 'accepted') bg-blue-100 text-blue-700
-                                                @elseif($deliveryPickup->status == 'on_the_way_to_pickup') bg-indigo-100 text-indigo-700
-                                                @elseif($deliveryPickup->status == 'picked_up') bg-purple-100 text-purple-700
-                                                @elseif($deliveryPickup->status == 'on_the_way_to_laundry') bg-violet-100 text-violet-700
-                                                @elseif($deliveryPickup->status == 'arrived_at_laundry') bg-green-100 text-green-700
-                                                @else bg-gray-100 text-gray-700
-                                                @endif">
-                                        <i class="bi bi-arrow-down-circle"></i>
-                                        @if($deliveryPickup->status == 'pending')
-                                            Menunggu Driver
-                                        @elseif($deliveryPickup->status == 'accepted')
-                                            Driver Ditentukan
-                                        @elseif($deliveryPickup->status == 'on_the_way_to_pickup')
-                                            Menuju Pelanggan
-                                        @elseif($deliveryPickup->status == 'picked_up')
-                                            Cucian Dijemput
-                                        @elseif($deliveryPickup->status == 'on_the_way_to_laundry')
-                                            Menuju Laundry
-                                        @elseif($deliveryPickup->status == 'arrived_at_laundry')
-                                            Tiba di Laundry
-                                        @else
-                                            {{ ucfirst(str_replace('_', ' ', $deliveryPickup->status)) }}
+                                    {{-- ========== ALERT PICKUP (STATUS: PICK_UP) ========== --}}
+                                    @if($p->status_transaksi == 'pick_up')
+                                        @if(!$deliveryPickup)
+                                            {{-- Belum Ada Delivery --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-red-600 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Buat Delivery & Isi Driver!
+                                            </span>
+                                        @elseif($deliveryPickup && !$deliveryPickup->id_driver)
+                                            {{-- Ada Delivery, Belum Ada Driver --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-red-500 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Isi Driver Pickup!
+                                            </span>
+                                        @elseif($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->status == 'pending')
+                                            {{-- Ada Driver, Masih Pending --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-orange-500 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-clock-history"></i>
+                                                Driver Belum Accept!
+                                            </span>
                                         @endif
-                                    </span>
                                     @endif
 
-                                    {{-- ✅ DELIVERY: PERLU PILIH DRIVER (JIKA TERLAMBAT) --}}
-                                    @if($p->status_transaksi == 'proses' && $terlambat)
-                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                                bg-orange-500 text-white shadow-md animate-pulse">
-                                        <i class="bi bi-clock-history"></i>
-                                        Perlu Delivery!
-                                    </span>
+                                    {{-- ✅ PICKUP STATUS BADGE (HANYA TAMPIL JIKA SUDAH ADA DRIVER & STATUS BUKAN PENDING) --}}
+                                    @if($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->status != 'pending')
+                                        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
+                                                    @if($deliveryPickup->status == 'accepted') bg-blue-100 text-blue-700
+                                                    @elseif($deliveryPickup->status == 'on_the_way_to_pickup') bg-indigo-100 text-indigo-700
+                                                    @elseif($deliveryPickup->status == 'picked_up') bg-purple-100 text-purple-700
+                                                    @elseif($deliveryPickup->status == 'on_the_way_to_laundry') bg-violet-100 text-violet-700
+                                                    @elseif($deliveryPickup->status == 'arrived_at_laundry') bg-green-100 text-green-700
+                                                    @else bg-gray-100 text-gray-700
+                                                    @endif">
+                                            <i class="bi bi-arrow-down-circle"></i>
+                                            @if($deliveryPickup->status == 'accepted')
+                                                Driver Ditentukan
+                                            @elseif($deliveryPickup->status == 'on_the_way_to_pickup')
+                                                Menuju Pelanggan
+                                            @elseif($deliveryPickup->status == 'picked_up')
+                                                Cucian Dijemput
+                                            @elseif($deliveryPickup->status == 'on_the_way_to_laundry')
+                                                Menuju Laundry
+                                            @elseif($deliveryPickup->status == 'arrived_at_laundry')
+                                                Tiba di Laundry
+                                            @else
+                                                {{ ucfirst(str_replace('_', ' ', $deliveryPickup->status)) }}
+                                            @endif
+                                        </span>
                                     @endif
 
-                                    {{-- ✅ SIAP DIANTAR: BELUM ADA DRIVER --}}
-                                    @if($p->status_transaksi == 'siap_di_antar' && (!$deliveryAntar || !$deliveryAntar->id_driver))
-                                    <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                                bg-red-500 text-white shadow-md animate-pulse">
-                                        <i class="bi bi-exclamation-triangle-fill"></i>
-                                        Perlu Driver Delivery!
-                                    </span>
+                                    {{-- ========== ALERT PROSES (STATUS: PROSES) ========== --}}
+                                    @if($p->status_transaksi == 'proses')
+                                        @if(!$deliveryAntar)
+                                            {{-- Info: Siapkan Delivery --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-blue-600 text-white shadow-md">
+                                                <i class="bi bi-info-circle-fill"></i>
+                                                Siapkan Delivery
+                                            </span>
+                                        @elseif($deliveryAntar && !$deliveryAntar->id_driver)
+                                            {{-- Ada Delivery, Belum Ada Driver --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-orange-500 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Isi Driver Delivery!
+                                            </span>
+                                        @endif
                                     @endif
 
-                                    {{-- ✅ DELIVERY STATUS BADGE --}}
-                                    @if($deliveryAntar && $deliveryAntar->id_driver)
+                                    {{-- ========== ALERT DELIVERY (STATUS: SIAP_DI_ANTAR) ========== --}}
+                                    @if($p->status_transaksi == 'siap_di_antar')
+                                        @if(!$deliveryAntar)
+                                            {{-- Belum Ada Delivery --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-red-600 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Buat Delivery & Isi Driver!
+                                            </span>
+                                        @elseif($deliveryAntar && !$deliveryAntar->id_driver)
+                                            {{-- Ada Delivery, Belum Ada Driver --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-red-500 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                                Isi Driver Delivery!
+                                            </span>
+                                        @elseif($deliveryAntar && $deliveryAntar->id_driver && $deliveryAntar->status == 'pending')
+                                            {{-- Ada Driver, Masih Pending --}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
+                                                        bg-orange-500 text-white shadow-md animate-pulse">
+                                                <i class="bi bi-clock-history"></i>
+                                                Driver Belum Accept!
+                                            </span>
+                                        @endif
+                                    @endif
+
+                                    {{-- ✅ DELIVERY STATUS BADGE (JIKA SUDAH ADA DRIVER & STATUS BUKAN PENDING) --}}
+                                    @if($deliveryAntar && $deliveryAntar->id_driver && $p->status_transaksi == 'siap_di_antar' && $deliveryAntar->status != 'pending')
                                     <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                                @if($deliveryAntar->status == 'pending') bg-orange-100 text-orange-700
-                                                @elseif($deliveryAntar->status == 'accepted') bg-blue-100 text-blue-700
+                                                @if($deliveryAntar->status == 'accepted') bg-blue-100 text-blue-700
                                                 @elseif($deliveryAntar->status == 'on_the_way_to_customer') bg-purple-100 text-purple-700
                                                 @elseif($deliveryAntar->status == 'delivered') bg-green-100 text-green-700
                                                 @else bg-gray-100 text-gray-700
                                                 @endif">
                                         <i class="bi bi-arrow-up-circle"></i>
-                                        @if($deliveryAntar->status == 'pending')
-                                            Menunggu Driver
-                                        @elseif($deliveryAntar->status == 'accepted')
+                                        @if($deliveryAntar->status == 'accepted')
                                             Driver Ditentukan
                                         @elseif($deliveryAntar->status == 'on_the_way_to_customer')
                                             Menuju Pelanggan
@@ -325,22 +407,22 @@
                                 {{-- ROW 2: Payment Status & Method --}}
                                 <div class="flex flex-wrap gap-2 items-center">
                                     
-                                    {{-- ✅ PAYMENT METHOD BADGE (CASH/TRANSFER) --}}
+                                    {{-- ✅ PAYMENT METHOD BADGE --}}
                                     @if($p->metodeBayar)
                                         @php
-                                            $isCashPayment = stripos($p->metodeBayar->nama_metode_bayar, 'cash') !== false || 
-                                                            stripos($p->metodeBayar->nama_metode_bayar, 'tunai') !== false;
-                                            $isTransferPayment = stripos($p->metodeBayar->nama_metode_bayar, 'transfer') !== false || 
-                                                                stripos($p->metodeBayar->nama_metode_bayar, 'tf') !== false;
+                                            $isCash = stripos($p->metodeBayar->nama_metode_bayar, 'cash') !== false || 
+                                                     stripos($p->metodeBayar->nama_metode_bayar, 'tunai') !== false;
+                                            $isTransfer = stripos($p->metodeBayar->nama_metode_bayar, 'transfer') !== false || 
+                                                         stripos($p->metodeBayar->nama_metode_bayar, 'tf') !== false;
                                         @endphp
                                         
-                                        @if($isCashPayment)
+                                        @if($isCash)
                                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
                                                         bg-green-50 border border-green-200 text-green-700">
                                                 <i class="bi bi-cash-stack"></i>
                                                 Cash
                                             </span>
-                                        @elseif($isTransferPayment)
+                                        @elseif($isTransfer)
                                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
                                                         bg-blue-50 border border-blue-200 text-blue-700">
                                                 <i class="bi bi-bank"></i>
@@ -355,23 +437,22 @@
                                         @endif
                                     @endif
 
-                                    {{-- ✅ PAYMENT STATUS BADGE (ENHANCED) --}}
-                                    @if ($p->status_bayar == 'belum_lunas' || $p->status_bayar == 'belum_bayar')
+                                    {{-- ✅ PAYMENT STATUS BADGE --}}
+                                    @if ($isUnpaid)
                                         <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                                     bg-red-100 text-red-700 rounded-lg text-xs font-semibold
                                                     border border-red-200">
                                             <i class="bi bi-x-circle"></i>
                                             Belum Bayar
                                         </span>
-                                    @elseif ($p->status_bayar == 'DP')
+                                    @elseif ($isDP)
                                         <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                                     bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold
                                                     border border-yellow-200">
                                             <i class="bi bi-cash"></i>
-                                            DP
+                                            DP (Rp {{ number_format($totalBayar, 0, ',', '.') }})
                                         </span>
                                     @else
-                                        {{-- ✅ LUNAS - HIGHLIGHT WITH ANIMATION --}}
                                         <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                                     bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs font-bold
                                                     shadow-md border border-green-600">
@@ -379,7 +460,6 @@
                                             LUNAS ✓
                                         </span>
                                         
-                                        {{-- ✅ SHOW PAYMENT METHOD IF PAID --}}
                                         @if($p->pembayaran && $p->pembayaran->count() > 0)
                                             @php
                                                 $lastPayment = $p->pembayaran->sortByDesc('created_at')->first();
@@ -421,6 +501,7 @@
       style="display: none;">
     @csrf
     @method('DELETE')
+    <input type="hidden" name="from_tab" value="{{ $tab }}">
 </form>
 @endforeach
 

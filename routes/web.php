@@ -21,7 +21,6 @@ use App\Models\Satuan;
 Route::post('/pesanan-online/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
     ->name('pesanan.online.assign-driver-pickup');
 
-
 /*
 |--------------------------------------------------------------------------
 | PUBLIC ROUTES - Authentication
@@ -193,84 +192,85 @@ Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
             ]);
         })->middleware('permission:add')->name('jenis.tambah');
     });
-
-    // ================= PESANAN ONLINE (KASIR) - FIXED =================
+// ================= PESANAN ONLINE (KASIR) =================
 Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function () {
-    // View
+    // Index & Detail
     Route::get('/', [PesananOnlineController::class, 'indexKasir'])
         ->middleware('permission:view')
         ->name('index');
-
+        
     Route::get('/{id}/detail', [PesananOnlineController::class, 'detailKasir'])
         ->middleware('permission:view')
         ->name('detail');
-
-    // ✅ TAMBAH INI - UPDATE DATA PESANAN
+    
+    // Update & Konfirmasi
     Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateDataKasir'])
         ->middleware('permission:edit')
         ->name('updateData');
-
-    // ✅ TAMBAH INI - KONFIRMASI PESANAN
-    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiKasir'])
+        
+    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiPesananKasir'])
         ->middleware('permission:edit')
         ->name('konfirmasi');
-
+    
     // Status Management
-    Route::get('/{id}/terima', [PesananOnlineController::class, 'terimaKasir'])
-        ->middleware('permission:edit')
-        ->name('terima');
-
-    Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolakKasir'])
-        ->middleware('permission:edit')
-        ->name('tolak');
-
     Route::get('/{id}/proses', [PesananOnlineController::class, 'prosesKasir'])
         ->middleware('permission:edit')
         ->name('proses');
-
-    Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbilKasir'])
-        ->middleware('permission:edit')
-        ->name('siap_di_ambil');
-
+        
     Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiKasir'])
         ->middleware('permission:edit')
         ->name('selesai');
-
+        
+    Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbilKasir'])
+        ->middleware('permission:edit')
+        ->name('siap_di_ambil');
+        
+    Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolakKasir'])
+        ->middleware('permission:edit')
+        ->name('tolak');
+    
     // Payment & Delete
     Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayarKasir'])
         ->middleware('permission:edit')
         ->name('bayar');
-
+        
     Route::delete('/{id}', [PesananOnlineController::class, 'destroyKasir'])
         ->middleware('permission:delete')
         ->name('destroy');
 
-    // Delivery - Assign Driver
-    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriverKasir'])
-        ->name('assign-driver');
-
-    // Pickup - List & Assign Driver
-    Route::get('/{id}/pickup/driver', [PesananOnlineController::class, 'listDriverPickupKasir'])
-        ->name('pickup.driver');
-
-    Route::post('/{id}/pickup/assign-driver', [PesananOnlineController::class, 'assignDriverPickupKasir'])
-        ->name('pickup.assign');
-
-    // List Driver untuk Antar
-    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriverKasir'])
+    // Bukti Pembayaran
+    Route::get('/{id}/bukti-pembayaran', [PesananOnlineController::class, 'buktiPembayaran'])
+        ->name('bukti-pembayaran');
+        
+    Route::put('/{id}/simpan-bukti-pembayaran', [PesananOnlineController::class, 'simpanBuktiPembayaran'])
         ->middleware('permission:edit')
+        ->name('simpan-bukti-pembayaran');
+    
+    // Delivery
+    Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnlineKasir'])
+        ->name('delivery');
+        
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriverKasir'])
         ->name('list-driver');
+    
+    // Assign Driver
+    Route::post('/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickupKasir'])
+        ->middleware('permission:edit')
+        ->name('assign-driver-pickup');
+        
+    Route::post('/{id}/assign-driver-antar', [PesananOnlineController::class, 'assignDriverAntarKasir'])
+        ->middleware('permission:edit')
+        ->name('assign-driver-antar');
+        
+    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriverKasir'])
+        ->middleware('permission:edit')
+        ->name('assign-driver');
+    
+    // Driver Arrive
+    Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArriveAtLaundry'])
+        ->middleware('permission:edit')
+        ->name('driver-arrive');
 });
-
-    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiKasir'])
-        ->whereNumber('id')
-        ->middleware('permission:edit')
-        ->name('konfirmasi');
-
-    // ✅ BENERIN INI - hapus "kasir.pesanan.online." karena sudah ada di group
-    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriverKasir'])
-        ->middleware('permission:edit')
-        ->name('list-driver'); // ← Cuma ini aja! Jadi: kasir.pesanan.online.list-driver
 });
 
  // ================= RIWAYAT (With Permission) =================
@@ -1052,59 +1052,79 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
             ->name('admin2.satuan.destroy');
     });
 
-    // ================= PESANAN ONLINE =================
-    Route::prefix('pesanan-online')->group(function () {
-        Route::get('/', [PesananOnlineController::class, 'indexAdmin2'])
-            ->name('admin2.pesanan.online.index');
+   // ================= PESANAN ONLINE (ADMIN2) =================
+Route::prefix('pesanan-online')->group(function () {
+    // Index & Detail
+    Route::get('/', [PesananOnlineController::class, 'indexAdmin2'])
+        ->name('admin2.pesanan.online.index');
+        
+    Route::get('/{id}/detail', [PesananOnlineController::class, 'detailAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.detail');
+    
+    // Update & Konfirmasi
+    Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateData'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.updateData');
+        
+    Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiPesanan'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.konfirmasi');
+    
+    // Status Management
+    Route::get('/{id}/proses', [PesananOnlineController::class, 'prosesAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.proses');
+        
+    Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.selesai');
+        
+    Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbilAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.siap_di_ambil');
+        
+    Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolakAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.tolak');
+    
+    // Payment & Delete
+    Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayarAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.bayar');
+        
+    Route::delete('/{id}', [PesananOnlineController::class, 'destroyAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.destroy');
 
-        Route::get('/{id}/detail', [PesananOnlineController::class, 'detailAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.detail');
-
-        Route::put('/{id}/update-data', [PesananOnlineController::class, 'updateDataAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.updateData');
-
-        Route::post('/{id}/konfirmasi', [PesananOnlineController::class, 'konfirmasiPesananAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.konfirmasi');
-
-        Route::get('/{id}/terima', [PesananOnlineController::class, 'terimaAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.terima');
-
-        Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolakAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.tolak');
-
-        Route::get('/{id}/proses', [PesananOnlineController::class, 'prosesAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.proses');
-
-        Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbilAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.siap_di_ambil');
-
-        Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.selesai');
-
-        Route::post('/{id}/bayar', [PesananOnlineController::class, 'bayarAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.bayar');
-
-        Route::delete('/{id}', [PesananOnlineController::class, 'destroyAdmin2'])
-            ->whereNumber('id')
-            ->name('admin2.pesanan.online.destroy');
-
-        Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriverAdmin2'])
-            ->middleware('permission:edit')
-            ->name('admin2.pesanan.online.list-driver');
-
-        Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriverAdmin2'])
-            ->middleware('permission:edit')
-            ->name('admin2.pesanan.online.assign-driver');
-    });
+    // Bukti Pembayaran
+    Route::get('/{id}/bukti-pembayaran', [PesananOnlineController::class, 'buktiPembayaranAdmin2'])
+        ->name('admin2.pesanan.online.bukti-pembayaran');
+        
+    Route::put('/{id}/simpan-bukti-pembayaran', [PesananOnlineController::class, 'simpanBuktiPembayaran'])
+        ->name('admin2.pesanan.online.simpan-bukti-pembayaran');
+    
+    // Delivery
+    Route::get('/delivery', [PesananOnlineController::class, 'listDeliveryOnline'])
+        ->name('admin2.pesanan.online.delivery');
+        
+    Route::get('/{id}/list-driver', [PesananOnlineController::class, 'listDriver'])
+        ->name('admin2.pesanan.online.list-driver');
+    
+    // Assign Driver
+    Route::post('/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
+        ->name('admin2.pesanan.online.assign-driver-pickup');
+        
+    Route::post('/{id}/assign-driver-antar', [PesananOnlineController::class, 'assignDriverAntar'])
+        ->name('admin2.pesanan.online.assign-driver-antar');
+        
+    Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
+        ->name('admin2.pesanan.online.assign-driver');
+    
+    // Driver Arrive
+    Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArriveAtLaundry'])
+        ->name('admin2.pesanan.online.driver-arrive');
+});
 
     // ================= RIWAYAT =================
     Route::prefix('riwayat')->group(function () {

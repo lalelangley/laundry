@@ -5,8 +5,8 @@
 
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
-        <a href="{{ route('pesanan.online.index') }}"
-           class="text-black text-2xl font-bold hover:opacity-70">
+        <a href="{{ route('pesanan.online.index', ['tab' => request()->get('from_tab', 'pickup')]) }}"
+        class="text-black text-2xl font-bold hover:opacity-70">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
@@ -225,29 +225,39 @@
 
                 <div class="space-y-2 text-sm">
                     @php
-                        $subtotalAll = 0;
+                        $subtotalItems = 0;
                         $totalQtyAll = 0;
                         
                         if($pesanan->detail_transaksi) {
                             foreach($pesanan->detail_transaksi as $d) {
-                                $subtotalAll += ($d->harga * $d->qty);
+                                $subtotalItems += ($d->harga * $d->qty);
                                 $totalQtyAll += $d->qty;
                             }
                         }
+                        
+                        // ✅ AMBIL BIAYA ONGKIR
+                        $biayaOngkir = 0;
+                        if($pesanan->id_biaya_tambahan && $pesanan->biayaTambahan) {
+                            $biayaOngkir = $pesanan->biayaTambahan->nominal;
+                        }
+                        
+                        // ✅ HITUNG TOTAL YANG BENAR
+                        // Total = Subtotal Items + Biaya Ongkir - Diskon
+                        $totalBenar = $subtotalItems + $biayaOngkir - ($pesanan->diskon ?? 0);
                     @endphp
                     
                     <div class="flex justify-between">
                         <span>Subtotal</span>
-                        <b>Rp {{ number_format($subtotalAll,0,',','.') }}</b>
+                        <b>Rp {{ number_format($subtotalItems,0,',','.') }}</b>
                     </div>
                     
                     {{-- ✅ BIAYA ONGKIR --}}
-                    @if($pesanan->id_biaya_tambahan && $pesanan->biayaTambahan)
+                    @if($biayaOngkir > 0)
                     <div class="flex justify-between text-orange-600">
                         <span>
                             <i class="bi bi-truck text-xs"></i> Biaya Ongkir
                         </span>
-                        <b>+ Rp {{ number_format($pesanan->biayaTambahan->nominal,0,',','.') }}</b>
+                        <b>+ Rp {{ number_format($biayaOngkir,0,',','.') }}</b>
                     </div>
                     @endif
                     
@@ -255,8 +265,8 @@
                     <div class="flex justify-between text-red-600">
                         <span>
                             Diskon
-                            @if($pesanan->tipe_diskon == 'percent' && $subtotalAll > 0)
-                                <span class="text-xs">({{ number_format(($pesanan->diskon / $subtotalAll) * 100, 1) }}%)</span>
+                            @if($pesanan->tipe_diskon == 'percent' && $subtotalItems > 0)
+                                <span class="text-xs">({{ number_format(($pesanan->diskon / $subtotalItems) * 100, 1) }}%)</span>
                             @endif
                         </span>
                         <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
@@ -311,12 +321,12 @@
             <div class="bg-white rounded-xl shadow p-5 space-y-3">
                 <h2 class="font-bold mb-2">Aksi</h2>
 
-                @php
+               @php
                     $dataLengkap = $pesanan->detail_transaksi->count() > 0 && $pesanan->total_harga > 0;
                     
-                    // Refresh delivery data from database to get latest status
-                    $deliveryPickup = $pesanan->delivery()->where('jenis', 'pickup')->first();
-                    $deliveryAntar = $pesanan->delivery()->where('jenis', 'antar')->first();
+                    // ✅ Gunakan variable dari controller, atau null jika tidak ada
+                    $deliveryPickup = $deliveryPickup ?? null;
+                    $deliveryAntar = $deliveryAntar ?? null;
                     
                     $metodeBayar = $pesanan->metodeBayar;
                     $isTransfer = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'transfer') !== false || stripos($metodeBayar->nama_metode_bayar, 'tf') !== false);
@@ -629,7 +639,7 @@
 
                   {{-- ✅ BUTTON PEMBAYARAN CASH (UNTUK DELIVERY DELIVERED) --}}
                     @if($pesanan->id_metode_bayar && $isCash && $deliveryAntar && $deliveryAntar->status === 'delivered')
-                    <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}"
+                    <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}?from_tab={{ request()->get('from_tab', 'pickup') }}"
                     class="block text-center py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-2">
                         <i class="bi bi-cash-stack"></i>
                         <span>Konfirmasi Pembayaran Cash</span>
@@ -696,7 +706,7 @@
 
                     {{-- PROSES --}}
                     @if($dataLengkap && in_array($pesanan->status_transaksi, ['antrian', 'menunggu_konfirmasi', 'dikonfirmasi']))
-                    <a href="{{ route('pesanan.online.proses',$pesanan->id_transaksi) }}"
+                    <a href="{{ route('pesanan.online.proses',$pesanan->id_transaksi) }}?from_tab={{ request()->get('from_tab', 'pickup') }}"
                     class="block text-center py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2">
                         <i class="bi bi-play-circle"></i>
                         <span>Mulai Proses</span>
@@ -742,7 +752,7 @@
                     <i class="bi bi-truck"></i> Pilih Metode Pengambilan:
                 </p>
                 <div class="grid grid-cols-2 gap-2">
-                    <a href="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}"
+                   <a href="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}?from_tab={{ request()->get('from_tab', 'pickup') }}"
                     class="block text-center py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm font-medium">
                         <i class="bi bi-shop"></i> Pick Up
                     </a>
@@ -757,7 +767,7 @@
 
                     {{-- SELESAI --}}
                     @if(in_array($pesanan->status_transaksi, ['siap_di_ambil', 'siap_di_antar']))
-                    <a href="{{ route('pesanan.online.selesai',$pesanan->id_transaksi) }}"
+                    <a href="{{ route('pesanan.online.selesai',$pesanan->id_transaksi) }}?from_tab={{ request()->get('from_tab', 'pickup') }}"
                     class="block text-center py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
                         <i class="bi bi-check-circle"></i>
                         <span>Selesaikan Pesanan</span>
@@ -793,8 +803,9 @@
         </div>
 
         <form action="{{ route('pesanan.online.updateData', $pesanan->id_transaksi) }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            @method('PUT')
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="from_tab" value="{{ request()->get('from_tab', 'pickup') }}">
 
             <div class="space-y-4">
                 {{-- ITEMS --}}
@@ -804,8 +815,12 @@
                         {{ $d->layanan->nama_layanan ?? 'Layanan' }}
                     </p>
                     <p class="text-xs text-gray-600 mb-2">
-                        {{ $d->jenis->nama_jenis ?? '-' }} — 
-                        <b>Rp {{ number_format($d->jenis->harga,0,',','.') }} / {{ $d->jenis->satuan->nama_satuan ?? '' }}</b>
+                        @if($d->jenis)
+                            {{ $d->jenis->nama_jenis }} — 
+                            <b>Rp {{ number_format($d->jenis->harga, 0, ',', '.') }} / {{ $d->jenis->satuan->nama_satuan ?? '' }}</b>
+                        @else
+                            <span class="text-gray-400">Jenis tidak tersedia</span>
+                        @endif
                     </p>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">
@@ -1034,7 +1049,7 @@
                     class="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold">
                 Batal
             </button>
-            <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}"
+            <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}?from_tab={{ request()->get('from_tab', 'pickup') }}"
                class="flex-1 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-center flex items-center justify-center gap-2 shadow-md">
                 <i class="bi bi-person-check"></i>
                 Tentukan Driver
