@@ -216,6 +216,10 @@ Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function (
     Route::get('/{id}/proses', [PesananOnlineController::class, 'prosesKasir'])
         ->middleware('permission:edit')
         ->name('proses');
+
+    Route::get('/{id}/selesai-di-cuci', [PesananOnlineController::class, 'selesaiDiCuciKasir'])
+        ->middleware('permission:edit')
+        ->name('selesai_di_cuci');
         
     Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiKasir'])
         ->middleware('permission:edit')
@@ -224,6 +228,11 @@ Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function (
     Route::get('/{id}/siap-di-ambil', [PesananOnlineController::class, 'siapDiAmbilKasir'])
         ->middleware('permission:edit')
         ->name('siap_di_ambil');
+
+    // Tambahkan route ini di section Pesanan Online
+    Route::get('/{id}/siap-di-antar', [PesananOnlineController::class, 'siapDiAntarKasir'])
+        ->middleware('permission:edit')
+        ->name('siap_di_antar');
         
     Route::get('/{id}/tolak', [PesananOnlineController::class, 'tolakKasir'])
         ->middleware('permission:edit')
@@ -638,6 +647,9 @@ Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
     Route::get('/{id}/proses', [PesananOnlineController::class, 'proses'])
         ->middleware('permission:edit')
         ->name('proses');
+    Route::get('/{id}/selesai-di-cuci', [PesananOnlineController::class, 'selesaiDiCuci'])
+        ->middleware('permission:edit')
+        ->name('selesai_di_cuci');
     Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesai'])
         ->middleware('permission:edit')
         ->name('selesai');
@@ -1075,6 +1087,15 @@ Route::prefix('pesanan-online')->group(function () {
     Route::get('/{id}/proses', [PesananOnlineController::class, 'prosesAdmin2'])
         ->whereNumber('id')
         ->name('admin2.pesanan.online.proses');
+    
+    // Tambahkan route ini di section Pesanan Online
+    Route::get('/{id}/siap-di-antar', [PesananOnlineController::class, 'siapDiAntarAdmin2'])
+        ->middleware('permission:edit')
+        ->name('siap_di_antar');
+
+    Route::get('/{id}/selesai-di-cuci', [PesananOnlineController::class, 'selesaiDiCuciAdmin2'])
+        ->whereNumber('id')
+        ->name('admin2.pesanan.online.selesai_di_cuci');
         
     Route::get('/{id}/selesai', [PesananOnlineController::class, 'selesaiAdmin2'])
         ->whereNumber('id')

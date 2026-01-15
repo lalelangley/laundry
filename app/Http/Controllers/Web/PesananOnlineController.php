@@ -96,9 +96,8 @@ class PesananOnlineController extends Controller
             ->with('success', 'Driver sampai laundry, pesanan masuk antrian');
     }
 
-
-
    // ==================== KASIR ====================
+// Di method index() - ADMIN
 public function indexKasir(Request $request)
 {
     $tab = $request->get('tab', 'pickup');
@@ -124,7 +123,6 @@ public function indexKasir(Request $request)
             ->orderByDesc('id_transaksi')
             ->get();
 
-        // ✅ LOAD DELIVERY FRESH
         foreach($pesanan as $p) {
             $p->setRelation('delivery', 
                 \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
@@ -134,18 +132,18 @@ public function indexKasir(Request $request)
             );
         }
 
-    } elseif ($tab === 'menunggu_konfirmasi') {
+    } elseif ($tab === 'antrian') {
         $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
             ->where('jenis_transaksi', 'online')
             ->where(function ($q) {
                 $q->where('status_transaksi', 'antrian')
-                  ->orWhere(function ($sub) {
-                      $sub->where('status_transaksi', 'pick_up')
-                          ->whereHas('delivery', function ($delivery) {
-                              $delivery->where('jenis', 'pickup')
-                                       ->where('status', 'arrived_at_laundry');
-                          });
-                  });
+                    ->orWhere(function ($sub) {
+                        $sub->where('status_transaksi', 'pick_up')
+                            ->whereHas('delivery', function ($delivery) {
+                                $delivery->where('jenis', 'pickup')
+                                    ->where('status', 'arrived_at_laundry');
+                            });
+                    });
             })
             ->orderByDesc('id_transaksi')
             ->get();
@@ -159,7 +157,23 @@ public function indexKasir(Request $request)
             );
         }
 
-    } elseif ($tab === 'siap_di_antar' || $tab === 'siap_diantar') {
+    } elseif ($tab === 'selesai_dicuci') { // ✅ TAMBAHKAN INI
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'selesai_dicuci')
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } elseif ($tab === 'siap_di_antar') {
         $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
             ->where('jenis_transaksi', 'online')
             ->where('status_transaksi', 'siap_di_antar')
@@ -178,7 +192,7 @@ public function indexKasir(Request $request)
     } else {
         $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
             ->where('jenis_transaksi', 'online')
-            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['dikonfirmasi'])
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
             ->orderByDesc('id_transaksi')
             ->get();
 
@@ -261,6 +275,15 @@ public function indexKasir(Request $request)
         return redirect()->route('kasir.pesanan.online.index', ['tab' => 'proses'])
             ->with('success', 'Pesanan dalam proses');
     }
+
+    public function selesaiDiCuciKasir($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
+        
+        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'selesai_dicuci'])
+            ->with('success', 'Pesanan selesai dicuci');
+    }
     
     public function siapDiAmbilKasir($id)
     {
@@ -302,107 +325,117 @@ public function indexKasir(Request $request)
     }
     
     // ==================== ADMIN ====================
-    public function index(Request $request)
-    {
-        $tab = $request->get('tab', 'pickup');
-        $statusMap = $this->statusMap();
+    // Di method index() - ADMIN
+public function index(Request $request)
+{
+    $tab = $request->get('tab', 'pickup');
+    $statusMap = $this->statusMap();
 
-        // ✅ HITUNG PICKUP YANG BUTUH DRIVER
-        $pickupNeedDriver = Transaksi::where('jenis_transaksi', 'online')
-            ->where('status_transaksi', 'pick_up')
-            ->where(function($q) {
-                $q->whereDoesntHave('delivery', function($sub) {
-                    $sub->where('jenis', 'pickup');
-                })
-                ->orWhereHas('delivery', function($sub) {
-                    $sub->where('jenis', 'pickup')
-                        ->whereNull('id_driver');
-                });
+    $pickupNeedDriver = Transaksi::where('jenis_transaksi', 'online')
+        ->where('status_transaksi', 'pick_up')
+        ->where(function($q) {
+            $q->whereDoesntHave('delivery', function($sub) {
+                $sub->where('jenis', 'pickup');
             })
-            ->count();
+            ->orWhereHas('delivery', function($sub) {
+                $sub->where('jenis', 'pickup')
+                    ->whereNull('id_driver');
+            });
+        })
+        ->count();
 
-        if ($tab === 'pickup') {
-            $pesanan = Transaksi::with([
-                'detail_transaksi', 
-                'pelanggan', 
-                'metodeBayar', 
-                'pembayaran'
-            ])
-                ->where('jenis_transaksi', 'online')
-                ->where('status_transaksi', 'pick_up')
-                ->orderByDesc('id_transaksi')
-                ->get();
+    if ($tab === 'pickup') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'pick_up')
+            ->orderByDesc('id_transaksi')
+            ->get();
 
-            // ✅ LOAD DELIVERY FRESH - TIDAK PAKAI latest() KARENA BIKIN AMBIGUITAS
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
-
-        } elseif ($tab === 'antrian') {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->where(function ($q) {
-                    $q->where('status_transaksi', 'antrian')
-                        ->orWhere(function ($sub) {
-                            $sub->where('status_transaksi', 'pick_up')
-                                ->whereHas('delivery', function ($delivery) {
-                                    $delivery->where('jenis', 'pickup')
-                                        ->where('status', 'arrived_at_laundry');
-                                });
-                        });
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
-
-        } elseif ($tab === 'siap_di_antar') {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->where('status_transaksi', 'siap_di_antar')
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
-
-        } else {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
         }
 
-        return view('pesanan_online.index', compact('pesanan', 'tab', 'pickupNeedDriver'));
+    } elseif ($tab === 'antrian') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where(function ($q) {
+                $q->where('status_transaksi', 'antrian')
+                    ->orWhere(function ($sub) {
+                        $sub->where('status_transaksi', 'pick_up')
+                            ->whereHas('delivery', function ($delivery) {
+                                $delivery->where('jenis', 'pickup')
+                                    ->where('status', 'arrived_at_laundry');
+                            });
+                    });
+            })
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } elseif ($tab === 'selesai_dicuci') { // ✅ TAMBAHKAN INI
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'selesai_dicuci')
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } elseif ($tab === 'siap_di_antar') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'siap_di_antar')
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } else {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
     }
+
+    return view('pesanan_online.index', compact('pesanan', 'tab', 'pickupNeedDriver'));
+}
 
     public function detail($id)
 {
@@ -470,6 +503,15 @@ public function indexKasir(Request $request)
         return redirect()->route('pesanan.online.index', ['tab' => 'proses'])
             ->with('success', 'Pesanan dalam proses');
     }
+
+    public function selesaiDiCuci($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
+        
+        return redirect()->route('pesanan.online.index', ['tab' => 'selesai_dicuci'])
+            ->with('success', 'Pesanan selesai dicuci');
+    }
     
     public function siapDiAmbil($id)
     {
@@ -512,101 +554,117 @@ public function indexKasir(Request $request)
     
     // ==================== ADMIN2 ====================
 
-    public function indexAdmin2(Request $request)
-    {
-        $tab = $request->get('tab', 'pickup');
-        $statusMap = $this->statusMap();
+    // Di method index() - ADMIN
+public function indexAdmin2(Request $request)
+{
+    $tab = $request->get('tab', 'pickup');
+    $statusMap = $this->statusMap();
 
-        $pickupNeedDriver = Transaksi::where('jenis_transaksi', 'online')
-            ->where('status_transaksi', 'pick_up')
-            ->where(function($q) {
-                $q->whereDoesntHave('delivery', function($sub) {
-                    $sub->where('jenis', 'pickup');
-                })
-                ->orWhereHas('delivery', function($sub) {
-                    $sub->where('jenis', 'pickup')
-                        ->whereNull('id_driver');
-                });
+    $pickupNeedDriver = Transaksi::where('jenis_transaksi', 'online')
+        ->where('status_transaksi', 'pick_up')
+        ->where(function($q) {
+            $q->whereDoesntHave('delivery', function($sub) {
+                $sub->where('jenis', 'pickup');
             })
-            ->count();
+            ->orWhereHas('delivery', function($sub) {
+                $sub->where('jenis', 'pickup')
+                    ->whereNull('id_driver');
+            });
+        })
+        ->count();
 
-        if ($tab === 'pickup') {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->where('status_transaksi', 'pick_up')
-                ->orderByDesc('id_transaksi')
-                ->get();
+    if ($tab === 'pickup') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'pick_up')
+            ->orderByDesc('id_transaksi')
+            ->get();
 
-            // ✅ LOAD DELIVERY FRESH
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
 
-        } elseif ($tab === 'menunggu_konfirmasi') {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->where(function ($q) {
-                    $q->where('status_transaksi', 'antrian')
+    } elseif ($tab === 'antrian') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where(function ($q) {
+                $q->where('status_transaksi', 'antrian')
                     ->orWhere(function ($sub) {
                         $sub->where('status_transaksi', 'pick_up')
                             ->whereHas('delivery', function ($delivery) {
                                 $delivery->where('jenis', 'pickup')
-                                        ->where('status', 'arrived_at_laundry');
+                                    ->where('status', 'arrived_at_laundry');
                             });
                     });
-                })
-                ->orderByDesc('id_transaksi')
-                ->get();
+            })
+            ->orderByDesc('id_transaksi')
+            ->get();
 
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
-
-        } elseif ($tab === 'siap_di_antar' || $tab === 'siap_diantar') {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->where('status_transaksi', 'siap_di_antar')
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
-
-        } else {
-            $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
-                ->where('jenis_transaksi', 'online')
-                ->whereIn('status_transaksi', $statusMap[$tab] ?? ['dikonfirmasi'])
-                ->orderByDesc('id_transaksi')
-                ->get();
-
-            foreach($pesanan as $p) {
-                $p->setRelation('delivery', 
-                    \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
-                        ->with('driver')
-                        ->orderByDesc('id_delivery')
-                        ->get()
-                );
-            }
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
         }
 
-        return view('admin2.pesanan_online.index', compact('pesanan', 'tab', 'pickupNeedDriver'));
+    } elseif ($tab === 'selesai_dicuci') { // ✅ TAMBAHKAN INI
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'selesai_dicuci')
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } elseif ($tab === 'siap_di_antar') {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'siap_di_antar')
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
+
+    } else {
+        $pesanan = Transaksi::with(['detail_transaksi', 'pelanggan', 'metodeBayar', 'pembayaran'])
+            ->where('jenis_transaksi', 'online')
+            ->whereIn('status_transaksi', $statusMap[$tab] ?? ['antrian'])
+            ->orderByDesc('id_transaksi')
+            ->get();
+
+        foreach($pesanan as $p) {
+            $p->setRelation('delivery', 
+                \App\Models\Delivery::where('id_transaksi', $p->id_transaksi)
+                    ->with('driver')
+                    ->orderByDesc('id_delivery')
+                    ->get()
+            );
+        }
     }
+
+    return view('admin2.pesanan_online.index', compact('pesanan', 'tab', 'pickupNeedDriver'));
+}
     
     public function detailAdmin2($id)
     {
@@ -674,6 +732,15 @@ public function indexKasir(Request $request)
         return redirect()->route('admin2.pesanan.online.index', ['tab' => 'proses'])
             ->with('success', 'Pesanan dalam proses');
     }
+
+    public function selesaiDiCuciAdmin2($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
+        
+        return redirect()->route('admin2.pesanan.online.index', ['tab' => 'selesai_dicuci'])
+            ->with('success', 'Pesanan selesai dicuci');
+    }
     
     public function siapDiAmbilAdmin2($id)
     {
@@ -693,6 +760,32 @@ public function indexKasir(Request $request)
             ->with('success', 'Pesanan selesai');
     }
     
+        public function siapDiAntar($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+        
+        return redirect()->route('pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
+    }
+
+    public function siapDiAntarKasir($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+        
+        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
+    }
+
+    public function siapDiAntarAdmin2($id)
+    {
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+        
+        return redirect()->route('admin2.pesanan.online.index', ['tab' => 'siap_di_antar'])
+            ->with('success', 'Pesanan siap diantar');
+    }
     public function bayarAdmin2(Request $request, $id)
     {
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
@@ -1229,6 +1322,7 @@ public function indexKasir(Request $request)
             'pickup'        => ['pick_up'],
             'antrian'       => ['antrian'], // ✅ CHANGED FROM menunggu_konfirmasi
             'proses'        => ['proses'],
+            'selesai_dicuci' => ['selesai_dicuci'],
             'siap_di_ambil' => ['siap_di_ambil'],
             'siap_di_antar' => ['siap_di_antar'],
             'selesai'       => ['selesai'],
@@ -2097,4 +2191,5 @@ public function updateDataKasir(Request $request, $id)
         
         return $today->greaterThan($estimasi);
     }
+    
 }

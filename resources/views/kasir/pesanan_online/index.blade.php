@@ -53,6 +53,11 @@
                             'icon'  => 'arrow-repeat',
                             'badge_color' => 'bg-purple-500'
                         ],
+                        'selesai_dicuci' => [
+                            'label' => 'Selesai Dicuci',
+                            'icon'  => 'check-circle-fill',
+                            'badge_color' => 'bg-blue-500'
+                        ],
                         'siap_di_ambil' => [
                             'label' => 'Siap Diambil',
                             'icon'  => 'check-circle',
@@ -153,6 +158,7 @@
                                     @if($p->status_transaksi == 'pick_up') hover:border-yellow-300
                                     @elseif($p->status_transaksi == 'antrian') hover:border-orange-300
                                     @elseif($p->status_transaksi == 'proses') hover:border-purple-300
+                                    @elseif($p->status_transaksi == 'selesai_dicuci') hover:border-blue-300
                                     @elseif($p->status_transaksi == 'siap_di_ambil') hover:border-teal-300
                                     @elseif($p->status_transaksi == 'siap_di_antar') hover:border-indigo-300
                                     @elseif($p->status_transaksi == 'selesai') hover:border-green-300
@@ -266,6 +272,7 @@
                                                 @if ($p->status_transaksi == 'pick_up') bg-yellow-100 text-yellow-700
                                                 @elseif ($p->status_transaksi == 'antrian') bg-orange-100 text-orange-700
                                                 @elseif ($p->status_transaksi == 'proses') bg-purple-100 text-purple-700
+                                                @elseif ($p->status_transaksi == 'selesai_dicuci') bg-blue-100 text-blue-700
                                                 @elseif ($p->status_transaksi == 'siap_di_ambil') bg-teal-100 text-teal-700
                                                 @elseif ($p->status_transaksi == 'siap_di_antar') bg-indigo-100 text-indigo-700
                                                 @elseif ($p->status_transaksi == 'selesai') bg-green-100 text-green-700
