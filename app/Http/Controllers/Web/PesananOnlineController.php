@@ -346,13 +346,34 @@ class PesananOnlineController extends Controller
     }
     
     public function destroy($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+{
+    try {
+        // Cari transaksi online
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')
+                           ->findOrFail($id);
+        
+        // Opsional: Hapus relasi terkait jika perlu
+        // (Pastikan foreign key di database sudah set ON DELETE CASCADE)
+        // Atau hapus manual:
+        // $pesanan->detail_transaksi()->delete();
+        // $pesanan->delivery()->delete();
+        // $pesanan->pembayaran()->delete();
+        
         $pesanan->delete();
         
         return redirect()->route('pesanan.online.index')
-            ->with('success', 'Pesanan berhasil dihapus');
+            ->with('success', 'Pesanan berhasil dihapus!');
+            
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return redirect()->route('pesanan.online.index')
+            ->with('error', 'Pesanan tidak ditemukan!');
+            
+    } catch (\Exception $e) {
+        return redirect()->route('pesanan.online.index')
+            ->with('error', 'Gagal menghapus pesanan: ' . $e->getMessage());
     }
+}
+
     
     // ==================== ADMIN2 ====================
     
