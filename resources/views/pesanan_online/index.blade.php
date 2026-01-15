@@ -3,6 +3,30 @@
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
+    <style>
+        .delete-btn {
+            pointer-events: auto !important;
+            z-index: 9999 !important;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .card-wrapper:hover .delete-btn {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .delete-btn:hover {
+            transform: scale(1.15) !important;
+            box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.5), 
+                        0 8px 10px -6px rgba(220, 38, 38, 0.4) !important;
+        }
+        
+        .delete-btn:active {
+            transform: scale(0.95) !important;
+        }
+    </style>
     
     {{-- ========================================
          HEADER SECTION
@@ -107,24 +131,24 @@
                     }
                 @endphp
                 
-{{-- ✅✅✅ CARD WRAPPER - STRUCTURE BARU ✅✅✅ --}}
+{{-- ✅ CARD WRAPPER WITH HOVER EFFECT --}}
 <div data-nama="{{ strtolower($p->nama_pelanggan ?? '') }}" 
      data-id="{{ $p->id_transaksi }}"
-     class="relative group">
+     class="relative group card-wrapper">
 
-    {{-- ✅✅✅ BAGIAN 1: DELETE BUTTON - SEJAJAR DENGAN CARD, BUKAN DI DALAM ✅✅✅ --}}
-    {{-- PERMISSION CHECK DIHAPUS UNTUK TESTING --}}
-    <button type="button"
-            onclick="alert('🗑️ Button Delete Diklik! ID: {{ $p->id_transaksi }}'); event.stopPropagation(); confirmDelete({{ $p->id_transaksi }}, '{{ addslashes($p->nama_pelanggan ?? 'Guest') }}'); return false;"
-            class="absolute top-4 right-4 z-[100] 
-                   bg-red-600 text-white p-3 rounded-lg 
-                   hover:bg-red-700 hover:scale-110 shadow-2xl border-2 border-white
-                   transition-all duration-200"
-            style="pointer-events: auto !important; cursor: pointer !important; opacity: 1 !important;">
-        <i class="bi bi-trash-fill text-lg"></i>
-    </button>
+    {{-- DELETE BUTTON - MUNCUL SAAT HOVER --}}
+    <div class="absolute top-4 right-4 z-50" style="pointer-events: auto;">
+        <button type="button"
+                data-id="{{ $p->id_transaksi }}"
+                data-nama="{{ addslashes($p->nama_pelanggan ?? 'Guest') }}"
+                class="delete-btn bg-red-600 text-white p-3 rounded-xl 
+                       hover:bg-red-700 shadow-lg border-2 border-white
+                       cursor-pointer">
+            <i class="bi bi-trash-fill text-lg"></i>
+        </button>
+    </div>
 
-    {{-- ✅✅✅ BAGIAN 2: CARD LINK ✅✅✅ --}}
+    {{-- CARD CONTENT --}}
     <a href="{{ route('pesanan.online.detail', $p->id_transaksi) }}" class="block">
         <div class="relative bg-white shadow-sm rounded-2xl p-6 
                     hover:shadow-md transition-all duration-300 border border-gray-200
@@ -469,50 +493,70 @@ document.getElementById('searchInput').addEventListener('keyup', function() {
     });
 });
 
-function confirmDelete(pesananId, namaPelanggan) {
-    console.log('🔴 DELETE BUTTON CLICKED!', pesananId, namaPelanggan); // DEBUG
+// DELETE BUTTON HANDLER
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🟢 Setting up delete buttons');
     
-    Swal.fire({
-        title: 'Hapus Pesanan?',
-        html: `<div class="text-gray-600">
-                    <p class="mb-2">Anda akan menghapus pesanan:</p>
-                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-3 my-3">
-                        <p class="font-bold text-red-700 text-lg">ORDER/${pesananId}</p>
-                        <p class="text-gray-700 mt-1">${namaPelanggan}</p>
-                    </div>
-                    <p class="text-sm text-gray-500">
-                        <i class="bi bi-info-circle text-blue-500"></i>
-                        Data yang sudah dihapus tidak dapat dikembalikan.
-                    </p>
-                </div>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus!',
-        cancelButtonText: 'Batal',
-        reverseButtons: true,
-        customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
-            cancelButton: 'rounded-xl px-6 py-3 font-bold'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    console.log('Found buttons:', deleteButtons.length);
+    
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            const pesananId = this.getAttribute('data-id');
+            const namaPelanggan = this.getAttribute('data-nama');
+            
+            console.log('🔴 DELETE CLICKED!', pesananId, namaPelanggan);
+            
             Swal.fire({
-                title: 'Menghapus Pesanan...',
-                html: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
+                title: 'Hapus Pesanan?',
+                html: `<div class="text-gray-600">
+                            <p class="mb-2">Anda akan menghapus pesanan:</p>
+                            <div class="bg-red-50 border-2 border-red-200 rounded-xl p-3 my-3">
+                                <p class="font-bold text-red-700 text-lg">ORDER/${pesananId}</p>
+                                <p class="text-gray-700 mt-1">${namaPelanggan}</p>
+                            </div>
+                            <p class="text-sm text-gray-500">
+                                <i class="bi bi-info-circle text-blue-500"></i>
+                                Data yang sudah dihapus tidak dapat dikembalikan.
+                            </p>
+                        </div>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+                customClass: {
+                    popup: 'rounded-2xl',
+                    confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
+                    cancelButton: 'rounded-xl px-6 py-3 font-bold'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Menghapus Pesanan...',
+                        html: 'Mohon tunggu sebentar',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    document.getElementById('deleteForm' + pesananId).submit();
                 }
             });
             
-            document.getElementById('deleteForm' + pesananId).submit();
-        }
+            return false;
+        }, true);
     });
-}
+});
+
 </script>
 
 @endsection

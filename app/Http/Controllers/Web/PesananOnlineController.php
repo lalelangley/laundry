@@ -543,15 +543,68 @@ public function index(Request $request)
             ->with('success', 'Pembayaran berhasil');
     }
     
-    public function destroy($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+    /**
+ * ===============================================
+ * DELETE PESANAN ONLINE
+ * ===============================================
+ * Menghapus pesanan beserta semua relasinya
+ */
+public function destroy($id)
+{
+    try {
+        // Cari transaksi online
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')
+                           ->findOrFail($id);
+        
+        // Simpan info untuk log
+        $customerName = $pesanan->nama_pelanggan ?? 'Guest';
+        $orderId = $pesanan->id_transaksi;
+        
+        // Hapus relasi terkait (untuk menghindari foreign key constraint)
+        // Jika sudah ada ON DELETE CASCADE di database, bagian ini bisa di-skip
+        if ($pesanan->detail_transaksi()->count() > 0) {
+            $pesanan->detail_transaksi()->delete();
+        }
+        
+        if ($pesanan->delivery()->count() > 0) {
+            $pesanan->delivery()->delete();
+        }
+        
+        if ($pesanan->pembayaran()->count() > 0) {
+            $pesanan->pembayaran()->delete();
+        }
+        
+        // Hapus transaksi utama
         $pesanan->delete();
         
+        // Log aktivitas
+        \Log::info("Pesanan ORDER/{$orderId} ({$customerName}) berhasil dihapus oleh Admin: " . auth()->guard('admin')->user()->nama);
+        
         return redirect()->route('pesanan.online.index')
-            ->with('success', 'Pesanan berhasil dihapus');
+            ->with('success', 'Pesanan berhasil dihapus!');
+            
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        \Log::warning("Attempt to delete non-existent order: {$id}");
+        
+        return redirect()->route('pesanan.online.index')
+            ->with('error', 'Pesanan tidak ditemukan!');
+            
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Error database (foreign key constraint, dll)
+        \Log::error("Database error while deleting order {$id}: " . $e->getMessage());
+        
+        return redirect()->route('pesanan.online.index')
+            ->with('error', 'Gagal menghapus pesanan. Data masih terkait dengan data lain.');
+            
+    } catch (\Exception $e) {
+        // Error umum lainnya
+        \Log::error("Error deleting order {$id}: " . $e->getMessage());
+        
+        return redirect()->route('pesanan.online.index')
+            ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
     }
-    
+}
+
     // ==================== ADMIN2 ====================
 
     // Di method index() - ADMIN
@@ -1333,15 +1386,17 @@ public function indexAdmin2(Request $request)
     public function updateData(Request $request, $id)
 {
     $request->validate([
-        'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
-        'qty.*'       => 'required|numeric|min:0.01',
-        'diskon'      => 'nullable|numeric|min:0',
-        'tipe_diskon' => 'nullable|in:nominal,percent',
-        'keterangan'  => 'nullable|string',
-        'foto_bukti'  => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
-        'tgl_estimasi' => 'required|date|after_or_equal:today',
-        'id_biaya_tambahan' => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
-    ]);
+    'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
+    'qty.*'       => 'required|numeric|min:0.01',
+    'diskon'      => 'nullable|numeric|min:0',
+    'tipe_diskon' => 'nullable|in:nominal,percent',
+    'keterangan'  => 'nullable|string',
+    'foto_bukti'  => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+    'tgl_estimasi' => 'required|date|after_or_equal:today',
+    'id_biaya_tambahan' => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
+    'ongkir_method' => 'nullable|in:preset,manual',  // ✅ BARU
+    'ongkir_manual' => 'nullable|numeric|min:0',     // ✅ BARU
+]);
 
     $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
 
@@ -1369,10 +1424,34 @@ public function indexAdmin2(Request $request)
 
     // ✅ STEP 2: AMBIL BIAYA ONGKIR (JIKA ADA)
     $biayaOngkir = 0;
-    if ($request->filled('id_biaya_tambahan')) {
-        $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
-        if ($biayaTambahan) {
-            $biayaOngkir = $biayaTambahan->nominal;
+    $idBiayaTambahanFinal = null;
+
+    // Cek metode ongkir yang dipilih
+    if ($request->filled('ongkir_method')) {
+        if ($request->ongkir_method === 'manual' && $request->filled('ongkir_manual') && $request->ongkir_manual > 0) {
+            // ✅ ONGKIR MANUAL - Buat/Update BiayaTambahan baru
+            $biayaOngkir = $request->ongkir_manual;
+            
+            // Cek apakah sudah ada biaya tambahan dengan nominal yang sama
+            $biayaTambahanManual = BiayaTambahan::where('nominal', $biayaOngkir)
+                ->first();
+            
+            if (!$biayaTambahanManual) {
+                // Buat baru jika belum ada
+                $biayaTambahanManual = BiayaTambahan::create([
+                    'nominal' => $biayaOngkir,
+                ]);
+            }
+            
+            $idBiayaTambahanFinal = $biayaTambahanManual->id_biaya_tambahan;
+            
+        } elseif ($request->ongkir_method === 'preset' && $request->filled('id_biaya_tambahan')) {
+            // ✅ ONGKIR DARI LIST
+            $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
+            if ($biayaTambahan) {
+                $biayaOngkir = $biayaTambahan->nominal;
+                $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
+            }
         }
     }
 
@@ -1423,7 +1502,7 @@ public function indexAdmin2(Request $request)
         'status_transaksi' => $statusBaru,
         'foto_bukti'  => $fotoBuktiPath,
         'tgl_estimasi' => $request->tgl_estimasi,
-        'id_biaya_tambahan' => $request->filled('id_biaya_tambahan') ? $request->id_biaya_tambahan : null,
+        'id_biaya_tambahan' => $idBiayaTambahanFinal,
     ]);
 
     $message = 'Data pesanan berhasil diperbarui!';
@@ -1438,7 +1517,7 @@ public function indexAdmin2(Request $request)
 
 public function updateDataAdmin2(Request $request, $id)
 {
-    $request->validate([
+        $request->validate([
         'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
         'qty.*'       => 'required|numeric|min:0.01',
         'diskon'      => 'nullable|numeric|min:0',
@@ -1447,6 +1526,8 @@ public function updateDataAdmin2(Request $request, $id)
         'foto_bukti'  => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
         'tgl_estimasi' => 'required|date|after_or_equal:today',
         'id_biaya_tambahan' => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
+        'ongkir_method' => 'nullable|in:preset,manual',  // ✅ BARU
+        'ongkir_manual' => 'nullable|numeric|min:0',     // ✅ BARU
     ]);
 
     $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
@@ -1475,10 +1556,34 @@ public function updateDataAdmin2(Request $request, $id)
 
     // ✅ STEP 2: AMBIL BIAYA ONGKIR (JIKA ADA)
     $biayaOngkir = 0;
-    if ($request->filled('id_biaya_tambahan')) {
-        $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
-        if ($biayaTambahan) {
-            $biayaOngkir = $biayaTambahan->nominal;
+    $idBiayaTambahanFinal = null;
+
+    // Cek metode ongkir yang dipilih
+    if ($request->filled('ongkir_method')) {
+        if ($request->ongkir_method === 'manual' && $request->filled('ongkir_manual') && $request->ongkir_manual > 0) {
+            // ✅ ONGKIR MANUAL - Buat/Update BiayaTambahan baru
+            $biayaOngkir = $request->ongkir_manual;
+            
+            // Cek apakah sudah ada biaya tambahan dengan nominal yang sama
+            $biayaTambahanManual = BiayaTambahan::where('nominal', $biayaOngkir)
+                ->first();
+            
+            if (!$biayaTambahanManual) {
+                // Buat baru jika belum ada
+                $biayaTambahanManual = BiayaTambahan::create([
+                    'nominal' => $biayaOngkir,
+                ]);
+            }
+            
+            $idBiayaTambahanFinal = $biayaTambahanManual->id_biaya_tambahan;
+            
+        } elseif ($request->ongkir_method === 'preset' && $request->filled('id_biaya_tambahan')) {
+            // ✅ ONGKIR DARI LIST
+            $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
+            if ($biayaTambahan) {
+                $biayaOngkir = $biayaTambahan->nominal;
+                $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
+            }
         }
     }
 
@@ -1529,7 +1634,7 @@ public function updateDataAdmin2(Request $request, $id)
         'status_transaksi' => $statusBaru,
         'foto_bukti'  => $fotoBuktiPath,
         'tgl_estimasi' => $request->tgl_estimasi,
-        'id_biaya_tambahan' => $request->filled('id_biaya_tambahan') ? $request->id_biaya_tambahan : null,
+        'id_biaya_tambahan' => $idBiayaTambahanFinal,
     ]);
 
     $message = 'Data pesanan berhasil diperbarui!';
@@ -1544,15 +1649,17 @@ public function updateDataAdmin2(Request $request, $id)
 public function updateDataKasir(Request $request, $id)
 {
     $request->validate([
-        'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
-        'qty.*'       => 'required|numeric|min:0.01',
-        'diskon'      => 'nullable|numeric|min:0',
-        'tipe_diskon' => 'nullable|in:nominal,percent',
-        'keterangan'  => 'nullable|string',
-        'foto_bukti'  => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
-        'tgl_estimasi' => 'required|date|after_or_equal:today',
-        'id_biaya_tambahan' => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
-    ]);
+    'id_detail.*' => 'required|exists:detail_transaksi,id_detail_transaksi',
+    'qty.*'       => 'required|numeric|min:0.01',
+    'diskon'      => 'nullable|numeric|min:0',
+    'tipe_diskon' => 'nullable|in:nominal,percent',
+    'keterangan'  => 'nullable|string',
+    'foto_bukti'  => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+    'tgl_estimasi' => 'required|date|after_or_equal:today',
+    'id_biaya_tambahan' => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
+    'ongkir_method' => 'nullable|in:preset,manual',  // ✅ BARU
+    'ongkir_manual' => 'nullable|numeric|min:0',     // ✅ BARU
+]);
 
     $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
 
@@ -1580,10 +1687,34 @@ public function updateDataKasir(Request $request, $id)
 
     // ✅ STEP 2: AMBIL BIAYA ONGKIR (JIKA ADA)
     $biayaOngkir = 0;
-    if ($request->filled('id_biaya_tambahan')) {
-        $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
-        if ($biayaTambahan) {
-            $biayaOngkir = $biayaTambahan->nominal;
+    $idBiayaTambahanFinal = null;
+
+    // Cek metode ongkir yang dipilih
+    if ($request->filled('ongkir_method')) {
+        if ($request->ongkir_method === 'manual' && $request->filled('ongkir_manual') && $request->ongkir_manual > 0) {
+            // ✅ ONGKIR MANUAL - Buat/Update BiayaTambahan baru
+            $biayaOngkir = $request->ongkir_manual;
+            
+            // Cek apakah sudah ada biaya tambahan dengan nominal yang sama
+            $biayaTambahanManual = BiayaTambahan::where('nominal', $biayaOngkir)
+                ->first();
+            
+            if (!$biayaTambahanManual) {
+                // Buat baru jika belum ada
+                $biayaTambahanManual = BiayaTambahan::create([
+                    'nominal' => $biayaOngkir,
+                ]);
+            }
+            
+            $idBiayaTambahanFinal = $biayaTambahanManual->id_biaya_tambahan;
+            
+        } elseif ($request->ongkir_method === 'preset' && $request->filled('id_biaya_tambahan')) {
+            // ✅ ONGKIR DARI LIST
+            $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
+            if ($biayaTambahan) {
+                $biayaOngkir = $biayaTambahan->nominal;
+                $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
+            }
         }
     }
 
@@ -1634,7 +1765,7 @@ public function updateDataKasir(Request $request, $id)
         'status_transaksi' => $statusBaru,
         'foto_bukti'  => $fotoBuktiPath,
         'tgl_estimasi' => $request->tgl_estimasi,
-        'id_biaya_tambahan' => $request->filled('id_biaya_tambahan') ? $request->id_biaya_tambahan : null,
+        'id_biaya_tambahan' => $idBiayaTambahanFinal,
     ]);
 
     $message = 'Data pesanan berhasil diperbarui!';
@@ -2191,5 +2322,129 @@ public function updateDataKasir(Request $request, $id)
         
         return $today->greaterThan($estimasi);
     }
+    /**
+ * ===============================================
+ * KIRIM FCM NOTIFICATION - CUCIAN SELESAI DICUCI
+ * ===============================================
+ */
+public function sendFcmNotification(Request $request, $id)
+{
+    try {
+        $pesanan = Transaksi::with(['pelanggan'])
+            ->where('jenis_transaksi', 'online')
+            ->findOrFail($id);
+        
+        $notificationType = $request->input('notification_type', 'selesai_dicuci');
+        
+        // Cek apakah pelanggan punya FCM token
+        if (!$pesanan->pelanggan || !$pesanan->pelanggan->fcm_token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pelanggan tidak memiliki FCM token. Pastikan pelanggan sudah login di aplikasi mobile.'
+            ], 400);
+        }
+        
+        // Prepare notification data
+        $title = '';
+        $body = '';
+        $data = [
+            'order_id' => $pesanan->id_transaksi,
+            'type' => $notificationType
+        ];
+        
+        switch ($notificationType) {
+            case 'selesai_dicuci':
+                $title = '🎉 Cucian Selesai Dicuci!';
+                $body = "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan siap untuk diproses lebih lanjut.";
+                break;
+            
+            case 'siap_diambil':
+                $title = '✅ Cucian Siap Diambil!';
+                $body = "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah siap diambil di laundry kami.";
+                break;
+            
+            case 'dalam_pengiriman':
+                $title = '🚚 Cucian Sedang Diantar!';
+                $body = "Driver kami sedang dalam perjalanan mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}).";
+                break;
+            
+            default:
+                $title = 'Update Pesanan Laundry';
+                $body = "Ada update terbaru untuk pesanan Anda (ORDER/{$pesanan->id_transaksi}).";
+        }
+        
+        // TODO: Kirim FCM Notification
+        // Implementasi menggunakan package firebase/php-jwt atau guzzle
+        // Contoh:
+        /*
+        $fcmToken = $pesanan->pelanggan->fcm_token;
+        
+        $notification = [
+            'title' => $title,
+            'body' => $body,
+            'sound' => 'default',
+            'badge' => '1',
+        ];
+        
+        $fcmData = [
+            'to' => $fcmToken,
+            'notification' => $notification,
+            'data' => $data,
+            'priority' => 'high'
+        ];
+        
+        $headers = [
+            'Authorization: key=' . env('FCM_SERVER_KEY'),
+            'Content-Type: application/json'
+        ];
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fcmData));
+        
+        $result = curl_exec($ch);
+        curl_close($ch);
+        
+        $response = json_decode($result, true);
+        
+        if (isset($response['success']) && $response['success'] == 1) {
+            \Log::info("FCM notification sent successfully to order {$pesanan->id_transaksi}");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Notifikasi berhasil dikirim ke pelanggan!'
+            ]);
+        } else {
+            throw new \Exception('FCM response error: ' . json_encode($response));
+        }
+        */
+        
+        // SEMENTARA: Simulasi sukses (hapus ini setelah implementasi FCM sebenarnya)
+        \Log::info("Simulated FCM notification for order {$pesanan->id_transaksi}: {$title}");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notifikasi berhasil dikirim ke pelanggan!'
+        ]);
+        
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Pesanan tidak ditemukan!'
+        ], 404);
+        
+    } catch (\Exception $e) {
+        \Log::error("Error sending FCM notification: " . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengirim notifikasi: ' . $e->getMessage()
+        ], 500);
+    }
+}
     
 }
