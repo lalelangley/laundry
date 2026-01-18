@@ -17,6 +17,9 @@ use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Models\Satuan;
 
+Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
+
+
 
 Route::post('/pesanan-online/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
     ->name('pesanan.online.assign-driver-pickup');
