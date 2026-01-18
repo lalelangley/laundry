@@ -1,9 +1,9 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Transaksi extends Model
 {
@@ -17,6 +17,7 @@ class Transaksi extends Model
         'id_kasir',
         'id_driver',
         'id_metode_bayar',
+        'id_biaya_tambahan',  // ✅ Added missing field
         'nama_pelanggan',
         'no_hp',
         'total_harga',
@@ -28,12 +29,12 @@ class Transaksi extends Model
         'status_transaksi',
         'jenis_transaksi',
         'keterangan',
+        'keterangan_bayar',
         'tgl_lunas',
         'tgl_estimasi',
         'tgl_transaksi',
-        'id_kasir',
-        'id_metode_bayar',
-        "id_driver",
+        'foto_bukti',
+        'foto_bukti_bayar',
     ];
 
     protected $casts = [
@@ -46,15 +47,17 @@ class Transaksi extends Model
         'tgl_transaksi' => 'date',
     ];
 
-    // ✅ Relasi - PASTIKAN NAMA TABEL & FOREIGN KEY BENAR
+    // Relationships
     public function detail()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
+
     public function detail_transaksi()
     {
         return $this->hasMany(DetailTransaksi::class, 'id_transaksi');
     }
+
     public function pelanggan()
     {
         return $this->belongsTo(Pelanggan::class, 'id_pelanggan', 'id_pelanggan');
@@ -62,8 +65,6 @@ class Transaksi extends Model
 
     public function kasir()
     {
-        // ⚠️ GANTI 'users' dengan nama tabel kasir yang benar
-        // Misal: 'kasir', 'pegawai', atau 'karyawan'
         return $this->belongsTo(Kasir::class, 'id_kasir', 'id_kasir');
     }
 
@@ -77,10 +78,31 @@ class Transaksi extends Model
         return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar', 'id_metode_bayar');
     }
 
-    // Transaksi punya satu delivery
+    public function biayaTambahan()
+    {
+        return $this->belongsTo(BiayaTambahan::class, 'id_biaya_tambahan', 'id_biaya_tambahan');
+    }
+
     public function delivery()
     {
         return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
     }
 
+    public function pembayaran()
+    {
+        return $this->hasMany(Pembayaran::class, 'id_transaksi', 'id_transaksi');
+    }
+
+    // ✅ Fixed attribute accessor
+    public function getEstimasiHariAttribute()
+    {
+        if (!$this->tgl_estimasi) {
+            return null;
+        }
+
+        $estimasi = Carbon::parse($this->tgl_estimasi)->startOfDay();
+        $today = now()->startOfDay();
+
+        return $today->diffInDays($estimasi, false);
+    }
 }

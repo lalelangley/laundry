@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LaundryOrderController;
 use App\Http\Controllers\Api\ProfilePelanggansController;
 use App\Http\Controllers\Api\DriverTaskController;
+use App\Http\Controllers\Api\PaymentController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +27,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/detail/{id}', [LaundryOrderController::class, 'getOrderDetail']);
     });
 
+    Route::get('/invoices', [LaundryOrderController::class, 'getInvoiceList']);
+    Route::get('/invoice/{id}', [LaundryOrderController::class, 'getInvoice']);
+    Route::post('/transaksi/{id}/bayar', [PaymentController::class, 'bayar']);
+    Route::post('/transaksi/{id_transaksi}/pilih-metode', [LaundryOrderController::class, 'pilihMetodePengambilan']);
+
+
+
     Route::prefix('driver')->group(function () {
         Route::get('/{id_driver}/history', [DriverTaskController::class, 'getDriverHistory']);
         Route::get('/{id_driver}/tasks', [DriverTaskController::class, 'getPendingTasks']); // task list
@@ -36,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/arrived-at-laundry', [DriverTaskController::class, 'arrivedAtLaundry']);
         Route::post('/on-the-way-to-customer', [DriverTaskController::class, 'onTheWayToCustomer']);
         Route::post('/complete-delivery', [DriverTaskController::class, 'completeDelivery']);
+        Route::get('{driverId}/antar', [DriverTaskController::class, 'getAntarTasks']);
+        Route::post('antar/start', [DriverTaskController::class, 'startAntar']);
+        Route::post('antar/complete', [DriverTaskController::class, 'completeAntar']);
     });
 
 });
