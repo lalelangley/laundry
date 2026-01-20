@@ -30,19 +30,14 @@ if (!function_exists('canDelete')) {
 }
 
 if (!function_exists('requirePermission')) {
-    /**
-     * ✅ FOOLPROOF - Bypass Super Admin dengan type juggling
-     */
     function requirePermission(string $menuIdentifier, string $action): void
     {
-        // ✅ BYPASS SUPER ADMIN - Cast to int untuk handle string/int
         $user = auth('admin')->user() ?? auth('kasir')->user();
         
         if ($user && (int)$user->role_id === 1) {
             return; // Super Admin ALWAYS bypass
         }
-        
-        // Check permission untuk user biasa
+
         if (!checkPermission($menuIdentifier, $action)) {
             abort(403, "Anda tidak memiliki izin untuk {$action} di menu ini");
         }
@@ -57,23 +52,27 @@ if (!function_exists('isMenuActive')) {
         if (!$user) {
             return false;
         }
-        
-        // ✅ Cast to int
+
+        // ✅ Super Admin bypass
         if ((int)$user->role_id === 1) {
             return true;
         }
-        
-        $permission = \App\Models\MenuRole::whereHas('menu', function($query) use ($menuIdentifier) {
-                $query->where('route', 'like', "%{$menuIdentifier}%")
-                      ->orWhere('nama_menu', 'like', "%{$menuIdentifier}%");
+
+        // ✅ PERBAIKAN: Hapus filter menu.role_id
+        $permission = \App\Models\MenuRole::join('menu', 'menu_role.menu_id', '=', 'menu.id')
+            ->where('menu_role.role_id', $user->role_id)
+            // ❌ HAPUS: ->where('menu.role_id', $user->role_id)
+            ->where(function($query) use ($menuIdentifier) {
+                $query->where('menu.route', 'like', "%{$menuIdentifier}%")
+                      ->orWhere('menu.nama_menu', 'like', "%{$menuIdentifier}%");
             })
-            ->where('role_id', $user->role_id)
+            ->select('menu_role.*')
             ->first();
-        
+
         if (!$permission) {
             return false;
         }
-        
+
         return $permission->is_active ?? false;
     }
 }
@@ -86,33 +85,67 @@ if (!function_exists('checkPermission')) {
         if (!$user) {
             return false;
         }
-        
-        // ✅ Cast to int - Handle both string "1" and integer 1
+
+        // ✅ Super Admin bypass
         if ((int)$user->role_id === 1) {
             return true;
         }
-        
-        $permission = \App\Models\MenuRole::whereHas('menu', function($query) use ($menuIdentifier, $user) {
-                $query->where('role_id', $user->role_id)
-                      ->where(function($q) use ($menuIdentifier) {
-                          $q->where('route', 'like', "%{$menuIdentifier}%")
-                            ->orWhere('nama_menu', 'like', "%{$menuIdentifier}%");
-                      });
+
+        // ✅ Normalisasi menu identifier
+        $normalizedIdentifiers = [
+            $menuIdentifier,
+            str_replace('.', '-', $menuIdentifier),
+            str_replace('.', ' ', $menuIdentifier),
+            ucwords(str_replace('.', ' ', $menuIdentifier)),
+        ];
+
+        // ✅ PERBAIKAN UTAMA: Hapus filter menu.role_id
+        $permission = \App\Models\MenuRole::join('menu', 'menu_role.menu_id', '=', 'menu.id')
+            ->where('menu_role.role_id', $user->role_id)
+            // ❌ HAPUS LINE INI: ->where('menu.role_id', $user->role_id)
+            ->where(function($query) use ($normalizedIdentifiers) {
+                foreach ($normalizedIdentifiers as $identifier) {
+                    $query->orWhere('menu.route', 'like', "%{$identifier}%")
+                          ->orWhere('menu.nama_menu', 'like', "%{$identifier}%");
+                }
             })
-            ->where('role_id', $user->role_id)
+            ->select('menu_role.*')
             ->first();
-        
+
         if (!$permission) {
+            \Log::warning("Permission not found", [
+                'menu_identifier' => $menuIdentifier,
+                'user_role' => $user->role_id,
+                'action' => $action,
+                'tried_identifiers' => $normalizedIdentifiers
+            ]);
             return false;
         }
-        
-        // Check toggle ON/OFF
+
+        // ✅ Check toggle ON/OFF
         if (!$permission->is_active) {
+            \Log::info("Menu inactive", [
+                'menu_identifier' => $menuIdentifier,
+                'user_role' => $user->role_id
+            ]);
             return false;
         }
+
+        // ✅ Check specific permission
+        $columnName = "can_{$action}";
+        $hasPermission = $permission->{$columnName} ?? false;
         
-        // Check specific permission
-        return $permission->{"can_{$action}"} ?? false;
+        if (!$hasPermission) {
+            \Log::info("Permission denied", [
+                'menu_identifier' => $menuIdentifier,
+                'user_role' => $user->role_id,
+                'action' => $action,
+                'column' => $columnName,
+                'value' => $permission->{$columnName} ?? 'null'
+            ]);
+        }
+
+        return $hasPermission;
     }
 }
 
@@ -124,8 +157,8 @@ if (!function_exists('getUserPermissions')) {
         if (!$user) {
             return [];
         }
-        
-        // ✅ Cast to int
+
+        // ✅ Super Admin bypass
         if ((int)$user->role_id === 1) {
             return [
                 'all' => true,
@@ -135,12 +168,15 @@ if (!function_exists('getUserPermissions')) {
                 'delete' => true,
             ];
         }
-        
-        $permissions = \App\Models\MenuRole::where('role_id', $user->role_id)
-            ->with('menu')
+
+        // ✅ PERBAIKAN: Hapus filter menu.role_id
+        $permissions = \App\Models\MenuRole::where('menu_role.role_id', $user->role_id)
+            ->join('menu', 'menu_role.menu_id', '=', 'menu.id')
+            // ❌ HAPUS: ->where('menu.role_id', $user->role_id)
+            ->select('menu_role.*', 'menu.route', 'menu.nama_menu')
             ->get()
             ->mapWithKeys(function($perm) {
-                $menuKey = $perm->menu->route ?? $perm->menu->nama_menu;
+                $menuKey = $perm->route ?? $perm->nama_menu;
                 return [
                     $menuKey => [
                         'active' => $perm->is_active,
@@ -152,7 +188,7 @@ if (!function_exists('getUserPermissions')) {
                 ];
             })
             ->toArray();
-        
+
         return $permissions;
     }
 }
