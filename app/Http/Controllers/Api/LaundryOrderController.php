@@ -203,10 +203,6 @@ class LaundryOrderController extends Controller
         ]);
     }
 
-    // ======================
-    // GET INVOICE (ORDER SUDAH ADA HARGA)
-    // ======================
-   // ====================== 
 // GET INVOICE (ORDER SUDAH ADA HARGA) 
 // ====================== 
 public function getInvoice($id) 
