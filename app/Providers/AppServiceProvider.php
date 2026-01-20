@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,7 +17,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // ✅ Tambahkan check untuk avoid error saat migration/seeding
         if (!app()->runningInConsole() || app()->runningUnitTests()) {
             $this->composeMenus();
         }
@@ -31,15 +31,22 @@ class AppServiceProvider extends ServiceProvider
                 $guardType = null;
 
                 try {
-                    // ✅ Cek guard dengan lebih hati-hati
+                    if (!Schema::hasTable('menu') || !Schema::hasTable('menu_role')) {
+                        $view->with([
+                            'menus' => collect(),
+                            'guardType' => null,
+                            'roleId' => null
+                        ]);
+                        return;
+                    }
+
                     if (Auth::guard('admin')->check()) {
                         $user = Auth::guard('admin')->user();
                         if ($user && isset($user->role_id)) {
-                            $roleId = $user->role_id;
+                            $roleId = (int)$user->role_id;
                             $guardType = 'admin';
                         }
-                    }
-                    elseif (Auth::guard('kasir')->check()) {
+                    } elseif (Auth::guard('kasir')->check()) {
                         $user = Auth::guard('kasir')->user();
                         if ($user) {
                             $roleId = 3;
@@ -47,18 +54,37 @@ class AppServiceProvider extends ServiceProvider
                         }
                     }
 
-                    // ✅ Load menu hanya jika roleId valid
-                    if ($roleId && DB::table('menu')->exists()) {
-                        $menus = DB::table('menu')
-                            ->join('menu_role', function($join) use ($roleId) {
-                                $join->on('menu.id', '=', 'menu_role.menu_id')
-                                     ->where('menu_role.role_id', '=', $roleId);
-                            })
-                            ->where('menu.status', 1)
-                            ->where('menu_role.can_view', 1)
-                            ->orderBy('menu.urutan', 'asc')
-                            ->select('menu.*')
-                            ->get();
+                    if ($roleId) {
+                        // ✅ SUPER ADMIN - Load semua menu aktif
+                        if ($roleId === 1) {
+                            $menus = DB::table('menu')
+                                ->where('status', 1)
+                                ->where('role_id', $roleId)
+                                ->orderBy('urutan', 'asc')
+                                ->get();
+                        } else {
+                            // ✅ PERBAIKAN: Hapus filter menu.role_id
+                            // Menu bisa dibagikan ke berbagai role melalui menu_role
+                            $menus = DB::table('menu')
+                                ->join('menu_role', function($join) use ($roleId) {
+                                    $join->on('menu.id', '=', 'menu_role.menu_id')
+                                         ->where('menu_role.role_id', '=', $roleId);
+                                })
+                                ->where('menu.status', 1)
+                                // ❌ HAPUS: ->where('menu.role_id', $roleId)
+                                ->where('menu_role.is_active', 1)
+                                ->where('menu_role.can_view', 1)
+                                ->orderBy('menu.urutan', 'asc')
+                                ->select('menu.*')
+                                ->distinct()  // ✅ Tambahkan distinct untuk avoid duplikasi
+                                ->get();
+                        }
+
+                        Log::info("Menus loaded for user", [
+                            'role_id' => $roleId,
+                            'guard' => $guardType,
+                            'menu_count' => $menus->count()
+                        ]);
                     }
                 } catch (\Exception $e) {
                     Log::error('Error loading menus: ' . $e->getMessage());
