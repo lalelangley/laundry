@@ -6,6 +6,12 @@ use App\Http\Controllers\Api\LaundryOrderController;
 use App\Http\Controllers\Api\ProfilePelanggansController;
 use App\Http\Controllers\Api\DriverTaskController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\FcmTokenController;
+
+
+Route::post('/register-fcm-token', [FcmTokenController::class, 'register']);
+Route::post('/delete-fcm-token', [FcmTokenController::class, 'delete']);
+Route::post('/register-fcm-token', [FcmTokenController::class, 'register']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

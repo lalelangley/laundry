@@ -17,6 +17,9 @@ use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Models\Satuan;
 
+Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
+
+
 
 Route::post('/pesanan-online/{id}/assign-driver-pickup', [PesananOnlineController::class, 'assignDriverPickup'])
     ->name('pesanan.online.assign-driver-pickup');
@@ -1155,9 +1158,10 @@ Route::prefix('pesanan-online')->group(function () {
     // Driver Arrive
     Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArriveAtLaundry'])
         ->name('admin2.pesanan.online.driver-arrive');
+    // BENAR - Route yang sudah diperbaiki
     Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
-        ->middleware('permission:edit')
-        ->name('send-fcm-notification');
+        ->whereNumber('id')  // ✅ Tambahkan validasi ID
+        ->name('admin2.pesanan.online.send-fcm-notification');  // ✅ Name konsisten dengan prefix
 });
 
     // ================= RIWAYAT =================
