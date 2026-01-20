@@ -1158,9 +1158,10 @@ Route::prefix('pesanan-online')->group(function () {
     // Driver Arrive
     Route::get('/{id}/driver-arrive', [PesananOnlineController::class, 'driverArriveAtLaundry'])
         ->name('admin2.pesanan.online.driver-arrive');
+    // BENAR - Route yang sudah diperbaiki
     Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
-        ->middleware('permission:edit')
-        ->name('send-fcm-notification');
+        ->whereNumber('id')  // ✅ Tambahkan validasi ID
+        ->name('admin2.pesanan.online.send-fcm-notification');  // ✅ Name konsisten dengan prefix
 });
 
     // ================= RIWAYAT =================

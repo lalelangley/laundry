@@ -6,10 +6,15 @@
     <style>
         .delete-btn {
             pointer-events: auto !important;
-            z-index: 9999 !important;
+            z-index: 5 !important;
             opacity: 0;
             transform: scale(0.8);
             transition: all 0.3s ease;
+        }
+        
+        .card-wrapper {
+            position: relative;
+            z-index: 1;
         }
         
         .card-wrapper:hover .delete-btn {
@@ -57,40 +62,130 @@
         {{-- ========================================
             STATUS TABS
         ======================================== --}}
+        {{-- DEBUG INFO - Uncomment untuk debugging --}}
+        {{-- <div class="mb-2 p-3 bg-blue-50 rounded text-xs">
+            Debug: Pickup need driver = {{ $pickupNeedDriver ?? 'NULL' }} | 
+            Antar need driver = {{ $antarNeedDriver ?? 'NULL' }}
+        </div> --}}
+        
         <div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
             <div class="flex gap-2 justify-between">
                 @php
                     $tabs = [
                         'pickup' => ['label' => 'Pickup', 'icon' => 'truck', 'badge_color' => 'bg-yellow-500'],
-                        'antrian' => ['label' => 'Antrian', 'icon' => 'hourglass-split', 'badge_color' => 'bg-orange-500'],
-                        'proses' => ['label' => 'Proses', 'icon' => 'arrow-repeat', 'badge_color' => 'bg-purple-500'],
-                        'selesai_dicuci' => ['label' => 'Selesai Dicuci', 'icon' => 'check-circle-fill', 'badge_color' => 'bg-blue-500'],
-                        'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle', 'badge_color' => 'bg-teal-500'],
-                        'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'bicycle', 'badge_color' => 'bg-indigo-500'],
-                        'selesai' => ['label' => 'Selesai', 'icon' => 'check-all', 'badge_color' => 'bg-green-500'],
-                        'ditolak' => ['label' => 'Ditolak', 'icon' => 'x-circle', 'badge_color' => 'bg-red-500'],
+                        'antrian' => ['label' => 'Antrian', 'icon' => 'hourglass-split', 'badge_color' => 'bg-yellow-500'],
+                        'proses' => ['label' => 'Proses', 'icon' => 'arrow-repeat', 'badge_color' => 'bg-yellow-500'],
+                        'selesai_dicuci' => ['label' => 'Selesai Dicuci', 'icon' => 'check-circle-fill', 'badge_color' => 'bg-yellow-500'],
+                        'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle', 'badge_color' => 'bg-yellow-500'],
+                        'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'bicycle', 'badge_color' => 'bg-yellow-500'],
+                        'selesai' => ['label' => 'Selesai', 'icon' => 'check-all', 'badge_color' => 'bg-yellow-500'],
+                        'ditolak' => ['label' => 'Ditolak', 'icon' => 'x-circle', 'badge_color' => 'bg-yellow-500'],
                     ];
 
-                    if(!isset($pickupNeedDriver)) {
-                        $pickupNeedDriver = $pesanan->where('status_transaksi', 'pick_up')
-                            ->filter(function($p) {
-                                $delivery = $p->delivery ? $p->delivery->where('jenis', 'pickup')->first() : null;
-                                return !$delivery || !$delivery->id_driver;
-                            })->count();
+                    // Hitung jumlah pesanan untuk setiap status
+                    $countPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')->where('jenis_transaksi', 'online')->count();
+                    $countAntrian = \App\Models\Transaksi::where('status_transaksi', 'antrian')->where('jenis_transaksi', 'online')->count();
+                    $countProses = \App\Models\Transaksi::where('status_transaksi', 'proses')->where('jenis_transaksi', 'online')->count();
+                    $countSelesaiDicuci = \App\Models\Transaksi::where('status_transaksi', 'selesai_dicuci')->where('jenis_transaksi', 'online')->count();
+                    $countSiapDiambil = \App\Models\Transaksi::where('status_transaksi', 'siap_di_ambil')->where('jenis_transaksi', 'online')->count();
+                    $countSiapDiantar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')->where('jenis_transaksi', 'online')->count();
+                    $countSelesai = \App\Models\Transaksi::where('status_transaksi', 'selesai')->where('jenis_transaksi', 'online')->count();
+                    $countDitolak = \App\Models\Transaksi::where('status_transaksi', 'ditolak')->where('jenis_transaksi', 'online')->count();
+
+                    // Hitung alert dari SEMUA pesanan online, bukan hanya yang di tab aktif
+                    
+                    // PICKUP - Cek pesanan dengan status pick_up yang belum ada driver
+                    $allPesananPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')
+                        ->where('jenis_transaksi', 'online')
+                        ->with('delivery')
+                        ->get();
+                    
+                    $pickupNeedDriver = 0;
+                    foreach($allPesananPickup as $p) {
+                        $hasDriver = false;
+                        
+                        if ($p->delivery && $p->delivery->count() > 0) {
+                            $deliveryPickup = $p->delivery->where('jenis', 'pickup')->first();
+                            if ($deliveryPickup && $deliveryPickup->id_driver) {
+                                $hasDriver = true;
+                            }
+                        }
+                        
+                        // Jika tidak punya driver, tambahkan ke counter
+                        if (!$hasDriver) {
+                            $pickupNeedDriver++;
+                        }
+                    }
+                    
+                    // SIAP DIANTAR - Cek pesanan dengan status siap_di_antar yang belum ada driver
+                    $allPesananSiapAntar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')
+                        ->where('jenis_transaksi', 'online')
+                        ->with('delivery')
+                        ->get();
+                    
+                    $antarNeedDriver = 0;
+                    foreach($allPesananSiapAntar as $p) {
+                        $hasDriver = false;
+                        
+                        if ($p->delivery && $p->delivery->count() > 0) {
+                            $deliveryAntar = $p->delivery->where('jenis', 'antar')->first();
+                            if ($deliveryAntar && $deliveryAntar->id_driver) {
+                                $hasDriver = true;
+                            }
+                        }
+                        
+                        // Jika tidak punya driver, tambahkan ke counter
+                        if (!$hasDriver) {
+                            $antarNeedDriver++;
+                        }
                     }
                 @endphp
 
                 @foreach ($tabs as $key => $data)
+                    @php
+                        // Tentukan jumlah pesanan berdasarkan tab
+                        $countPesanan = 0;
+                        switch($key) {
+                            case 'pickup': $countPesanan = $countPickup; break;
+                            case 'antrian': $countPesanan = $countAntrian; break;
+                            case 'proses': $countPesanan = $countProses; break;
+                            case 'selesai_dicuci': $countPesanan = $countSelesaiDicuci; break;
+                            case 'siap_di_ambil': $countPesanan = $countSiapDiambil; break;
+                            case 'siap_di_antar': $countPesanan = $countSiapDiantar; break;
+                            case 'selesai': $countPesanan = $countSelesai; break;
+                            case 'ditolak': $countPesanan = $countDitolak; break;
+                        }
+                    @endphp
+
                     <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
                     class="relative flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
                             {{ $tab == $key ? 'bg-yellow-400 text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
                         <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
                         <span class="hidden sm:inline">{{ $data['label'] }}</span>
                         
+                        {{-- Badge jumlah pesanan (di kanan atas, posisi tengah-atas) --}}
+                        @if($countPesanan > 0)
+                            <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 
+                                        {{ $data['badge_color'] }} text-white text-xs font-bold rounded-full shadow-md border-2 border-white">
+                                {{ $countPesanan }}
+                            </span>
+                        @endif
+                        
+                        {{-- Alert Badge untuk Pickup (yang butuh driver) - di kiri atas --}}
                         @if($key == 'pickup' && $pickupNeedDriver > 0)
-                            <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
-                                        bg-red-500 text-white text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white">
-                                {{ $pickupNeedDriver }}
+                            <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
+                                        bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
+                                  style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
+                                <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
+                            </span>
+                        @endif
+                        
+                        {{-- Alert Badge untuk Siap Diantar (yang butuh driver) - di kiri atas --}}
+                        @if($key == 'siap_di_antar' && $antarNeedDriver > 0)
+                            <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
+                                        bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
+                                  style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
+                                <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
                             </span>
                         @endif
                     </a>
@@ -154,11 +249,11 @@
                     hover:shadow-md transition-all duration-300 border border-gray-200
                     @if($p->status_transaksi == 'pick_up') hover:border-yellow-300
                     @elseif($p->status_transaksi == 'antrian') hover:border-orange-300
-                    @elseif($p->status_transaksi == 'proses') hover:border-purple-300
-                    @elseif($p->status_transaksi == 'selesai_dicuci') hover:border-blue-300
-                    @elseif($p->status_transaksi == 'siap_di_ambil') hover:border-teal-300
-                    @elseif($p->status_transaksi == 'siap_di_antar') hover:border-indigo-300
-                    @elseif($p->status_transaksi == 'selesai') hover:border-green-300
+                    @elseif($p->status_transaksi == 'proses') hover:border-yellow-300
+                    @elseif($p->status_transaksi == 'selesai_dicuci') hover:border-orange-300
+                    @elseif($p->status_transaksi == 'siap_di_ambil') hover:border-yellow-300
+                    @elseif($p->status_transaksi == 'siap_di_antar') hover:border-orange-300
+                    @elseif($p->status_transaksi == 'selesai') hover:border-yellow-300
                     @else hover:border-red-300
                     @endif">
                     
@@ -188,8 +283,8 @@
                 
                 {{-- Tanggal Pesan --}}
                 <div class="flex items-center gap-3 text-sm">
-                    <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-calendar-date text-blue-500"></i>
+                    <div class="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-calendar-date text-yellow-500"></i>
                     </div>
                     <div class="flex-1">
                         <p class="text-gray-500 text-xs">Tanggal Pesan</p>
@@ -210,8 +305,8 @@
 
                 {{-- Total Item --}}
                 <div class="flex items-center gap-3 text-sm">
-                    <div class="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-basket text-purple-500"></i>
+                    <div class="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-basket text-yellow-500"></i>
                     </div>
                     <div class="flex-1">
                         <p class="text-gray-500 text-xs">Total Item</p>
@@ -237,8 +332,8 @@
                 {{-- Driver Delivery Info --}}
                 @if($deliveryAntar && $deliveryAntar->id_driver && $deliveryAntar->driver)
                 <div class="flex items-center gap-3 text-sm">
-                    <div class="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-person-badge text-indigo-500"></i>
+                    <div class="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-person-badge text-yellow-500"></i>
                     </div>
                     <div class="flex-1">
                         <p class="text-gray-500 text-xs">Driver Delivery</p>
@@ -259,11 +354,11 @@
                     <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
                                 @if ($p->status_transaksi == 'pick_up') bg-yellow-100 text-yellow-700
                                 @elseif ($p->status_transaksi == 'antrian') bg-orange-100 text-orange-700
-                                @elseif ($p->status_transaksi == 'proses') bg-purple-100 text-purple-700
-                                @elseif ($p->status_transaksi == 'selesai_dicuci') bg-blue-100 text-blue-700
-                                @elseif ($p->status_transaksi == 'siap_di_ambil') bg-teal-100 text-teal-700
-                                @elseif ($p->status_transaksi == 'siap_di_antar') bg-indigo-100 text-indigo-700
-                                @elseif ($p->status_transaksi == 'selesai') bg-green-100 text-green-700
+                                @elseif ($p->status_transaksi == 'proses') bg-yellow-100 text-yellow-700
+                                @elseif ($p->status_transaksi == 'selesai_dicuci') bg-orange-100 text-orange-700
+                                @elseif ($p->status_transaksi == 'siap_di_ambil') bg-yellow-100 text-yellow-700
+                                @elseif ($p->status_transaksi == 'siap_di_antar') bg-orange-100 text-orange-700
+                                @elseif ($p->status_transaksi == 'selesai') bg-yellow-100 text-yellow-700
                                 @else bg-red-100 text-red-700 @endif">
                         <i class="bi bi-clipboard-check"></i>
                         {{ ucfirst(str_replace('_', ' ', $p->status_transaksi)) }}
@@ -281,19 +376,19 @@
                     @if($p->status_transaksi == 'pick_up')
                         @if(!$deliveryPickup)
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-red-600 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
-                                Buat Delivery & Isi Driver!
+                                Buat Delivery Pickup & Isi Driver!
                             </span>
                         @elseif($deliveryPickup && !$deliveryPickup->id_driver)
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-red-500 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
-                                Isi Driver Pickup!
+                                Tentukan Driver Pickup!
                             </span>
                         @elseif($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->status == 'pending')
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-orange-500 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-clock-history"></i>
                                 Driver Belum Accept!
                             </span>
@@ -303,12 +398,7 @@
                     {{-- Pickup Status Badge --}}
                     @if($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->status != 'pending')
                         <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                    @if($deliveryPickup->status == 'accepted') bg-blue-100 text-blue-700
-                                    @elseif($deliveryPickup->status == 'on_the_way_to_pickup') bg-indigo-100 text-indigo-700
-                                    @elseif($deliveryPickup->status == 'picked_up') bg-purple-100 text-purple-700
-                                    @elseif($deliveryPickup->status == 'on_the_way_to_laundry') bg-violet-100 text-violet-700
-                                    @elseif($deliveryPickup->status == 'arrived_at_laundry') bg-green-100 text-green-700
-                                    @else bg-gray-100 text-gray-700 @endif">
+                                    bg-yellow-100 text-yellow-800 border border-yellow-300">
                             <i class="bi bi-arrow-down-circle"></i>
                             @if($deliveryPickup->status == 'accepted') Driver Ditentukan
                             @elseif($deliveryPickup->status == 'on_the_way_to_pickup') Menuju Pelanggan
@@ -320,40 +410,23 @@
                         </span>
                     @endif
 
-                    {{-- Alert Proses --}}
-                    @if($p->status_transaksi == 'proses')
-                        @if(!$deliveryAntar)
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-blue-600 text-white shadow-md">
-                                <i class="bi bi-info-circle-fill"></i>
-                                Siapkan Delivery
-                            </span>
-                        @elseif($deliveryAntar && !$deliveryAntar->id_driver)
-                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-orange-500 text-white shadow-md animate-pulse">
-                                <i class="bi bi-exclamation-triangle-fill"></i>
-                                Isi Driver Delivery!
-                            </span>
-                        @endif
-                    @endif
-
                     {{-- Alert Delivery --}}
                     @if($p->status_transaksi == 'siap_di_antar')
                         @if(!$deliveryAntar)
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-red-600 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
-                                Buat Delivery & Isi Driver!
+                                Buat Delivery Antar & Isi Driver!
                             </span>
                         @elseif($deliveryAntar && !$deliveryAntar->id_driver)
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-red-500 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
-                                Isi Driver Delivery!
+                                Tentukan Driver Antar!
                             </span>
                         @elseif($deliveryAntar && $deliveryAntar->id_driver && $deliveryAntar->status == 'pending')
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold
-                                        bg-orange-500 text-white shadow-md animate-pulse">
+                                        bg-yellow-400 text-gray-900 shadow-md animate-pulse">
                                 <i class="bi bi-clock-history"></i>
                                 Driver Belum Accept!
                             </span>
@@ -363,10 +436,7 @@
                     {{-- Delivery Status Badge --}}
                     @if($deliveryAntar && $deliveryAntar->id_driver && $p->status_transaksi == 'siap_di_antar' && $deliveryAntar->status != 'pending')
                     <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                @if($deliveryAntar->status == 'accepted') bg-blue-100 text-blue-700
-                                @elseif($deliveryAntar->status == 'on_the_way_to_customer') bg-purple-100 text-purple-700
-                                @elseif($deliveryAntar->status == 'delivered') bg-green-100 text-green-700
-                                @else bg-gray-100 text-gray-700 @endif">
+                                bg-yellow-100 text-yellow-800 border border-yellow-300">
                         <i class="bi bi-arrow-up-circle"></i>
                         @if($deliveryAntar->status == 'accepted') Driver Ditentukan
                         @elseif($deliveryAntar->status == 'on_the_way_to_customer') Menuju Pelanggan
@@ -397,7 +467,7 @@
                             </span>
                         @elseif($isTransfer)
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                        bg-blue-50 border border-blue-200 text-blue-700">
+                                        bg-yellow-50 border border-yellow-200 text-yellow-700">
                                 <i class="bi bi-bank"></i> Transfer
                             </span>
                         @else
@@ -520,7 +590,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p class="text-gray-700 mt-1">${namaPelanggan}</p>
                             </div>
                             <p class="text-sm text-gray-500">
-                                <i class="bi bi-info-circle text-blue-500"></i>
+                                <i class="bi bi-info-circle text-yellow-500"></i>
                                 Data yang sudah dihapus tidak dapat dikembalikan.
                             </p>
                         </div>`,

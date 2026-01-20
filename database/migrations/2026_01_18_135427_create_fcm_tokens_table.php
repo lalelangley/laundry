@@ -1,23 +1,25 @@
-,<?php
+<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('fcm_tokens', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('pelanggan_id'); // relasi ke tabel pelanggan
-            $table->string('token')->unique();
-            $table->string('device_name')->nullable(); // opsional, misal: Android, iOS
+            $table->unsignedBigInteger('pelanggan_id')->nullable();
+            $table->unsignedBigInteger('driver_id')->nullable();
+            $table->text('token');
+            $table->string('device_name')->nullable();
+            $table->timestamp('last_used_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('pelanggan_id')
-                  ->references('id_pelanggan')
-                  ->on('pelanggan')
-                  ->onDelete('cascade');
+            // index
+            $table->index('pelanggan_id');
+            $table->index('driver_id');
         });
     }
 

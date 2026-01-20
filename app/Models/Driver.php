@@ -11,7 +11,7 @@ class Driver extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'driver';
+    protected $table = 'driver'; // ← PASTIKAN NAMA TABEL BENAR
     protected $primaryKey = 'id_driver';
     public $incrementing = true;
     protected $keyType = 'int';
@@ -28,9 +28,28 @@ class Driver extends Authenticatable
         'password',
     ];
 
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
+    // =============================
+    // RELASI
+    // =============================
+
+    /**
+     * 1 Driver punya banyak Transaksi
+     */
     public function transaksi()
     {
         return $this->hasMany(Transaksi::class, 'id_driver', 'id_driver');
+    }
+
+    /**
+     * 1 Driver bisa punya banyak FCM Tokens
+     */
+    public function fcmTokens()
+    {
+        return $this->hasMany(FcmToken::class, 'driver_id', 'id_driver');
     }
 }
