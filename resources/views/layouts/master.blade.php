@@ -391,6 +391,94 @@
         })();
     </script>
     
+    {{-- ===============================================
+     FLASH MESSAGE HANDLER dengan SweetAlert2
+     ===============================================
+     Letakkan kode ini di layouts/master.blade.php
+     SEBELUM tag </body> atau SETELAH @yield('content')
+================================================== --}}
+
+{{-- SweetAlert2 CDN (pastikan hanya ada 1x di master layout) --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{{-- SUCCESS MESSAGE --}}
+@if(session('success'))
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '{{ session('success') }}',
+        confirmButtonColor: '#10b981',
+        confirmButtonText: 'OK',
+        timer: 3000,
+        timerProgressBar: true,
+        showClass: {
+            popup: 'animate__animated animate__fadeInDown'
+        },
+        hideClass: {
+            popup: 'animate__animated animate__fadeOutUp'
+        },
+        customClass: {
+            popup: 'rounded-2xl shadow-2xl',
+            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
+        }
+    });
+    </script>
+    @endif
+
+    {{-- ERROR MESSAGE --}}
+    @if(session('error'))
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: '{{ session('error') }}',
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'OK',
+            showClass: {
+                popup: 'animate__animated animate__shakeX'
+            },
+            customClass: {
+                popup: 'rounded-2xl shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
+            }
+        });
+    </script>
+    @endif
+
+    {{-- WARNING MESSAGE --}}
+    @if(session('warning'))
+    <script>
+        Swal.fire({
+            icon: 'warning',
+            title: 'Perhatian!',
+            text: '{{ session('warning') }}',
+            confirmButtonColor: '#f59e0b',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-2xl shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
+            }
+        });
+    </script>
+    @endif
+
+    {{-- INFO MESSAGE --}}
+    @if(session('info'))
+    <script>
+        Swal.fire({
+            icon: 'info',
+            title: 'Informasi',
+            text: '{{ session('info') }}',
+            confirmButtonColor: '#3b82f6',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'rounded-2xl shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
+            }
+        });
+    </script>
+    @endif
     {{-- Script tambahan dari halaman --}}
     @yield('scripts')
 

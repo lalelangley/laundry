@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LaundryOrderController;
 use App\Http\Controllers\Api\ProfilePelanggansController;
 use App\Http\Controllers\Api\DriverTaskController;
+use App\Http\Controllers\Api\PaymentController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -28,6 +29,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/invoices', [LaundryOrderController::class, 'getInvoiceList']);
     Route::get('/invoice/{id}', [LaundryOrderController::class, 'getInvoice']);
+    Route::post('/transaksi/{id}/bayar', [PaymentController::class, 'bayar']);
+    Route::post('/transaksi/{id_transaksi}/pilih-metode', [LaundryOrderController::class, 'pilihMetodePengambilan']);
+
 
 
     Route::prefix('driver')->group(function () {

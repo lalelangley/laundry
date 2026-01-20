@@ -34,11 +34,10 @@
                 <i class="bi bi-info-circle-fill text-blue-600 text-xl flex-shrink-0 mt-0.5"></i>
                 <div class="text-sm text-blue-900">
                     <p class="font-semibold mb-1">📋 Cara Penggunaan:</p>
-                    <ul class="space-y-1 list-disc list-inside ml-2">
-                        <li><strong>Toggle "Aktif":</strong> Menentukan apakah menu muncul di sidebar atau tidak</li>
-                        <li><strong>Centang Permission:</strong> Bisa pilih kombinasi apapun (View saja, View+Add, dll)</li>
-                        <li><strong>Flexible:</strong> Menu bisa aktif tapi cuma View, atau View+Edit tanpa Delete</li>
-                        <li><strong>Tombol Bulk:</strong> "Aktifkan Semua" = ON semua menu + full permission</li>
+                    <ul class="space-y-1 ml-2">
+                        <li>• Toggle ON/OFF untuk mengaktifkan/nonaktifkan akses ke menu tersebut</li>
+                        <li>• Setiap menu memiliki permission yang berbeda sesuai fiturnya</li>
+                        <li>• Gunakan tombol "Aktifkan Semua" untuk akses penuh ke semua menu</li>
                     </ul>
                 </div>
             </div>
@@ -51,143 +50,154 @@
             @csrf
             <input type="hidden" name="role_id" value="{{ $selectedRoleId }}">
 
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                                <i class="bi bi-list-check text-white text-xl"></i>
-                            </div>
-                            <div>
-                                <h2 class="text-lg font-bold text-gray-900">Pengaturan Hak Akses Menu</h2>
-                                <p class="text-sm text-gray-500">Toggle menu & pilih permission yang diinginkan</p>
+            {{-- BULK ACTIONS --}}
+            <div class="mb-6 flex items-center gap-3 justify-end">
+                <button type="button" onclick="bulkAction('enable')" 
+                    class="px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 inline-flex items-center gap-2">
+                    <i class="bi bi-check-all text-lg"></i> Aktifkan Semua
+                </button>
+                <button type="button" onclick="bulkAction('disable')" 
+                    class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 inline-flex items-center gap-2">
+                    <i class="bi bi-x-lg text-lg"></i> Nonaktifkan Semua
+                </button>
+            </div>
+
+            {{-- MENU CARDS GRID --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                @foreach($menus as $menu)
+                    @php
+                        $permData = $permissions[$menu->id] ?? null;
+                        $menuAktif = $permData ? $permData->is_active : false;
+                        
+                        // Tentukan permission yang tersedia berdasarkan nama menu
+                        $menuSlug = strtolower(str_replace([' ', '-'], '_', $menu->nama_menu));
+                        
+                        // Mapping permission berdasarkan menu
+                        $availablePerms = [];
+                        switch($menuSlug) {
+                            case 'layanan':
+                            case 'satuan':
+                            case 'parfum':
+                            case 'pelanggan':
+                            case 'pengeluaran':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'add', 'label' => 'Tambah', 'icon' => 'plus-circle-fill'],
+                                    ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
+                                    ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                ];
+                                break;
+                            case 'metode_bayar':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'add', 'label' => 'Tambah', 'icon' => 'plus-circle-fill'],
+                                    ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                ];
+                                break;
+                            case 'transaksi':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
+                                    ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                    ['value' => 'cancel', 'label' => 'Batal', 'icon' => 'x-circle-fill'],
+                                ];
+                                break;
+                            case 'pesanan_online':
+                            case 'riwayat':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
+                                    ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                ];
+                                break;
+                            case 'laporan':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                ];
+                                break;
+                            case 'pengaturan':
+                            case 'data':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'restore', 'label' => 'Restore Data', 'icon' => 'arrow-repeat'],
+                                    ['value' => 'hapus_backup', 'label' => 'Hapus Backup', 'icon' => 'trash-fill'],
+                                    ['value' => 'password', 'label' => 'Ganti Password', 'icon' => 'key-fill'],
+                                    ['value' => 'logout', 'label' => 'Logout', 'icon' => 'box-arrow-right'],
+                                ];
+                                break;
+                            default:
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                ];
+                        }
+                    @endphp
+
+                    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-gray-100 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 menu-card" data-menu-id="{{ $menu->id }}">
+                        {{-- CARD HEADER --}}
+                        <div class="bg-gradient-to-r from-yellow-50 to-white px-6 py-4 border-b-2 border-yellow-200">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                                        <i class="bi bi-{{ $menu->icon ?? 'circle' }} text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-900">Sekuriti {{ $menu->nama_menu }}</h3>
+                                        @if($menu->route)
+                                            <p class="text-xs text-gray-500 mt-0.5">{{ $menu->route }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                
+                                {{-- TOGGLE MENU AKTIF --}}
+                                <label class="relative inline-flex items-center cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="menus[{{ $menu->id }}][active]"
+                                           value="1"
+                                           class="menu-toggle sr-only peer"
+                                           data-menu="{{ $menu->id }}"
+                                           @checked($menuAktif)>
+                                    <div class="toggle-main w-16 h-8 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all after:shadow-md peer-checked:bg-green-500 shadow-inner"></div>
+                                </label>
                             </div>
                         </div>
-                        
-                        {{-- BULK ACTIONS --}}
-                        <div class="flex items-center gap-3">
-                            <button type="button" onclick="bulkAction('enable')" 
-                                class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition inline-flex items-center gap-2">
-                                <i class="bi bi-check-all"></i> Aktifkan Semua
-                            </button>
-                            <button type="button" onclick="bulkAction('disable')" 
-                                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition inline-flex items-center gap-2">
-                                <i class="bi bi-x-lg"></i> Nonaktifkan Semua
-                            </button>
-                            <button type="button" onclick="bulkAction('view-only')" 
-                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition inline-flex items-center gap-2">
-                                <i class="bi bi-eye"></i> View Only Semua
-                            </button>
+
+                        {{-- CARD BODY - PERMISSIONS --}}
+                        <div class="px-6 py-5 space-y-2.5 bg-gray-50/50">
+                            @foreach($availablePerms as $perm)
+                                <div class="flex items-center justify-between py-3 px-4 bg-white hover:bg-yellow-50/50 rounded-xl transition-all border border-gray-100 hover:border-yellow-200 hover:shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 bg-yellow-400/10 rounded-lg flex items-center justify-center">
+                                            <i class="bi bi-{{ $perm['icon'] }} text-yellow-600 text-base"></i>
+                                        </div>
+                                        <span class="text-gray-800 font-semibold text-sm">{{ $perm['label'] }} {{ $menu->nama_menu }}</span>
+                                    </div>
+                                    
+                                    <label class="relative inline-flex items-center cursor-pointer group">
+                                        <input type="checkbox"
+                                               name="menus[{{ $menu->id }}][permissions][]"
+                                               value="{{ $perm['value'] }}"
+                                               class="perm-toggle-{{ $menu->id }} sr-only peer"
+                                               @checked($permData && isset($permData->{'can_'.$perm['value']}) && $permData->{'can_'.$perm['value']})>
+                                        <div class="toggle-perm w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-3 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-500 shadow-inner"></div>
+                                    </label>
+                                </div>
+                            @endforeach
                         </div>
                     </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="bg-gray-100 border-b border-gray-200">
-                                <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700 w-1/3">
-                                    Menu
-                                </th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-24">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <i class="bi bi-toggle-on text-lg"></i>
-                                        <span>Aktif</span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-24">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <i class="bi bi-eye text-lg"></i>
-                                        <span>View</span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-24">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <i class="bi bi-plus-circle text-lg"></i>
-                                        <span>Add</span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-24">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <i class="bi bi-pencil text-lg"></i>
-                                        <span>Edit</span>
-                                    </div>
-                                </th>
-                                <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700 w-24">
-                                    <div class="flex flex-col items-center gap-1">
-                                        <i class="bi bi-trash text-lg"></i>
-                                        <span>Delete</span>
-                                    </div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            @foreach($menus as $menu)
-                                @php
-                                    $permData = $permissions[$menu->id] ?? null;
-
-                                    // Menu aktif kalau is_active = true
-                                    $menuAktif = $permData ? $permData->is_active : false;
-                                @endphp
-                                <tr class="hover:bg-gray-50 transition" data-menu-row="{{ $menu->id }}">
-                                    {{-- NAMA MENU --}}
-                                    <td class="px-8 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <i class="bi bi-{{ $menu->icon ?? 'circle' }} text-yellow-600"></i>
-                                            </div>
-                                            <div>
-                                                <span class="font-semibold text-gray-900 block">{{ $menu->nama_menu }}</span>
-                                                @if($menu->route)
-                                                    <span class="text-xs text-gray-500">{{ $menu->route }}</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {{-- TOGGLE MENU AKTIF (INDEPENDENT) --}}
-                                    <td class="px-6 py-4 text-center">
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox"
-                                                   name="menus[{{ $menu->id }}][active]"
-                                                   value="1"
-                                                   class="menu-toggle sr-only peer"
-                                                   data-menu="{{ $menu->id }}"
-                                                   @checked($menuAktif)>
-                                            <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-                                        </label>
-                                    </td>
-
-                                    {{-- PERMISSION CHECKBOXES (INDEPENDENT) --}}
-                                    @foreach(['view','add','edit','delete'] as $perm)
-                                        <td class="px-6 py-4 text-center">
-                                            <label class="inline-flex items-center cursor-pointer">
-                                                <input type="checkbox"
-                                                       name="menus[{{ $menu->id }}][permissions][]"
-                                                       value="{{ $perm }}"
-                                                       class="perm-{{ $menu->id }} w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                                       @checked($permData && $permData->{'can_'.$perm})>
-                                            </label>
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                @endforeach
             </div>
 
             {{-- ACTION BUTTONS --}}
-            <div class="mt-8 flex items-center justify-between">
+            <div class="mt-8 flex items-center justify-between bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6">
                 <a href="{{ route('manager.index') }}"
-                   class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
-                    <i class="bi bi-x-circle"></i>
+                   class="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold transition-all inline-flex items-center gap-2 hover:scale-105">
+                    <i class="bi bi-x-circle text-lg"></i>
                     <span>Batal</span>
                 </a>
                 <button type="submit"
-                        class="px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold transition inline-flex items-center gap-2 shadow-lg shadow-yellow-200">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <span>Simpan Hak Akses</span>
+                        class="px-10 py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 font-bold transition-all inline-flex items-center gap-2 shadow-xl shadow-yellow-200 hover:shadow-2xl hover:scale-105">
+                    <i class="bi bi-check-circle-fill text-xl"></i>
+                    <span class="text-lg">Simpan Perubahan</span>
                 </button>
             </div>
         </form>
@@ -196,21 +206,22 @@
 
 <script>
 // =============================
-// TOGGLE INDIVIDUAL MENU (INDEPENDENT - NO AUTO UNCHECK)
+// TOGGLE INDIVIDUAL MENU
 // =============================
 document.querySelectorAll('.menu-toggle').forEach(cb => {
     cb.addEventListener('change', function () {
         let menuId = this.dataset.menu;
         let isChecked = this.checked;
         
-        // Visual feedback saja, TIDAK auto uncheck permission
-        let row = document.querySelector(`[data-menu-row="${menuId}"]`);
+        let card = document.querySelector(`[data-menu-id="${menuId}"]`);
         if (isChecked) {
-            row.classList.remove('opacity-50');
-            row.classList.add('bg-green-50');
+            card.classList.remove('opacity-50', 'grayscale');
+            card.classList.add('border-green-300');
+            card.classList.remove('border-gray-100');
         } else {
-            row.classList.add('opacity-50');
-            row.classList.remove('bg-green-50');
+            card.classList.add('opacity-50', 'grayscale');
+            card.classList.remove('border-green-300');
+            card.classList.add('border-gray-100');
         }
     });
 });
@@ -220,13 +231,12 @@ document.querySelectorAll('.menu-toggle').forEach(cb => {
 // =============================
 function bulkAction(action) {
     if (action === 'enable') {
-        if (!confirm('Aktifkan semua menu dengan full permission (View, Add, Edit, Delete)?')) return;
+        if (!confirm('Aktifkan semua menu dengan full permission?')) return;
         
-        // Aktifkan semua toggle
+        // Aktifkan semua toggle menu
         document.querySelectorAll('.menu-toggle').forEach(toggle => {
             toggle.checked = true;
-            let event = new Event('change');
-            toggle.dispatchEvent(event);
+            toggle.dispatchEvent(new Event('change'));
         });
         
         // Centang semua permission
@@ -235,38 +245,17 @@ function bulkAction(action) {
         });
     } 
     else if (action === 'disable') {
-        if (!confirm('Nonaktifkan semua menu? Ini akan uncheck semua toggle & permission!')) return;
+        if (!confirm('Nonaktifkan semua menu?')) return;
         
-        // Nonaktifkan semua toggle
+        // Nonaktifkan semua toggle menu
         document.querySelectorAll('.menu-toggle').forEach(toggle => {
             toggle.checked = false;
-            let event = new Event('change');
-            toggle.dispatchEvent(event);
+            toggle.dispatchEvent(new Event('change'));
         });
         
         // Uncheck semua permission
         document.querySelectorAll('input[type="checkbox"][name*="permissions"]').forEach(cb => {
             cb.checked = false;
-        });
-    }
-    else if (action === 'view-only') {
-        if (!confirm('Set semua menu jadi View Only (aktif tapi cuma bisa lihat)?')) return;
-        
-        // Aktifkan semua toggle
-        document.querySelectorAll('.menu-toggle').forEach(toggle => {
-            toggle.checked = true;
-            let event = new Event('change');
-            toggle.dispatchEvent(event);
-        });
-        
-        // Uncheck semua permission dulu
-        document.querySelectorAll('input[type="checkbox"][name*="permissions"]').forEach(cb => {
-            cb.checked = false;
-        });
-        
-        // Centang hanya View
-        document.querySelectorAll('input[type="checkbox"][value="view"]').forEach(cb => {
-            cb.checked = true;
         });
     }
 }
@@ -276,25 +265,16 @@ function bulkAction(action) {
 // =============================
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.menu-toggle').forEach(toggle => {
+        let menuId = toggle.dataset.menu;
+        let card = document.querySelector(`[data-menu-id="${menuId}"]`);
+        
         if (!toggle.checked) {
-            let row = document.querySelector(`[data-menu-row="${toggle.dataset.menu}"]`);
-            row.classList.add('opacity-50');
+            card.classList.add('opacity-50', 'grayscale');
         } else {
-            let row = document.querySelector(`[data-menu-row="${toggle.dataset.menu}"]`);
-            row.classList.add('bg-green-50');
+            card.classList.add('border-green-300');
+            card.classList.remove('border-gray-100');
         }
     });
-});
-
-// =============================
-// KEYBOARD SHORTCUTS
-// =============================
-document.addEventListener('keydown', function(e) {
-    // Ctrl+S = Save
-    if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        document.querySelector('form').submit();
-    }
 });
 
 // =============================
@@ -318,26 +298,94 @@ window.addEventListener('beforeunload', function(e) {
 document.querySelector('form').addEventListener('submit', function() {
     formChanged = false;
 });
+
+// =============================
+// KEYBOARD SHORTCUTS
+// =============================
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        document.querySelector('form').submit();
+    }
+});
 </script>
 
 <style>
-/* Row styling */
-[data-menu-row]:hover {
-    background-color: #f9fafb;
+/* Card hover effects */
+.menu-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Smooth transitions */
-tr {
-    transition: all 0.2s ease;
+.menu-card:hover {
+    transform: translateY(-4px);
 }
 
-input[type="checkbox"] {
-    transition: all 0.15s ease;
+/* Toggle animations - MAIN (Menu On/Off) */
+.toggle-main {
+    transition: background-color 0.3s ease;
 }
 
-/* Checked state animation */
-input[type="checkbox"]:checked {
-    transform: scale(1.05);
+.toggle-main:after {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Toggle animations - PERMISSION */
+.toggle-perm {
+    transition: background-color 0.3s ease;
+}
+
+.toggle-perm:after {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth opacity transitions */
+.menu-card {
+    transition: opacity 0.3s ease, border-color 0.3s ease, transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Grayscale effect for inactive cards */
+.grayscale {
+    filter: grayscale(0.6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1280px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Smooth animations on load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.menu-card {
+    animation: fadeInUp 0.4s ease-out;
+    animation-fill-mode: both;
+}
+
+.menu-card:nth-child(1) { animation-delay: 0.05s; }
+.menu-card:nth-child(2) { animation-delay: 0.1s; }
+.menu-card:nth-child(3) { animation-delay: 0.15s; }
+.menu-card:nth-child(4) { animation-delay: 0.2s; }
+.menu-card:nth-child(5) { animation-delay: 0.25s; }
+.menu-card:nth-child(6) { animation-delay: 0.3s; }
+.menu-card:nth-child(7) { animation-delay: 0.35s; }
+.menu-card:nth-child(8) { animation-delay: 0.4s; }
+.menu-card:nth-child(9) { animation-delay: 0.45s; }
 </style>
 @endsection

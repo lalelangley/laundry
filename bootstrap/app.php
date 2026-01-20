@@ -4,6 +4,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+// ✅ MATIKAN DEPRECATION WARNINGS (PHP 8.4+ Compatible)
+error_reporting(E_ALL & ~E_DEPRECATED);
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -11,9 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-
     ->withMiddleware(function (Middleware $middleware) {
-
         // GROUP API MIDDLEWARE
         $middleware->group('api', [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
@@ -27,7 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
     })
-
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })

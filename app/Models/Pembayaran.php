@@ -11,6 +11,7 @@ class Pembayaran extends Model
     
     protected $fillable = [
         'id_transaksi',
+        'id_metode_bayar', // 🔥 TAMBAH INI
         'tipe_pembayaran',
         'nominal',
         'foto_bukti',
@@ -29,5 +30,13 @@ class Pembayaran extends Model
     public function transaksi()
     {
         return $this->belongsTo(Transaksi::class, 'id_transaksi', 'id_transaksi');
+    }
+
+    /**
+     * Relasi ke Metode Bayar
+     */
+    public function metodeBayar()
+    {
+        return $this->belongsTo(MetodeBayar::class, 'id_metode_bayar', 'id_metode_bayar');
     }
 }
