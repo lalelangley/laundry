@@ -156,9 +156,9 @@
 
                 <div class="relative group">
                     <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                         alt="Bukti Cucian" 
-                         class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-yellow-400 transition"
-                         onclick="openImageModal('{{ asset('storage/' . $pesanan->foto_bukti) }}')">
+                        alt="Bukti Cucian" 
+                        class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-yellow-400 transition"
+                        onclick="openImageModal('{{ asset('storage/' . $pesanan->foto_bukti) }}')">
                     
                     <div class="absolute top-2 right-2 bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                         <i class="bi bi-check-circle"></i>
@@ -173,8 +173,8 @@
                 <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
                     <span><i class="bi bi-calendar"></i> Upload: {{ $pesanan->updated_at->format('d/m/Y H:i') }}</span>
                     <a href="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                       download 
-                       class="text-yellow-600 hover:text-yellow-700 font-semibold">
+                    download 
+                    class="text-yellow-600 hover:text-yellow-700 font-semibold">
                         <i class="bi bi-download"></i> Download
                     </a>
                 </div>
@@ -925,9 +925,9 @@
                             <p class="text-sm font-semibold text-gray-700 mb-2">Foto saat ini:</p>
                             <div class="relative inline-block">
                                 <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                                     alt="Bukti Cucian" 
-                                     class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
-                                <div class="absolute -top-2 -right-2 bg-from-orange-600 to-red-600-600 text-white rounded-full p-2 shadow-lg">
+                                    alt="Bukti Cucian" 
+                                    class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
+                                <div class="absolute -top-2 -right-2 bg-orange-600 text-white rounded-full p-2 shadow-lg">
                                     <i class="bi bi-check text-sm"></i>
                                 </div>
                             </div>

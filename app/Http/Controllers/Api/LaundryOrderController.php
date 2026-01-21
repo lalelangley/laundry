@@ -162,128 +162,144 @@ class LaundryOrderController extends Controller
     // GET ORDER DETAIL
     // ======================
     public function getOrderDetail($id)
-    {
-        $order = Transaksi::with([
-            'detail.layanan:id_layanan,nama_layanan',
-            'detail.jenis:id_jenis_layanan,nama_jenis',
-            'detail.parfum:id_parfum,nama_parfum',
-            'delivery',
-            'biayaTambahan' // ✅ TAMBAHKAN RELASI BIAYA TAMBAHAN (ONGKIR)
-        ])
-        ->where('id_transaksi', $id)
-        ->first();
+{
+    $order = Transaksi::with([
+        'detail.layanan:id_layanan,nama_layanan',
+        'detail.jenis:id_jenis_layanan,nama_jenis',
+        'detail.parfum:id_parfum,nama_parfum',
+        'delivery',
+        'biayaTambahan' // relasi ke biaya_tambahan
+    ])
+    ->where('id_transaksi', $id)
+    ->first();
 
-        if (!$order) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Order tidak ditemukan'
-            ], 404);
-        }
-
-        // ✅ HITUNG SUBTOTAL DARI DETAIL
-        $subtotal = $order->detail->sum(function($item) {
-            return $item->harga * ($item->qty ?? 1);
-        });
-
-        // ✅ AMBIL BIAYA ONGKIR
-        $biayaOngkir = $order->biayaTambahan ? $order->biayaTambahan->biaya : 0;
-
+    if (!$order) {
         return response()->json([
-            'status' => true,
-            'data'   => [
-                'order' => $order,
-                'subtotal' => $subtotal,
-                'biaya_ongkir' => $biayaOngkir,
-                'diskon' => $order->diskon ?? 0,
-                'tipe_diskon' => $order->tipe_diskon,
-                'total_bayar' => $order->total_bayar,
-                'total_item' => $order->detail->sum('qty') ?? $order->detail->count(),
-                'tgl_estimasi' => $order->tgl_estimasi, // ✅ TAMBAHKAN ESTIMASI
-            ]
-        ]);
+            'status'  => false,
+            'message' => 'Order tidak ditemukan'
+        ], 404);
     }
+
+    // ✅ SUBTOTAL
+    $subtotal = $order->detail->sum(function ($item) {
+        return $item->harga * ($item->qty ?? 1);
+    });
+
+    // ✅ BIAYA TAMBAHAN (ONGKIR)
+    $biayaTambahan = $order->biayaTambahan?->nominal ?? 0;
+
+    // ✅ TOTAL ITEM
+    $totalItem = $order->detail->sum('qty') ?: $order->detail->count();
+
+
+return response()->json([
+    'status' => true,
+    'data' => [
+        'id_transaksi'     => $order->id_transaksi,
+        'tanggal'          => $order->created_at,
+        'pelanggan'        => [
+            'nama' => $order->nama_pelanggan,
+            'hp'   => $order->hp_pelanggan
+        ],
+        'items'            => $order->detail,
+        'subtotal'         => $subtotal,
+        'biaya_tambahan'   => $biayaTambahan,
+        'diskon'           => $order->diskon ?? 0,
+        'tipe_diskon'      => $order->tipe_diskon,
+        'total_bayar'      => $order->total_bayar,
+        'total_dibayar'    => $order->total_dibayar ?? 0,
+        'sisa_pembayaran'  => ($order->total_bayar - ($order->total_dibayar ?? 0)),
+        'status_bayar'     => $order->status_bayar,
+        'delivery'         => $order->delivery,
+        'total_item'       => $totalItem,
+        'tgl_estimasi'     => $order->tgl_estimasi,
+
+        // ✅ INI FOTONYA
+        'foto_bukti' => $order->foto_bukti
+            ? url('storage/' . $order->foto_bukti)
+            : null,
+    ]
+]);
+
+}
+
 
     // ======================
     // GET INVOICE (ORDER SUDAH ADA HARGA)
     // ======================
-   // ====================== 
-// GET INVOICE (ORDER SUDAH ADA HARGA) 
-// ====================== 
-public function getInvoice($id) 
-{ 
-    $order = Transaksi::with([ 
-        'detail.layanan', 
-        'detail.jenis', 
-        'detail.parfum', 
-        'delivery', 
-        'biayaTambahan' 
-    ]) 
-    ->where('id_transaksi', $id) 
-    ->whereNotNull('total_harga') 
-    ->where('total_harga', '>', 0) 
-    ->first(); 
+   public function getInvoice($id)
+    {
+        $order = Transaksi::with([
+            'detail.layanan',
+            'detail.jenis',
+            'detail.parfum',
+            'delivery',
+            'biayaTambahan'
+        ])
+        ->where('id_transaksi', $id)
+        ->where('total_harga', '>', 0)
+        ->first();
 
-    if (!$order) { 
-        return response()->json([ 
-            'status' => false, 
-            'message' => 'Invoice belum tersedia atau order tidak ditemukan' 
-        ], 404); 
-    } 
+        if (!$order) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invoice belum tersedia'
+            ], 404);
+        }
 
-    /* ========================= 
-     * SUBTOTAL 
-     * ========================= */ 
-    $subtotal = $order->detail->sum(function ($item) { 
-        return $item->harga * ($item->qty ?? 1); 
-    }); 
+        // ================= SUBTOTAL =================
+        $subtotal = $order->detail->sum(fn ($d) =>
+            $d->harga * ($d->qty ?? 1)
+        );
 
-    /* ========================= 
-     * BIAYA TAMBAHAN 
-     * ========================= */ 
-    $biayaTambahan = $order->biayaTambahan->biaya ?? 0; 
+        // ================= BIAYA TAMBAHAN (FIX UTAMA) =================
+       $biayaTambahan = $order->biayaTambahan->nominal ?? 0;
 
-    /* ========================= 
-     * DISKON 
-     * ========================= */ 
-    $nominalDiskon = 0; 
-    if ($order->tipe_diskon === 'percent') { 
-        $nominalDiskon = ($subtotal * $order->diskon) / 100; 
-    } elseif ($order->tipe_diskon === 'nominal') { 
-        $nominalDiskon = $order->diskon; 
-    } 
 
-    /* ========================= 
-     * TOTAL 
-     * ========================= */ 
-    $totalBayar = max(0, ($subtotal + $biayaTambahan) - $nominalDiskon); 
-    $totalDibayar = $order->dp ?? 0;
-    $sisaPembayaran = max(0, $totalBayar - $totalDibayar); 
+        // ================= DISKON =================
+        $nominalDiskon = 0;
+        if ($order->tipe_diskon === 'percent') {
+            $nominalDiskon = ($subtotal * $order->diskon) / 100;
+        } elseif ($order->tipe_diskon === 'nominal') {
+            $nominalDiskon = $order->diskon;
+        }
 
-    return response()->json([ 
-        'status' => true, 
-        'data' => [ 
-            'invoice_no' => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT), 
-            'tanggal' => $order->tgl_transaksi, 
-            'pelanggan' => [ 
-                'nama' => $order->nama_pelanggan, 
-                'hp' => $order->no_hp, 
-            ], 
-            'items' => $order->detail, 
-            'subtotal' => $subtotal, 
-            'biaya_tambahan' => $biayaTambahan, 
-            'diskon' => $order->diskon ?? 0, 
-            'tipe_diskon' => $order->tipe_diskon, 
-            'nominal_diskon' => $nominalDiskon,
-            'total_bayar' => $totalBayar,
-            'total_dibayar' => $totalDibayar,
-            'sisa_pembayaran' => $sisaPembayaran,
-            'status_bayar' => $order->status_bayar ?? 'belum_lunas', 
-            'delivery' => $order->delivery, 
-            'total_item' => $order->detail->sum('qty') ?: $order->detail->count(), 
-            'tgl_estimasi' => $order->tgl_estimasi, 
-        ] 
-    ]); 
-}
+        // ================= TOTAL =================
+        $totalBayar = max(0, ($subtotal + $biayaTambahan) - $nominalDiskon);
+        $totalDibayar = $order->dp ?? 0;
+        $totalItem = $order->detail->sum('qty') ?: $order->detail->count();
+
+
+        return response()->json([
+    'status' => true,
+    'data' => [
+        'id_transaksi' => $order->id_transaksi,
+        'tanggal' => $order->created_at,
+        'pelanggan' => [
+            'nama' => $order->nama_pelanggan,
+            'hp'   => $order->hp_pelanggan
+        ],
+        'items' => $order->detail,
+        'subtotal' => $subtotal,
+        'biaya_tambahan' => $biayaTambahan,
+        'diskon' => $order->diskon ?? 0,
+        'tipe_diskon' => $order->tipe_diskon,
+        'total_bayar' => $order->total_bayar,
+        'total_dibayar' => $order->total_dibayar ?? 0,
+        'sisa_pembayaran' => ($order->total_bayar - ($order->total_dibayar ?? 0)),
+        'status_bayar' => $order->status_bayar,
+        'delivery' => $order->delivery,
+        'total_item' => $totalItem,
+        'tgl_estimasi' => $order->tgl_estimasi,
+
+        // ✅ INI YANG PENTING
+        'foto_bukti' => $order->foto_bukti
+            ? url('storage/' . $order->foto_bukti)
+            : null,
+    ]
+]);
+    }
+
 
 
     // ======================

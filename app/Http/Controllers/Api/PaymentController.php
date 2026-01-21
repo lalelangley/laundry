@@ -75,7 +75,7 @@ class PaymentController extends Controller
             } else {
                 // cash → belum lunas
                 $transaksi->update([
-                    'status_bayar' => 'belum_lunas'
+                    'status_bayar' => 'lunas'
                 ]);
             }
 
