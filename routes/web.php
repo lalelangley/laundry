@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\PengaturanController;
 use App\Http\Controllers\Web\ChangePasswordController;
 use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\FcmTokenController;
 use App\Models\Satuan;
 
 Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
@@ -426,20 +427,56 @@ Route::prefix('riwayat')->name('kasir.riwayat.')->group(function () {
         
     });
 
+// ================= PENGATURAN (KASIR) - ✅ WITH PERMISSION =================
 Route::prefix('pengaturan')->name('kasir.pengaturan.')->group(function () {
-    Route::get('/', [PengaturanController::class, 'indexKasir'])->name('index');
-    Route::post('/update', [PengaturanController::class, 'updateKasir'])->name('update');
-    Route::post('/omzet', [PengaturanController::class, 'updateOmzetKasir'])->name('omzet');
-    Route::post('/backup', [PengaturanController::class, 'backupKasir'])->name('backup');
-    Route::post('/restore', [PengaturanController::class, 'restoreKasir'])->name('restore');
     
-    Route::get('/backups/list', [PengaturanController::class, 'listBackupsKasir'])->name('backups.list');
-    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupKasir'])->name('backup.download');
-    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupKasir'])->name('backups.delete');  // ← TAMBAH INI
+    // View routes - butuh permission:view
+    Route::get('/', [PengaturanController::class, 'indexKasir'])
+        ->middleware('permission:view')
+        ->name('index');
     
-    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarKasir'])->name('metode');
-    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarKasir'])->name('metode.store');
-    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarKasir'])->name('metode.delete');
+    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarKasir'])
+        ->middleware('permission:view')
+        ->name('metode');
+    
+    Route::get('/backups/list', [PengaturanController::class, 'listBackupsKasir'])
+        ->middleware('permission:view')
+        ->name('backups.list');
+    
+    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupKasir'])
+        ->middleware('permission:view')
+        ->name('backup.download');
+    
+    // Edit/Update routes - butuh permission:edit
+    Route::post('/update', [PengaturanController::class, 'updateKasir'])
+        ->middleware('permission:edit')
+        ->name('update');
+
+    Route::post('/omzet', [PengaturanController::class, 'updateOmzetKasir'])
+        ->middleware('permission:edit')
+        ->name('omzet');
+    
+    Route::post('/backup', [PengaturanController::class, 'backupKasir'])
+        ->middleware('permission:edit')
+        ->name('backup');
+    
+    Route::post('/restore', [PengaturanController::class, 'restoreKasir'])
+        ->middleware('permission:edit')
+        ->name('restore');
+    
+    // Add routes - butuh permission:add
+    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarKasir'])
+        ->middleware('permission:add')
+        ->name('metode.store');
+    
+    // Delete routes - butuh permission:delete
+    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupKasir'])
+        ->middleware('permission:delete')
+        ->name('backups.delete');
+    
+    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarKasir'])
+        ->middleware('permission:delete')
+        ->name('metode.delete');
 });
 
     // ================= LAPORAN (View Permission Only) =================
@@ -879,22 +916,57 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             ->name('destroy');
     });
 
-    // ================= PENGATURAN =================
-    Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
-        Route::get('/', [PengaturanController::class, 'index'])->name('index');
-        Route::post('/update', [PengaturanController::class, 'update'])->name('update');
-        Route::post('/omzet', [PengaturanController::class, 'updateOmzet'])->name('omzet');
-        Route::post('/backup', [PengaturanController::class, 'backup'])->name('backup');
-        Route::post('/restore', [PengaturanController::class, 'restore'])->name('restore');
-        
-        Route::get('/backups/list', [PengaturanController::class, 'listBackups'])->name('backups.list');
-        Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackup'])->name('backups.download');
-        Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackup'])->name('backups.delete');
-                
-        Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayar'])->name('metode');
-        Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayar'])->name('metode.store');
-        Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayar'])->name('metode.delete');
-    });
+    // ================= PENGATURAN (ADMIN) - ✅ WITH PERMISSION =================
+Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
+    
+    // View routes - butuh permission:view
+    Route::get('/', [PengaturanController::class, 'index'])
+        ->middleware('permission:view')
+        ->name('index');
+    
+    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayar'])
+        ->middleware('permission:view')
+        ->name('metode');
+    
+    Route::get('/backups/list', [PengaturanController::class, 'listBackups'])
+        ->middleware('permission:view')
+        ->name('backups.list');
+    
+    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackup'])
+        ->middleware('permission:view')
+        ->name('backups.download');
+    
+    // Edit/Update routes - butuh permission:edit
+    Route::post('/update', [PengaturanController::class, 'update'])
+        ->middleware('permission:edit')
+        ->name('update');
+    
+    Route::post('/omzet', [PengaturanController::class, 'updateOmzet'])
+        ->middleware('permission:edit')
+        ->name('omzet');
+    
+    Route::post('/backup', [PengaturanController::class, 'backup'])
+        ->middleware('permission:edit')
+        ->name('backup');
+    
+    Route::post('/restore', [PengaturanController::class, 'restore'])
+        ->middleware('permission:edit')
+        ->name('restore');
+    
+    // Add routes - butuh permission:add
+    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayar'])
+        ->middleware('permission:add')
+        ->name('metode.store');
+    
+    // Delete routes - butuh permission:delete
+    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackup'])
+        ->middleware('permission:delete')
+        ->name('backups.delete');
+    
+    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayar'])
+        ->middleware('permission:delete')
+        ->name('metode.delete');
+});
 
     // ================= LAPORAN (View Permission Only) =================
     Route::prefix('laporan')->name('laporan.')->group(function () {
@@ -1384,6 +1456,14 @@ Route::prefix('manager')
         Route::post('/status', [UserManagerController::class, 'updateStatusAdmin2'])
             ->name('update.status');
 
+        // ✅ TAMBAH INI - HAK AKSES ROLE KASIR
+        Route::get('/role/hak-akses', [UserManagerController::class, 'hakRoleAdmin2'])
+            ->name('role.hak');
+        
+        Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRoleAdmin2'])
+            ->name('role.hak.save');
+
+        // ✅ Kasir & Driver routes (sudah ada, biarkan)
         Route::prefix('kasir')->name('kasir.')->group(function () {
             Route::get('/create', [UserManagerController::class, 'createKasirAdmin2'])->name('create');
             Route::post('/', [UserManagerController::class, 'storeKasirAdmin2'])->name('store');
@@ -1416,22 +1496,56 @@ Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
        Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiAdmin2'])->name('transaksi.export');
 });
 
-   // ================= PENGATURAN ADMIN2 =================
+// ================= PENGATURAN ADMIN2 - ✅ WITH PERMISSION =================
 Route::prefix('pengaturan')->name('admin2.pengaturan.')->group(function () {
-    Route::get('/', [PengaturanController::class, 'indexAdmin2'])->name('index');
-    Route::post('/update', [PengaturanController::class, 'updateAdmin2'])->name('update');
-    Route::post('/omzet', [PengaturanController::class, 'updateOmzetAdmin2'])->name('omzet');
-    Route::post('/backup', [PengaturanController::class, 'backupAdmin2'])->name('backup');
-    Route::post('/restore', [PengaturanController::class, 'restoreAdmin2'])->name('restore');
     
-    // ✅ TAMBAHKAN 3 ROUTE INI
-    Route::get('/backups/list', [PengaturanController::class, 'listBackupsAdmin2'])->name('backups.list');
-    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupAdmin2'])->name('backup.download');
-    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupAdmin2'])->name('backups.delete');  // ← PENTING
+    // View routes - butuh permission:view
+    Route::get('/', [PengaturanController::class, 'indexAdmin2'])
+        ->middleware('permission:view')
+        ->name('index');
     
-    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarAdmin2'])->name('metode');
-    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarAdmin2'])->name('metode.store');
-    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarAdmin2'])->name('metode.delete');
+    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayarAdmin2'])
+        ->middleware('permission:view')
+        ->name('metode');
+    
+    Route::get('/backups/list', [PengaturanController::class, 'listBackupsAdmin2'])
+        ->middleware('permission:view')
+        ->name('backups.list');
+    
+    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackupAdmin2'])
+        ->middleware('permission:view')
+        ->name('backup.download');
+    
+    // Edit/Update routes - butuh permission:edit
+    Route::post('/update', [PengaturanController::class, 'updateAdmin2'])
+        ->middleware('permission:edit')
+        ->name('update');
+    
+    Route::post('/omzet', [PengaturanController::class, 'updateOmzetAdmin2'])
+        ->middleware('permission:edit')
+        ->name('omzet');
+    
+    Route::post('/backup', [PengaturanController::class, 'backupAdmin2'])
+        ->middleware('permission:edit')
+        ->name('backup');
+    
+    Route::post('/restore', [PengaturanController::class, 'restoreAdmin2'])
+        ->middleware('permission:edit')
+        ->name('restore');
+    
+    // Add routes - butuh permission:add
+    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayarAdmin2'])
+        ->middleware('permission:add')
+        ->name('metode.store');
+    
+    // Delete routes - butuh permission:delete
+    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackupAdmin2'])
+        ->middleware('permission:delete')
+        ->name('backups.delete');
+    
+    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayarAdmin2'])
+        ->middleware('permission:delete')
+        ->name('metode.delete');
 });
 
     // ================= CHANGE PASSWORD =================

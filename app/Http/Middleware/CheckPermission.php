@@ -42,7 +42,6 @@ class CheckPermission
             'profile',
             'change.password',
             'password.update',
-            'pengaturan',
             'logout',
             'reset',
         ];
