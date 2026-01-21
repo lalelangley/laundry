@@ -21,7 +21,7 @@ $adminLogin = auth()->guard('admin')->user();
     {{-- BUTTONS SECTION --}}
     <div class="px-8 py-6">
         <div class="flex gap-3 flex-wrap">
-            <a href="{{ route('admin2.manager.kasir.hak') }}"
+            <a href="{{ route('admin2.manager.role.hak') }}"
                class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-md hover:shadow-lg">
                 <i class="bi bi-sliders text-lg"></i>
                 <span>Setting Hak Akses Role</span>

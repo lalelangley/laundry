@@ -1389,88 +1389,32 @@ Route::prefix('transaksi')->name('admin2.transaksi.')->group(function () {
             ->middleware('permission:delete')
             ->name('admin2.pengeluaran.destroy');
     });
-
-// ================= USER MANAGER (SUPER ADMIN) =================
-Route::prefix('manager')
-    ->name('manager.')
-    ->middleware(['auth:admin'])
-    ->group(function () {
-        // INDEX
-        Route::get('/', [UserManagerController::class, 'index'])->name('index');
-        
-        // UPDATE STATUS (Admin, Kasir, Driver)
-        Route::post('/status', [UserManagerController::class, 'updateStatus'])->name('update.status');
-        // ✅ UPDATE STATUS (untuk Admin, Kasir, Driver)
-        Route::post('/status', [UserManagerController::class, 'updateStatusAdmin2'])->name('admin2.update.status');
-        
-
-        // ✅ ADMIN ROUTES
-        Route::prefix('admin')->name('admin.')->group(function() {
-            Route::get('/create', function () {
-                $roles = \App\Models\Role::all();
-                return view('manager.admin.create', compact('roles'));
-            })->name('create');
-            Route::post('/', [AuthWebController::class, 'storeAdmin'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editAdmin'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateAdmin'])->name('update');
-        });
-        
-        // ✅ KASIR ROUTES
-        Route::prefix('kasir')->name('kasir.')->group(function() {
-            Route::get('/create', function () {
-                return view('manager.kasir.create');
-            })->name('create');
-            Route::post('/', [UserManagerController::class, 'storeKasir'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editKasir'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateKasir'])->name('update');
-        });
-        
-        // ✅ DRIVER ROUTES
-        Route::prefix('driver')->name('driver.')->group(function() {
-            Route::get('/create', [UserManagerController::class, 'createDriver'])->name('create');
-            Route::post('/', [UserManagerController::class, 'storeDriver'])->name('store');
-            Route::get('/{id}/edit', [UserManagerController::class, 'editDriver'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateDriver'])->name('update');
-            Route::delete('/{id}', [UserManagerController::class, 'destroyDriver'])->name('destroy');
-        });
-        
-        // ✅ HAK AKSES & MENU ROLE
-        Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
-        Route::post('/permission/user', [UserManagerController::class, 'saveUserPermission'])->name('permission.save.user');
-        Route::get('/menu-role/create', [UserManagerController::class, 'create'])->name('create');
-        Route::post('/menu-role', [UserManagerController::class, 'store'])->name('store');
-        Route::put('/menu-role/{id}', [UserManagerController::class, 'update'])->name('update');
-        Route::delete('/menu-role/{id}', [UserManagerController::class, 'destroy'])->name('destroy');
-        Route::get('/role/hak-akses', [UserManagerController::class, 'hakRole'])->name('role.hak');
-        Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRole'])->name('role.hak.save');
-    });
-
 Route::prefix('manager')
     ->name('admin2.manager.')
     ->middleware(['auth:admin'])
     ->group(function () {
-
         Route::get('/', [UserManagerController::class, 'indexAdmin2'])
             ->name('index');
-
         Route::post('/status', [UserManagerController::class, 'updateStatusAdmin2'])
             ->name('update.status');
-
-        // ✅ TAMBAH INI - HAK AKSES ROLE KASIR
+        
+        // ✅ HAK AKSES ROLE KASIR
         Route::get('/role/hak-akses', [UserManagerController::class, 'hakRoleAdmin2'])
             ->name('role.hak');
-        
         Route::post('/role/hak-akses', [UserManagerController::class, 'saveHakRoleAdmin2'])
             ->name('role.hak.save');
-
-        // ✅ Kasir & Driver routes (sudah ada, biarkan)
+        
+        // ✅ TAMBAH INI - Quick Save untuk Auto-save
+        Route::post('/role/hak-akses/quick', [UserManagerController::class, 'quickSaveHakRoleAdmin2'])
+            ->name('role.hak.quick');
+        
+        // Kasir & Driver routes
         Route::prefix('kasir')->name('kasir.')->group(function () {
             Route::get('/create', [UserManagerController::class, 'createKasirAdmin2'])->name('create');
             Route::post('/', [UserManagerController::class, 'storeKasirAdmin2'])->name('store');
             Route::get('/{id}/edit', [UserManagerController::class, 'editKasirAdmin2'])->name('edit');
-            Route::put('/{id}', [UserManagerController::class, 'updateKasirAdmin2'])->name('update');
         });
-
+        
         Route::prefix('driver')->name('driver.')->group(function () {
             Route::get('/create', [UserManagerController::class, 'createDriverAdmin2'])->name('create');
             Route::post('/', [UserManagerController::class, 'storeDriverAdmin2'])->name('store');
@@ -1479,22 +1423,6 @@ Route::prefix('manager')
             Route::delete('/{id}', [UserManagerController::class, 'destroyDriverAdmin2'])->name('destroy');
         });
     });
-
-    // ================= LAPORAN =================
-Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
-    // ✅ nama route jadi: admin2.laporan.index
-    Route::get('/', [LaporanController::class, 'laporanIndexAdmin2'])->name('index');
-    Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndexAdmin2'])->name('transaksi.index');
-    Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
-    Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
-    Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
-    Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
-    Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
-    Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
-
-    // ✅ TAMBAH INI - Export Excel
-       Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiAdmin2'])->name('transaksi.export');
-});
 
 // ================= PENGATURAN ADMIN2 - ✅ WITH PERMISSION =================
 Route::prefix('pengaturan')->name('admin2.pengaturan.')->group(function () {

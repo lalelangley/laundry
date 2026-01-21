@@ -1362,5 +1362,63 @@ public function saveHakRoleAdmin2(Request $request)
     return $admin;
     
 }
+/**
+ * Quick save untuk auto-save (AJAX)
+ */
+public function quickSaveHakRoleAdmin2(Request $request)
+{
+    try {
+        // Ambil role_id kasir (ID 3)
+        $roleId = 3;
+        
+        \Log::info('Quick Save Request:', [
+            'role_id' => $roleId,
+            'menus' => $request->menus
+        ]);
 
+        foreach ($request->menus as $menuId => $data) {
+            $isActive = isset($data['active']) && $data['active'] == 1;
+            $permissions = $data['permissions'] ?? [];
+
+            \Log::info("Processing menu {$menuId}:", [
+                'is_active' => $isActive,
+                'permissions' => $permissions
+            ]);
+
+            // Update atau create permission
+            \DB::table('menu_role_permissions')->updateOrInsert(
+                [
+                    'role_id' => $roleId,
+                    'menu_id' => $menuId
+                ],
+                [
+                    'is_active' => $isActive,
+                    'can_view' => in_array('view', $permissions),
+                    'can_add' => in_array('add', $permissions),
+                    'can_edit' => in_array('edit', $permissions),
+                    'can_delete' => in_array('delete', $permissions),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
+        \Log::info('Quick save successful');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Berhasil menyimpan'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Quick save error:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }
