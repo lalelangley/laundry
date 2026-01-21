@@ -15,7 +15,7 @@ use App\Http\Controllers\Web\PengaturanController;
 use App\Http\Controllers\Web\ChangePasswordController;
 use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
-use App\Http\Controllers\Web\FcmTokenController;
+use App\Http\Controllers\FcmTokenController;
 use App\Models\Satuan;
 
 Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
