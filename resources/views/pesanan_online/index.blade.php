@@ -62,12 +62,6 @@
         {{-- ========================================
             STATUS TABS
         ======================================== --}}
-        {{-- DEBUG INFO - Uncomment untuk debugging --}}
-        {{-- <div class="mb-2 p-3 bg-blue-50 rounded text-xs">
-            Debug: Pickup need driver = {{ $pickupNeedDriver ?? 'NULL' }} | 
-            Antar need driver = {{ $antarNeedDriver ?? 'NULL' }}
-        </div> --}}
-        
         <div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
             <div class="flex gap-2 justify-between">
                 @php
@@ -79,7 +73,6 @@
                         'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle', 'badge_color' => 'bg-yellow-500'],
                         'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'bicycle', 'badge_color' => 'bg-yellow-500'],
                         'selesai' => ['label' => 'Selesai', 'icon' => 'check-all', 'badge_color' => 'bg-yellow-500'],
-                        'ditolak' => ['label' => 'Ditolak', 'icon' => 'x-circle', 'badge_color' => 'bg-yellow-500'],
                     ];
 
                     // Hitung jumlah pesanan untuk setiap status
@@ -90,11 +83,8 @@
                     $countSiapDiambil = \App\Models\Transaksi::where('status_transaksi', 'siap_di_ambil')->where('jenis_transaksi', 'online')->count();
                     $countSiapDiantar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')->where('jenis_transaksi', 'online')->count();
                     $countSelesai = \App\Models\Transaksi::where('status_transaksi', 'selesai')->where('jenis_transaksi', 'online')->count();
-                    $countDitolak = \App\Models\Transaksi::where('status_transaksi', 'ditolak')->where('jenis_transaksi', 'online')->count();
 
-                    // Hitung alert dari SEMUA pesanan online, bukan hanya yang di tab aktif
-                    
-                    // PICKUP - Cek pesanan dengan status pick_up yang belum ada driver
+                    // Hitung alert dari SEMUA pesanan online
                     $allPesananPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')
                         ->where('jenis_transaksi', 'online')
                         ->with('delivery')
@@ -111,13 +101,11 @@
                             }
                         }
                         
-                        // Jika tidak punya driver, tambahkan ke counter
                         if (!$hasDriver) {
                             $pickupNeedDriver++;
                         }
                     }
                     
-                    // SIAP DIANTAR - Cek pesanan dengan status siap_di_antar yang belum ada driver
                     $allPesananSiapAntar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')
                         ->where('jenis_transaksi', 'online')
                         ->with('delivery')
@@ -134,7 +122,6 @@
                             }
                         }
                         
-                        // Jika tidak punya driver, tambahkan ke counter
                         if (!$hasDriver) {
                             $antarNeedDriver++;
                         }
@@ -153,7 +140,6 @@
                             case 'siap_di_ambil': $countPesanan = $countSiapDiambil; break;
                             case 'siap_di_antar': $countPesanan = $countSiapDiantar; break;
                             case 'selesai': $countPesanan = $countSelesai; break;
-                            case 'ditolak': $countPesanan = $countDitolak; break;
                         }
                     @endphp
 
@@ -163,7 +149,7 @@
                         <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
                         <span class="hidden sm:inline">{{ $data['label'] }}</span>
                         
-                        {{-- Badge jumlah pesanan (di kanan atas, posisi tengah-atas) --}}
+                        {{-- Badge jumlah pesanan --}}
                         @if($countPesanan > 0)
                             <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 
                                         {{ $data['badge_color'] }} text-white text-xs font-bold rounded-full shadow-md border-2 border-white">
@@ -171,7 +157,7 @@
                             </span>
                         @endif
                         
-                        {{-- Alert Badge untuk Pickup (yang butuh driver) - di kiri atas --}}
+                        {{-- Alert Badge untuk Pickup --}}
                         @if($key == 'pickup' && $pickupNeedDriver > 0)
                             <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
                                         bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
@@ -180,7 +166,7 @@
                             </span>
                         @endif
                         
-                        {{-- Alert Badge untuk Siap Diantar (yang butuh driver) - di kiri atas --}}
+                        {{-- Alert Badge untuk Siap Diantar --}}
                         @if($key == 'siap_di_antar' && $antarNeedDriver > 0)
                             <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
                                         bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
@@ -209,17 +195,18 @@
                         $terlambat = $today->greaterThan($estimasi);
                     }
                     
+                    // ✅ HITUNG PEMBAYARAN DARI TABEL PEMBAYARAN
+                    $totalDibayar = $p->pembayaran()->sum('nominal');
                     $totalHarga = $p->total_harga ?? 0;
-                    $totalBayar = $p->total_bayar ?? 0;
-                    $sisaBayar = $totalHarga - $totalBayar;
+                    $sisaBayar = $totalHarga - $totalDibayar;
                     
                     $isPaid = false;
                     $isDP = false;
                     $isUnpaid = false;
                     
-                    if ($totalBayar >= $totalHarga && $totalHarga > 0) {
+                    if ($totalDibayar >= $totalHarga && $totalHarga > 0) {
                         $isPaid = true;
-                    } elseif ($totalBayar > 0 && $totalBayar < $totalHarga) {
+                    } elseif ($totalDibayar > 0 && $totalDibayar < $totalHarga) {
                         $isDP = true;
                     } else {
                         $isUnpaid = true;
@@ -281,14 +268,19 @@
             {{-- Order Details --}}
             <div class="space-y-3">
                 
-                {{-- Tanggal Pesan --}}
+                {{-- Tanggal Pesan - FIXED FORMAT --}}
                 <div class="flex items-center gap-3 text-sm">
                     <div class="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="bi bi-calendar-date text-yellow-500"></i>
                     </div>
                     <div class="flex-1">
                         <p class="text-gray-500 text-xs">Tanggal Pesan</p>
-                        <p class="font-semibold text-gray-800">{{ $p->tgl_transaksi }}</p>
+                        <p class="font-semibold text-gray-800">
+                            {{ \Carbon\Carbon::parse($p->tgl_transaksi)->format('d M Y') }}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            {{ \Carbon\Carbon::parse($p->tgl_transaksi)->format('H:i') }} WIB
+                        </p>
                     </div>
                 </div>
 
@@ -365,7 +357,7 @@
                     </span>
 
                     {{-- Terlambat Badge --}}
-                    @if($terlambat && !in_array($p->status_transaksi, ['selesai', 'ditolak']))
+                    @if($terlambat && !in_array($p->status_transaksi, ['selesai']))
                     <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                         Terlambat
@@ -452,12 +444,24 @@
                 <div class="flex flex-wrap gap-2 items-center">
                     
                     {{-- Payment Method Badge --}}
-                    @if($p->metodeBayar)
+                    @php
+                        // ✅ AMBIL METODE BAYAR DARI PEMBAYARAN TERBARU
+                        $pembayaranTerbaru = $p->pembayaran()->latest()->first();
+                        $displayMetodeBayar = null;
+                        
+                        if ($pembayaranTerbaru && $pembayaranTerbaru->metodeBayar) {
+                            $displayMetodeBayar = $pembayaranTerbaru->metodeBayar;
+                        } elseif ($p->metodeBayar) {
+                            $displayMetodeBayar = $p->metodeBayar;
+                        }
+                    @endphp
+                    
+                    @if($displayMetodeBayar)
                         @php
-                            $isCash = stripos($p->metodeBayar->nama_metode_bayar, 'cash') !== false || 
-                                     stripos($p->metodeBayar->nama_metode_bayar, 'tunai') !== false;
-                            $isTransfer = stripos($p->metodeBayar->nama_metode_bayar, 'transfer') !== false || 
-                                         stripos($p->metodeBayar->nama_metode_bayar, 'tf') !== false;
+                            $isCash = stripos($displayMetodeBayar->nama_metode_bayar, 'cash') !== false || 
+                                     stripos($displayMetodeBayar->nama_metode_bayar, 'tunai') !== false;
+                            $isTransfer = stripos($displayMetodeBayar->nama_metode_bayar, 'transfer') !== false || 
+                                         stripos($displayMetodeBayar->nama_metode_bayar, 'tf') !== false;
                         @endphp
                         
                         @if($isCash)
@@ -474,7 +478,7 @@
                             <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold
                                         bg-gray-50 border border-gray-200 text-gray-700">
                                 <i class="bi bi-wallet2"></i>
-                                {{ $p->metodeBayar->nama_metode_bayar }}
+                                {{ $displayMetodeBayar->nama_metode_bayar }}
                             </span>
                         @endif
                     @endif
@@ -489,7 +493,7 @@
                         <span class="inline-flex items-center gap-1 px-3 py-1.5 
                                     bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold border border-yellow-200">
                             <i class="bi bi-cash"></i>
-                            DP (Rp {{ number_format($totalBayar, 0, ',', '.') }})
+                            DP (Rp {{ number_format($totalDibayar, 0, ',', '.') }})
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1 px-3 py-1.5 

@@ -38,8 +38,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/transaksi/{id}/bayar', [PaymentController::class, 'bayar']);
     Route::post('/transaksi/{id_transaksi}/pilih-metode', [LaundryOrderController::class, 'pilihMetodePengambilan']);
 
-
-
     Route::prefix('driver')->group(function () {
         Route::get('/{id_driver}/history', [DriverTaskController::class, 'getDriverHistory']);
         Route::get('/{id_driver}/tasks', [DriverTaskController::class, 'getPendingTasks']); // task list

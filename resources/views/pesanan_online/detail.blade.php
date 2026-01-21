@@ -156,9 +156,9 @@
 
                 <div class="relative group">
                     <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                         alt="Bukti Cucian" 
-                         class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-yellow-400 transition"
-                         onclick="openImageModal('{{ asset('storage/' . $pesanan->foto_bukti) }}')">
+                        alt="Bukti Cucian" 
+                        class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-yellow-400 transition"
+                        onclick="openImageModal('{{ asset('storage/' . $pesanan->foto_bukti) }}')">
                     
                     <div class="absolute top-2 right-2 bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                         <i class="bi bi-check-circle"></i>
@@ -173,8 +173,8 @@
                 <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
                     <span><i class="bi bi-calendar"></i> Upload: {{ $pesanan->updated_at->format('d/m/Y H:i') }}</span>
                     <a href="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                       download 
-                       class="text-yellow-600 hover:text-yellow-700 font-semibold">
+                    download 
+                    class="text-yellow-600 hover:text-yellow-700 font-semibold">
                         <i class="bi bi-download"></i> Download
                     </a>
                 </div>
@@ -242,7 +242,11 @@
                             $biayaOngkir = $pesanan->biayaTambahan->nominal;
                         }
                         
+                        // ✅ HITUNG TOTAL DIBAYAR DARI TABEL PEMBAYARAN
+                        $totalDibayar = $pesanan->pembayaran()->sum('nominal');
+                        
                         $totalBenar = $subtotalItems + $biayaOngkir - ($pesanan->diskon ?? 0);
+                        $sisa = $pesanan->total_harga - $totalDibayar;
                     @endphp
                     
                     <div class="flex justify-between">
@@ -261,12 +265,7 @@
                     
                     @if($pesanan->diskon > 0)
                     <div class="flex justify-between text-red-600">
-                        <span>
-                            Diskon
-                            @if($pesanan->tipe_diskon == 'percent' && $subtotalItems > 0)
-                                <span class="text-xs">({{ number_format(($pesanan->diskon / $subtotalItems) * 100, 1) }}%)</span>
-                            @endif
-                        </span>
+                        <span>Diskon</span>
                         <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
                     </div>
                     @endif
@@ -291,16 +290,13 @@
                     </div>
                     @endif
 
-                    @if($pesanan->total_bayar > 0)
+                    @if($totalDibayar > 0)
                     <div class="flex justify-between bg-green-50 -mx-2 px-2 py-2 rounded">
                         <span class="text-green-600">Total Dibayar</span>
-                        <b class="text-green-600">Rp {{ number_format($pesanan->total_bayar,0,',','.') }}</b>
+                        <b class="text-green-600">Rp {{ number_format($totalDibayar,0,',','.') }}</b>
                     </div>
                     @endif
 
-                    @php
-                        $sisa = $pesanan->total_harga - $pesanan->total_bayar;
-                    @endphp
                     @if($sisa > 0)
                     <div class="flex justify-between bg-red-50 -mx-2 px-2 py-2 rounded">
                         <span class="text-red-600 font-semibold">Sisa Pembayaran</span>
@@ -324,9 +320,33 @@
         $deliveryPickup = $deliveryPickup ?? null;
         $deliveryAntar = $deliveryAntar ?? null;
         
-        $metodeBayar = $pesanan->metodeBayar;
-        $isTransfer = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'transfer') !== false || stripos($metodeBayar->nama_metode_bayar, 'tf') !== false);
-        $isCash = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'cash') !== false || stripos($metodeBayar->nama_metode_bayar, 'tunai') !== false);
+        // ✅ AMBIL METODE BAYAR DARI TABEL PEMBAYARAN (prioritas utama)
+        $pembayaranTerbaru = $pesanan->pembayaran()->latest()->first();
+        
+        // Jika ada pembayaran, gunakan metode dari pembayaran
+        // Jika tidak ada, gunakan dari transaksi
+        if ($pembayaranTerbaru && $pembayaranTerbaru->id_metode_bayar) {
+            $metodeBayar = $pembayaranTerbaru->metodeBayar;
+        } else {
+            $metodeBayar = $pesanan->metodeBayar;
+        }
+        
+        // Debug info
+        $debugInfo = [
+            'transaksi_id_metode' => $pesanan->id_metode_bayar ?? 'NULL',
+            'pembayaran_terbaru_id' => $pembayaranTerbaru ? $pembayaranTerbaru->id_metode_bayar : 'NULL',
+            'metode_bayar_found' => $metodeBayar ? 'YES' : 'NO',
+            'nama_metode' => $metodeBayar ? $metodeBayar->nama_metode_bayar : 'NULL'
+        ];
+        
+        $isTransfer = false;
+        $isCash = false;
+        
+        if ($metodeBayar && isset($metodeBayar->nama_metode_bayar)) {
+            $namaMetode = strtolower($metodeBayar->nama_metode_bayar);
+            $isTransfer = (stripos($namaMetode, 'transfer') !== false || stripos($namaMetode, 'tf') !== false);
+            $isCash = (stripos($namaMetode, 'cash') !== false || stripos($namaMetode, 'tunai') !== false);
+        }
         
         // Cek apakah sudah lunas
         $sudahLunas = $pesanan->status_bayar === 'lunas';
@@ -425,7 +445,7 @@
                 
                 {{-- ✅ TOMBOL DRIVER SAMPAI --}}
                 <a href="{{ route('pesanan.online.driver-arrive', $pesanan->id_transaksi) }}" 
-                   class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-yellow-600 transition flex items-center justify-center gap-2 shadow-lg">
+                   class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 transition flex items-center justify-center gap-2 shadow-lg">
                     <i class="bi bi-check-circle-fill"></i> 
                     <span>Driver Sampai di Laundry</span>
                 </a>
@@ -504,7 +524,7 @@
         @else
         {{-- Tombol Proses hanya muncul jika data lengkap --}}
         <a href="{{ route('pesanan.online.proses', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-700 hover:to-pink-700 transition shadow-lg flex items-center justify-center">
+           class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:from-orange-700 hover:to-red-700 transition shadow-lg flex items-center justify-center">
             <i class="bi bi-play-circle-fill"></i> Mulai Proses
         </a>
         @endif
@@ -520,31 +540,9 @@
 
     {{-- ========== STATUS: SELESAI_DICUCI ========== --}}
     @if($pesanan->status_transaksi === 'selesai_dicuci')
-        {{-- Notifikasi FCM --}}
-        <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-yellow-200 rounded-xl p-4">
-            <div class="flex items-start gap-3 mb-3">
-                <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shrink-0">
-                    <i class="bi bi-bell-fill text-white text-lg"></i>
-                </div>
-                <div class="flex-1">
-                    <p class="font-bold text-yellow-700 mb-1">Cucian Sudah Selesai!</p>
-                    <p class="text-sm text-yellow-700">Kirim notifikasi ke pelanggan bahwa cucian sudah selesai dicuci.</p>
-                </div>
-            </div>
-
-            <button onclick="sendNotificationSelesaiDicuci()" 
-                    id="btnSendNotification"
-                    class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-from-orange-600 to-red-600-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="bi bi-send-fill text-lg"></i>
-                <span>Kirim Notifikasi</span>
-            </button>
-        </div>
-        
-        <hr class="my-3">
-        
         {{-- Pilih: Antar atau Ambil Sendiri --}}
         <a href="{{ route('pesanan.online.siap_di_antar', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-from-orange-600 to-red-600-600 transition shadow-lg flex items-center justify-center mb-2">
+           class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition shadow-lg flex items-center justify-center mb-2">
             <i class="bi bi-truck"></i> Siap Diantar (Butuh Driver)
         </a>
         
@@ -573,7 +571,7 @@
                             <i class="bi bi-telephone"></i> {{ $deliveryAntar->driver->no_hp }}
                         </p>
                         @endif
-                        <p class="text-xs text-from-orange-600 to-red-600-600 mt-1">
+                        <p class="text-xs text-orange-600 mt-1">
                             <i class="bi bi-info-circle"></i> Status: {{ str_replace('_', ' ', ucwords($deliveryAntar->status, '_')) }}
                         </p>
                     </div>
@@ -624,27 +622,52 @@
 
    {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
     @php
-        // Debug: Cek nilai variabel
-        $debugMetodeBayar = $pesanan->metodeBayar ? $pesanan->metodeBayar->nama_metode_bayar : 'NULL';
-        
-        // Tentukan kapan tombol bukti pembayaran muncul berdasarkan metode bayar
+        // ✅ PERBAIKAN: Logika yang lebih sederhana dan jelas dengan pengecekan null yang lebih baik
         $showBuktiPembayaran = false;
         $labelButton = 'Input Bukti Pembayaran';
         
-        // ✅ HAPUS PENGECEKAN !$sudahLunas - TOMBOL SELALU MUNCUL
-        if ($isTransfer) {
-            // ✅ TRANSFER: Muncul di antrian, proses, selesai_dicuci
-            $showBuktiPembayaran = in_array($pesanan->status_transaksi, ['antrian', 'proses', 'selesai_dicuci']);
-            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
-        } elseif ($isCash) {
-            // ✅ CASH: Muncul di siap_di_antar, siap_di_ambil
-            $showBuktiPembayaran = in_array($pesanan->status_transaksi, ['siap_di_antar', 'siap_di_ambil']);
-            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
+        // ✅ CEK METODE BAYAR - Jika null, tetap tampilkan tombol dengan pesan khusus
+        if ($metodeBayar) {
+            if ($isTransfer) {
+                // ✅ TRANSFER: Muncul mulai dari antrian sampai siap_di_ambil
+                $allowedStatusTransfer = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
+                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusTransfer);
+                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
+                
+            } elseif ($isCash) {
+                // ✅ CASH: Muncul di siap_di_antar dan siap_di_ambil
+                $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
+                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash);
+                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
+            } else {
+                // ✅ METODE BAYAR LAIN: Tampilkan tombol di status yang sama dengan transfer
+                $allowedStatusOther = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
+                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusOther);
+                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran' : 'Input Bukti Pembayaran';
+            }
+        } else {
+            // ✅ JIKA BELUM ADA METODE BAYAR: Tetap tampilkan tombol untuk setup pembayaran
+            $allowedStatusNoMethod = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusNoMethod);
+            $labelButton = 'Atur Metode Pembayaran';
         }
     @endphp
 
     @if($showBuktiPembayaran)
         <hr class="my-3">
+        
+        {{-- ✅ WARNING JIKA BELUM ADA METODE BAYAR --}}
+        @if(!$metodeBayar)
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-orange-600 mt-0.5"></i>
+                <div class="text-xs text-orange-700">
+                    <p class="font-semibold mb-1">Metode Pembayaran Belum Ditentukan</p>
+                    <p>Silakan tentukan metode pembayaran terlebih dahulu.</p>
+                </div>
+            </div>
+        </div>
+        @endif
         
         {{-- ✅ INFO BERBEDA UNTUK TRANSFER VS CASH --}}
         @if($isTransfer)
@@ -693,6 +716,7 @@
             @endif
         @endif
         
+        {{-- ✅ TOMBOL BUKTI PEMBAYARAN --}}
         <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
         class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
             <i class="bi bi-receipt"></i>
@@ -726,7 +750,7 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white">Isi Data Pesanan</h3>
-                    <p class="text-from-orange-600 to-red-600-100 text-sm">ORDER/{{ $pesanan->id_transaksi }}</p>
+                    <p class="text-orange-100 text-sm">ORDER/{{ $pesanan->id_transaksi }}</p>
                 </div>
             </div>
             <button type="button" onclick="closeIsiDataModal()" 
@@ -744,7 +768,7 @@
 
                 <div class="space-y-5">
                     {{-- ITEMS SECTION --}}
-                    <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-yellow-200 rounded-xl p-5">
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-5">
                         <h4 class="font-bold text-lg text-yellow-700 mb-4 flex items-center gap-2">
                             <i class="bi bi-basket2"></i> Item Pesanan
                         </h4>
@@ -754,7 +778,7 @@
                             @php
                                 $subtotal = $d->harga * $d->qty;
                             @endphp
-                            <div class="bg-white border-2 border-yellow-200 rounded-xl p-4 hover:border-from-orange-600 to-red-600-300 transition">
+                            <div class="bg-white border-2 border-yellow-200 rounded-xl p-4 hover:border-orange-300 transition">
                                 <div class="flex items-start gap-4">
                                     <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center font-bold text-white shadow-md shrink-0">
                                         {{ $i+1 }}
@@ -776,7 +800,7 @@
                                                 <i class="bi bi-calculator text-yellow-600"></i> Jumlah (Qty) <span class="text-red-500">*</span>
                                             </label>
                                             <input type="number" name="qty[]" step="0.01" min="0.01" value="{{ $d->qty }}"
-                                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-from-orange-600 to-red-600-500 transition" 
+                                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" 
                                                    placeholder="0.00"
                                                    required>
                                         </div>
@@ -914,7 +938,7 @@
                     </div>
 
                     {{-- UPLOAD FOTO BUKTI CUCIAN --}}
-                    <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-orange-200 rounded-xl p-5">
+                    <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
                         <h4 class="font-bold text-lg text-orange-900 mb-4 flex items-center gap-2">
                             <i class="bi bi-camera"></i> Foto Bukti Cucian <span class="text-sm text-gray-600 font-normal">(Opsional)</span>
                         </h4>
@@ -925,9 +949,9 @@
                             <p class="text-sm font-semibold text-gray-700 mb-2">Foto saat ini:</p>
                             <div class="relative inline-block">
                                 <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
-                                     alt="Bukti Cucian" 
-                                     class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
-                                <div class="absolute -top-2 -right-2 bg-from-orange-600 to-red-600-600 text-white rounded-full p-2 shadow-lg">
+                                    alt="Bukti Cucian" 
+                                    class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
+                                <div class="absolute -top-2 -right-2 bg-orange-600 text-white rounded-full p-2 shadow-lg">
                                     <i class="bi bi-check text-sm"></i>
                                 </div>
                             </div>
@@ -936,13 +960,13 @@
 
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-upload text-from-orange-600 to-red-600-600"></i> {{ $pesanan->foto_bukti ? 'Ganti Foto' : 'Upload Foto' }}
+                                <i class="bi bi-upload text-orange-600"></i> {{ $pesanan->foto_bukti ? 'Ganti Foto' : 'Upload Foto' }}
                             </label>
                             <input type="file" 
                                    name="foto_bukti" 
                                    id="foto_bukti"
                                    accept="image/jpeg,image/jpg,image/png"
-                                   class="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-from-orange-600 to-red-600-500 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-from-orange-600 to-red-600-200 cursor-pointer">
+                                   class="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer">
                             <p class="text-xs text-gray-600 mt-2 flex items-start gap-1">
                                 <i class="bi bi-info-circle mt-0.5"></i>
                                 <span>Format: JPG, JPEG, PNG. Maksimal 2MB.</span>
@@ -1206,7 +1230,7 @@ function sendNotificationSelesaiDicuci() {
                 <i class="bi bi-check-circle-fill text-lg"></i>
                 <span>Notifikasi Terkirim!</span>
             `;
-            btn.classList.remove('from-from-orange-600 to-red-600-500', 'to-from-orange-600 to-red-600-500', 'hover:from-from-orange-600 to-red-600-600', 'hover:to-from-orange-600 to-red-600-600');
+            btn.classList.remove('from-yellow-500', 'to-orange-500', 'hover:from-yellow-600', 'hover:to-orange-600');
             btn.classList.add('from-green-500', 'to-emerald-500');
             
             alert('✅ ' + data.message);
@@ -1214,7 +1238,7 @@ function sendNotificationSelesaiDicuci() {
             setTimeout(() => {
                 btn.innerHTML = originalContent;
                 btn.classList.remove('from-green-500', 'to-emerald-500');
-                btn.classList.add('from-from-orange-600 to-red-600-500', 'to-from-orange-600 to-red-600-500', 'hover:from-from-orange-600 to-red-600-600', 'hover:to-from-orange-600 to-red-600-600');
+                btn.classList.add('from-yellow-500', 'to-orange-500', 'hover:from-yellow-600', 'hover:to-orange-600');
                 btn.disabled = false;
             }, 3000);
         } else {
