@@ -37,7 +37,7 @@
             {{-- ITEM PESANAN --}}
             <div class="bg-white rounded-xl shadow p-5">
                 <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="bi bi-basket text-purple-600"></i> Item Pesanan
+                    <i class="bi bi-basket text-yellow-600"></i> Item Pesanan
                 </h2>
 
                 @if($pesanan->detail_transaksi && $pesanan->detail_transaksi->count() > 0)
@@ -88,7 +88,7 @@
             {{-- DATA PELANGGAN --}}
             <div class="bg-white rounded-xl shadow p-5">
                 <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="bi bi-person text-blue-600"></i> Data Pelanggan
+                    <i class="bi bi-person text-orange-600"></i> Data Pelanggan
                 </h2>
 
                 <div class="grid md:grid-cols-2 gap-4 text-sm">
@@ -105,7 +105,7 @@
                         <p class="font-semibold">{{ $pesanan->pelanggan->alamat ?? '-' }}</p>
                     </div>
                     
-                    {{-- ✅ ESTIMASI SELESAI --}}
+                    {{-- ESTIMASI SELESAI --}}
                     @if($pesanan->tgl_estimasi)
                     <div class="md:col-span-2">
                         <p class="text-gray-500">Estimasi Selesai</p>
@@ -136,7 +136,7 @@
                                     Besok
                                 </span>
                             @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
                                     <i class="bi bi-calendar-check"></i>
                                     {{ $daysLeft }} hari lagi
                                 </span>
@@ -151,16 +151,16 @@
             @if($pesanan->foto_bukti)
             <div class="bg-white rounded-xl shadow p-5">
                 <h2 class="font-bold text-lg mb-4 flex items-center gap-2">
-                    <i class="bi bi-camera text-purple-600"></i> Foto Bukti Cucian
+                    <i class="bi bi-camera text-yellow-600"></i> Foto Bukti Cucian
                 </h2>
 
                 <div class="relative group">
                     <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
                          alt="Bukti Cucian" 
-                         class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-purple-400 transition"
+                         class="w-full h-64 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-yellow-400 transition"
                          onclick="openImageModal('{{ asset('storage/' . $pesanan->foto_bukti) }}')">
                     
-                    <div class="absolute top-2 right-2 bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
+                    <div class="absolute top-2 right-2 bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                         <i class="bi bi-check-circle"></i>
                         <span>Verified</span>
                     </div>
@@ -174,7 +174,7 @@
                     <span><i class="bi bi-calendar"></i> Upload: {{ $pesanan->updated_at->format('d/m/Y H:i') }}</span>
                     <a href="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
                        download 
-                       class="text-purple-600 hover:text-purple-700 font-semibold">
+                       class="text-yellow-600 hover:text-yellow-700 font-semibold">
                         <i class="bi bi-download"></i> Download
                     </a>
                 </div>
@@ -194,10 +194,12 @@
                         <p class="text-gray-500">Status Transaksi</p>
                         <span class="inline-block px-3 py-1 rounded-full text-white text-xs
                             @if($pesanan->status_transaksi=='menunggu_konfirmasi' || $pesanan->status_transaksi=='antrian') bg-orange-500
-                            @elseif($pesanan->status_transaksi=='dikonfirmasi') bg-blue-500
-                            @elseif($pesanan->status_transaksi=='proses') bg-purple-600
+                            @elseif($pesanan->status_transaksi=='dikonfirmasi') bg-yellow-500
+                            @elseif($pesanan->status_transaksi=='proses') bg-orange-600
                             @elseif($pesanan->status_transaksi=='selesai') bg-green-600
                             @elseif($pesanan->status_transaksi=='pick_up') bg-yellow-500
+                            @elseif($pesanan->status_transaksi=='selesai_dicuci') bg-yellow-600
+                            @elseif($pesanan->status_transaksi=='siap_di_antar') bg-orange-500
                             @else bg-gray-500
                             @endif">
                             {{ str_replace('_',' ',$pesanan->status_transaksi) }}
@@ -210,7 +212,7 @@
                             @if($pesanan->status_bayar == 'lunas')
                                 <span class="text-green-600">Lunas</span>
                             @elseif($pesanan->status_bayar == 'DP')
-                                <span class="text-blue-600">DP</span>
+                                <span class="text-orange-600">DP</span>
                             @else
                                 <span class="text-red-600">Belum Bayar</span>
                             @endif
@@ -235,14 +237,11 @@
                             }
                         }
                         
-                        // ✅ AMBIL BIAYA ONGKIR
                         $biayaOngkir = 0;
                         if($pesanan->id_biaya_tambahan && $pesanan->biayaTambahan) {
                             $biayaOngkir = $pesanan->biayaTambahan->nominal;
                         }
                         
-                        // ✅ HITUNG TOTAL YANG BENAR
-                        // Total = Subtotal Items + Biaya Ongkir - Diskon
                         $totalBenar = $subtotalItems + $biayaOngkir - ($pesanan->diskon ?? 0);
                     @endphp
                     
@@ -251,7 +250,6 @@
                         <b>Rp {{ number_format($subtotalItems,0,',','.') }}</b>
                     </div>
                     
-                    {{-- ✅ BIAYA ONGKIR --}}
                     @if($biayaOngkir > 0)
                     <div class="flex justify-between text-orange-600">
                         <span>
@@ -287,9 +285,9 @@
                     </div>
 
                     @if($pesanan->dp > 0)
-                    <div class="flex justify-between bg-blue-50 -mx-2 px-2 py-2 rounded">
-                        <span class="text-blue-600">DP Dibayar</span>
-                        <b class="text-blue-600">Rp {{ number_format($pesanan->dp,0,',','.') }}</b>
+                    <div class="flex justify-between bg-yellow-50 -mx-2 px-2 py-2 rounded">
+                        <span class="text-orange-600">DP Dibayar</span>
+                        <b class="text-orange-600">Rp {{ number_format($pesanan->dp,0,',','.') }}</b>
                     </div>
                     @endif
 
@@ -317,84 +315,403 @@
                 </div>
             </div>
 
-            {{-- AKSI --}}
-            <div class="bg-white rounded-xl shadow p-5 space-y-3">
-                <h2 class="font-bold mb-2">Aksi</h2>
+            {{-- ✅ AKSI SECTION - CLEAN & NO DUPLICATE --}}
+<div class="bg-white rounded-xl shadow p-5 space-y-3">
+    <h2 class="font-bold mb-2">Aksi</h2>
 
-               @php
-                    $dataLengkap = $pesanan->detail_transaksi->count() > 0 && $pesanan->total_harga > 0;
-                    
-                    // ✅ Gunakan variable dari controller, atau null jika tidak ada
-                    $deliveryPickup = $deliveryPickup ?? null;
-                    $deliveryAntar = $deliveryAntar ?? null;
-                    
-                    $metodeBayar = $pesanan->metodeBayar;
-                    $isTransfer = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'transfer') !== false || stripos($metodeBayar->nama_metode_bayar, 'tf') !== false);
-                    $isCash = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'cash') !== false || stripos($metodeBayar->nama_metode_bayar, 'tunai') !== false);
-                @endphp
+    @php
+        $dataLengkap = $pesanan->detail_transaksi->count() > 0 && $pesanan->total_harga > 0;
+        $deliveryPickup = $deliveryPickup ?? null;
+        $deliveryAntar = $deliveryAntar ?? null;
+        
+        $metodeBayar = $pesanan->metodeBayar;
+        $isTransfer = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'transfer') !== false || stripos($metodeBayar->nama_metode_bayar, 'tf') !== false);
+        $isCash = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'cash') !== false || stripos($metodeBayar->nama_metode_bayar, 'tunai') !== false);
+        
+        // Cek apakah sudah lunas
+        $sudahLunas = $pesanan->status_bayar === 'lunas';
+    @endphp
 
-                {{-- BUTTON ISI DATA PESANAN --}}
-                @if(in_array($pesanan->status_transaksi, ['antrian', 'pick_up']) && !in_array($pesanan->status_transaksi, ['selesai', 'ditolak']))
-                <button onclick="openIsiDataModal()" 
-                        class="w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-indigo-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
-                    <i class="bi bi-pencil-square text-lg"></i> 
-                    <span>{{ $dataLengkap ? 'Edit' : 'Isi' }} Data Pesanan</span>
-                </button>
-                @endif
-
-                {{-- ✅ KIRIM NOTIFIKASI FCM - STATUS SELESAI_DICUCI --}}
-                @if($pesanan->status_transaksi === 'selesai_dicuci')
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4">
-                    <div class="flex items-start gap-3 mb-3">
-                        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
-                            <i class="bi bi-bell-fill text-white text-lg"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="font-bold text-blue-900 mb-1">Cucian Sudah Selesai!</p>
-                            <p class="text-sm text-blue-700">Kirim notifikasi ke pelanggan bahwa cucian sudah selesai dicuci dan siap untuk diproses lebih lanjut.</p>
-                        </div>
+    {{-- ========== STATUS: PICK_UP ========== --}}
+    @if($pesanan->status_transaksi === 'pick_up')
+        {{-- ✅ Cek apakah driver sudah sampai di laundry --}}
+        @if($deliveryPickup && $deliveryPickup->status === 'arrived_at_laundry')
+            {{-- ✅ DRIVER SUDAH SAMPAI - LANGSUNG TAMPILKAN ISI DATA PESANAN --}}
+            <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                        <i class="bi bi-check-circle-fill text-white text-lg"></i>
                     </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-green-900 mb-1">Driver Sudah Sampai di Laundry</p>
+                        
+                        @if($deliveryPickup->driver)
+                        <p class="text-sm text-green-700">
+                            <i class="bi bi-person-badge"></i> {{ $deliveryPickup->driver->nama_driver }}
+                        </p>
+                        @endif
+                        
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="bi bi-info-circle"></i> Cucian sudah tiba, silakan isi data pesanan.
+                        </p>
+                        
+                        @if($deliveryPickup->waktu)
+                        <p class="text-xs text-green-600">
+                            <i class="bi bi-clock"></i> Tiba: {{ \Carbon\Carbon::parse($deliveryPickup->waktu)->format('d M Y, H:i') }}
+                        </p>
+                        @endif
+                    </div>
+                </div>
+            </div>
 
-                    <button onclick="sendNotificationSelesaiDicuci()" 
-                            id="btnSendNotification"
-                            class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-bold hover:from-blue-600 hover:to-indigo-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="bi bi-send-fill text-lg"></i>
-                        <span>Kirim Notifikasi Cucian Selesai</span>
-                    </button>
+            {{-- ✅ TOMBOL ISI DATA PESANAN --}}
+            <button onclick="openIsiDataModal()" 
+                    class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
+                <i class="bi bi-pencil-square text-lg"></i> 
+                <span>{{ $dataLengkap ? 'Edit' : 'Isi' }} Data Pesanan</span>
+            </button>
 
-                    <p class="text-xs text-blue-600 mt-2 flex items-center gap-1">
-                        <i class="bi bi-info-circle-fill"></i>
-                        <span>Pelanggan akan menerima notifikasi push melalui aplikasi mobile</span>
+            {{-- ✅ INFO: Data akan otomatis masuk antrian setelah disimpan --}}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-info-circle-fill text-orange-600 mt-0.5"></i>
+                    <p class="text-xs text-yellow-700">
+                        <strong>Info:</strong> Setelah data pesanan disimpan, status akan otomatis berubah menjadi <strong>"Antrian"</strong> dan siap untuk diproses.
                     </p>
                 </div>
-                @endif
+            </div>
 
-
-                {{-- WARNING JIKA BELUM ISI DATA --}}
-                @if(!$dataLengkap && in_array($pesanan->status_transaksi, ['antrian', 'menunggu_konfirmasi', 'dikonfirmasi']))
-                <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                    <div class="flex items-start gap-2">
-                        <i class="bi bi-exclamation-triangle-fill text-amber-600 mt-0.5"></i>
-                        <div class="text-sm text-amber-800">
-                            <p class="font-semibold">Data Pesanan Belum Lengkap</p>
-                            <p class="text-xs mt-1">Silakan isi data pesanan terlebih dahulu sebelum melanjutkan proses.</p>
-                        </div>
+        @elseif($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->driver)
+            {{-- ✅ DRIVER SUDAH ASSIGNED TAPI BELUM SAMPAI --}}
+            <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shrink-0">
+                        <i class="bi bi-person-check-fill text-white text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-yellow-700 mb-1">Driver Pickup Ditugaskan</p>
+                        
+                        <p class="text-sm text-yellow-700">
+                            <i class="bi bi-person-badge"></i> {{ $deliveryPickup->driver->nama_driver }}
+                        </p>
+                        
+                        @if($deliveryPickup->driver->no_hp)
+                        <p class="text-sm text-yellow-700">
+                            <i class="bi bi-telephone"></i> {{ $deliveryPickup->driver->no_hp }}
+                        </p>
+                        @endif
+                        
+                        <p class="text-xs text-orange-600 mt-1">
+                            <i class="bi bi-info-circle"></i> Status: 
+                            <span class="font-semibold">
+                                {{ str_replace('_', ' ', ucwords($deliveryPickup->status, '_')) }}
+                            </span>
+                        </p>
+                        
+                        @if($deliveryPickup->waktu)
+                        <p class="text-xs text-orange-600">
+                            <i class="bi bi-clock"></i> 
+                            {{ \Carbon\Carbon::parse($deliveryPickup->waktu)->format('d M Y, H:i') }}
+                        </p>
+                        @endif
+                        
+                        @if($deliveryPickup->catatan)
+                        <p class="text-xs text-orange-600 mt-2 bg-yellow-100 p-2 rounded">
+                            <i class="bi bi-chat-left-text"></i> {{ $deliveryPickup->catatan }}
+                        </p>
+                        @endif
                     </div>
                 </div>
-                @endif
-
-                {{-- CETAK NOTA --}}
-                <button onclick="window.print()"
-                        class="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2">
-                    <i class="bi bi-printer"></i>
-                    <span>Cetak Nota</span>
-                </button>
+                
+                {{-- ✅ TOMBOL DRIVER SAMPAI --}}
+                <a href="{{ route('admin2.pesanan.online.driver-arrive', $pesanan->id_transaksi) }}" 
+                   class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-yellow-600 transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="bi bi-check-circle-fill"></i> 
+                    <span>Driver Sampai di Laundry</span>
+                </a>
             </div>
+
+        @else
+            {{-- ✅ BELUM ADA DRIVER ATAU DATA TIDAK LENGKAP --}}
+            <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-3">
+                <p class="text-orange-800 font-semibold mb-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Perlu Driver Pickup
+                </p>
+                <p class="text-sm text-orange-700">
+                    Silakan tentukan driver untuk menjemput cucian pelanggan.
+                </p>
+                
+                @if($deliveryPickup && !$deliveryPickup->id_driver)
+                <p class="text-xs text-orange-600 mt-2">
+                    <i class="bi bi-info-circle"></i> Delivery sudah dibuat (ID: {{ $deliveryPickup->id_delivery }}), 
+                    tapi belum ada driver yang ditugaskan.
+                </p>
+                @endif
+                
+                @if($deliveryPickup && $deliveryPickup->id_driver && !$deliveryPickup->driver)
+                <p class="text-xs text-red-600 mt-2">
+                    <i class="bi bi-exclamation-circle"></i> Driver ID {{ $deliveryPickup->id_driver }} 
+                    tidak ditemukan di database. Silakan assign ulang.
+                </p>
+                @endif
+            </div>
+
+            <a href="{{ route('admin2.pesanan.online.list-driver', $pesanan->id_transaksi) }}?from_tab=pickup" 
+               class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
+                <i class="bi bi-truck text-lg"></i>
+                <span>Pilih Driver Pickup</span>
+            </a>
+        @endif
+    @endif
+
+    {{-- ========== STATUS: ANTRIAN ========== --}}
+    @if($pesanan->status_transaksi === 'antrian')
+        {{-- ✅ INFO: Tampilkan info delivery pickup jika ada --}}
+        @if($deliveryPickup && $deliveryPickup->driver)
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+            <p class="text-xs text-gray-600 font-semibold mb-1">
+                <i class="bi bi-truck"></i> Info Pickup:
+            </p>
+            <p class="text-xs text-gray-700">
+                Driver: {{ $deliveryPickup->driver->nama_driver }}
+            </p>
+            @if($deliveryPickup->waktu)
+            <p class="text-xs text-gray-600">
+                Tiba: {{ \Carbon\Carbon::parse($deliveryPickup->waktu)->format('d M Y, H:i') }}
+            </p>
+            @endif
+        </div>
+        @endif
+
+        {{-- Tombol Isi/Edit Data Pesanan --}}
+        <button onclick="openIsiDataModal()" 
+                class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
+            <i class="bi bi-pencil-square text-lg"></i> 
+            <span>{{ $dataLengkap ? 'Edit' : 'Isi' }} Data Pesanan</span>
+        </button>
+        
+        {{-- Warning jika belum lengkap --}}
+        @if(!$dataLengkap)
+        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill text-amber-600 mt-0.5"></i>
+                <div class="text-sm text-amber-800">
+                    <p class="font-semibold">Data Pesanan Belum Lengkap</p>
+                    <p class="text-xs mt-1">Silakan isi data pesanan terlebih dahulu sebelum melanjutkan proses.</p>
+                </div>
+            </div>
+        </div>
+        @else
+        {{-- Tombol Proses hanya muncul jika data lengkap --}}
+        <a href="{{ route('admin2.pesanan.online.proses', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-700 hover:to-pink-700 transition shadow-lg flex items-center justify-center">
+            <i class="bi bi-play-circle-fill"></i> Mulai Proses
+        </a>
+        @endif
+    @endif
+
+    {{-- ========== STATUS: PROSES ========== --}}
+    @if($pesanan->status_transaksi === 'proses')
+        <a href="{{ route('admin2.pesanan.online.selesai_di_cuci', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg flex items-center justify-center">
+            <i class="bi bi-check2-circle"></i> Tandai Selesai Dicuci
+        </a>
+    @endif
+
+    {{-- ========== STATUS: SELESAI_DICUCI ========== --}}
+    @if($pesanan->status_transaksi === 'selesai_dicuci')
+        {{-- Notifikasi FCM --}}
+        <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-yellow-200 rounded-xl p-4">
+            <div class="flex items-start gap-3 mb-3">
+                <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shrink-0">
+                    <i class="bi bi-bell-fill text-white text-lg"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-bold text-yellow-700 mb-1">Cucian Sudah Selesai!</p>
+                    <p class="text-sm text-yellow-700">Kirim notifikasi ke pelanggan bahwa cucian sudah selesai dicuci.</p>
+                </div>
+            </div>
+
+            <button onclick="sendNotificationSelesaiDicuci()" 
+                    id="btnSendNotification"
+                    class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-from-orange-600 to-red-600-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="bi bi-send-fill text-lg"></i>
+                <span>Kirim Notifikasi</span>
+            </button>
+        </div>
+        
+        <hr class="my-3">
+        
+        {{-- Pilih: Antar atau Ambil Sendiri --}}
+        <a href="{{ route('admin2.pesanan.online.siap_di_antar', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-from-orange-600 to-red-600-600 hover:to-from-orange-600 to-red-600-600 transition shadow-lg flex items-center justify-center mb-2">
+            <i class="bi bi-truck"></i> Siap Diantar (Butuh Driver)
+        </a>
+
+        <a href="{{ route('admin2.pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition shadow-lg flex items-center justify-center">
+            <i class="bi bi-shop"></i> Siap Diambil (Pelanggan Ambil)
+        </a>
+    @endif
+
+    {{-- ========== STATUS: SIAP_DI_ANTAR ========== --}}
+    @if($pesanan->status_transaksi === 'siap_di_antar')
+        @if($deliveryAntar && $deliveryAntar->id_driver && $deliveryAntar->driver)
+            {{-- Driver sudah assigned --}}
+            <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
+                        <i class="bi bi-person-check-fill text-white text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-orange-900 mb-1">Driver Delivery Ditugaskan</p>
+                        <p class="text-sm text-orange-700">
+                            <i class="bi bi-person-badge"></i> {{ $deliveryAntar->driver->nama_driver }}
+                        </p>
+                        @if($deliveryAntar->driver->no_hp)
+                        <p class="text-sm text-orange-700">
+                            <i class="bi bi-telephone"></i> {{ $deliveryAntar->driver->no_hp }}
+                        </p>
+                        @endif
+                        <p class="text-xs text-from-orange-600 to-red-600-600 mt-1">
+                            <i class="bi bi-info-circle"></i> Status: {{ str_replace('_', ' ', ucwords($deliveryAntar->status, '_')) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            {{-- Tombol Selesai hanya muncul setelah delivered --}}
+            @if($deliveryAntar->status === 'delivered' || $sudahLunas)
+            <a href="{{ route('admin2.pesanan.online.selesai', $pesanan->id_transaksi) }}" 
+               class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center">
+                <i class="bi bi-check-circle-fill"></i> Selesaikan Pesanan
+            </a>
+            @else
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                <p class="text-yellow-700 font-semibold"><i class="bi bi-hourglass-split"></i> Menunggu Delivery</p>
+                <p class="text-xs text-yellow-600 mt-1">Driver sedang dalam perjalanan...</p>
+            </div>
+            @endif
+        @else
+            {{-- Belum ada driver delivery --}}
+            <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-3">
+                <p class="text-orange-800 font-semibold mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Perlu Driver Delivery</p>
+                <p class="text-sm text-orange-700">Silakan tentukan driver untuk mengantar cucian ke pelanggan.</p>
+            </div>
+
+            <a href="{{ route('admin2.pesanan.online.list-driver', $pesanan->id_transaksi) }}" 
+               class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
+                <i class="bi bi-truck text-lg"></i>
+                <span>Pilih Driver Delivery</span>
+            </a>
+        @endif
+    @endif
+
+    {{-- ========== STATUS: SIAP_DI_AMBIL ========== --}}
+    @if($pesanan->status_transaksi === 'siap_di_ambil')
+        @if($sudahLunas)
+        <a href="{{ route('admin2.pesanan.online.selesai', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center">
+            <i class="bi bi-check-circle-fill"></i> Selesaikan Pesanan
+        </a>
+        @else
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center mb-3">
+            <p class="text-yellow-700 font-semibold"><i class="bi bi-hourglass-split"></i> Menunggu Pengambilan</p>
+            <p class="text-xs text-yellow-600 mt-1">Pelanggan belum mengambil cuciannya</p>
+        </div>
+        @endif
+    @endif
+
+   {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
+    @php
+        // Debug: Cek nilai variabel
+        $debugMetodeBayar = $pesanan->metodeBayar ? $pesanan->metodeBayar->nama_metode_bayar : 'NULL';
+        
+        // Tentukan kapan tombol bukti pembayaran muncul berdasarkan metode bayar
+        $showBuktiPembayaran = false;
+        $labelButton = 'Input Bukti Pembayaran';
+        
+        // ✅ HAPUS PENGECEKAN !$sudahLunas - TOMBOL SELALU MUNCUL
+        if ($isTransfer) {
+            // ✅ TRANSFER: Muncul di antrian, proses, selesai_dicuci
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, ['antrian', 'proses', 'selesai_dicuci']);
+            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
+        } elseif ($isCash) {
+            // ✅ CASH: Muncul di siap_di_antar, siap_di_ambil
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, ['siap_di_antar', 'siap_di_ambil']);
+            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
+        }
+    @endphp
+
+    @if($showBuktiPembayaran)
+        <hr class="my-3">
+        
+        {{-- ✅ INFO BERBEDA UNTUK TRANSFER VS CASH --}}
+        @if($isTransfer)
+            @if($sudahLunas)
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
+                    <div class="text-xs text-green-700">
+                        <p class="font-semibold mb-1">Pembayaran Transfer - Lunas</p>
+                        <p>Pembayaran telah dikonfirmasi dan lunas.</p>
+                    </div>
+                </div>
+            </div>
+            @else
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-info-circle-fill text-orange-600 mt-0.5"></i>
+                    <div class="text-xs text-yellow-700">
+                        <p class="font-semibold mb-1">Metode Transfer</p>
+                        <p>Silakan tunggu bukti transfer dari pelanggan untuk konfirmasi pembayaran.</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+        @elseif($isCash)
+            @if($sudahLunas)
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
+                    <div class="text-xs text-green-700">
+                        <p class="font-semibold mb-1">Pembayaran Cash - Lunas</p>
+                        <p>Pembayaran cash telah dikonfirmasi dan lunas.</p>
+                    </div>
+                </div>
+            </div>
+            @else
+            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-cash-coin text-green-600 mt-0.5 text-lg"></i>
+                    <div class="text-xs text-green-700">
+                        <p class="font-semibold mb-1">Metode Cash/Tunai</p>
+                        <p>Konfirmasi pembayaran cash saat cucian diserahkan ke pelanggan.</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+        @endif
+
+        <a href="{{ route('admin2.pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
+        class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
+            <i class="bi bi-receipt"></i>
+            <span>{{ $labelButton }}</span>
+        </a>
+    @endif
+
+    {{-- CETAK NOTA --}}
+    <button onclick="window.print()"
+            class="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2 mt-3">
+        <i class="bi bi-printer"></i>
+        <span>Cetak Nota</span>
+    </button>
+    </div>
         </div>
     </div>
 </div>
 
-{{-- ================= MODAL ISI DATA PESANAN - IMPROVED ================= --}}
+{{-- MODAL ISI DATA PESANAN --}}
 <div id="isiDataModal"
      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 z-[999] hidden"
      onclick="closeIsiDataModal()">
@@ -402,14 +719,14 @@
          onclick="event.stopPropagation()">
         
         {{-- HEADER --}}
-        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5 flex items-center justify-between shrink-0">
+        <div class="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-5 flex items-center justify-between shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                     <i class="bi bi-pencil-square text-white text-2xl"></i>
                 </div>
                 <div>
                     <h3 class="text-xl font-bold text-white">Isi Data Pesanan</h3>
-                    <p class="text-purple-100 text-sm">ORDER/{{ $pesanan->id_transaksi }}</p>
+                    <p class="text-from-orange-600 to-red-600-100 text-sm">ORDER/{{ $pesanan->id_transaksi }}</p>
                 </div>
             </div>
             <button type="button" onclick="closeIsiDataModal()" 
@@ -427,8 +744,8 @@
 
                 <div class="space-y-5">
                     {{-- ITEMS SECTION --}}
-                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-blue-900 mb-4 flex items-center gap-2">
+                    <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-yellow-200 rounded-xl p-5">
+                        <h4 class="font-bold text-lg text-yellow-700 mb-4 flex items-center gap-2">
                             <i class="bi bi-basket2"></i> Item Pesanan
                         </h4>
 
@@ -437,7 +754,7 @@
                             @php
                                 $subtotal = $d->harga * $d->qty;
                             @endphp
-                            <div class="bg-white border-2 border-blue-100 rounded-xl p-4 hover:border-blue-300 transition">
+                            <div class="bg-white border-2 border-yellow-200 rounded-xl p-4 hover:border-from-orange-600 to-red-600-300 transition">
                                 <div class="flex items-start gap-4">
                                     <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center font-bold text-white shadow-md shrink-0">
                                         {{ $i+1 }}
@@ -456,10 +773,10 @@
                                         
                                         <div>
                                             <label class="block text-sm font-bold text-gray-700 mb-2">
-                                                <i class="bi bi-calculator text-purple-600"></i> Jumlah (Qty) <span class="text-red-500">*</span>
+                                                <i class="bi bi-calculator text-yellow-600"></i> Jumlah (Qty) <span class="text-red-500">*</span>
                                             </label>
                                             <input type="number" name="qty[]" step="0.01" min="0.01" value="{{ $d->qty }}"
-                                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition" 
+                                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-from-orange-600 to-red-600-500 transition" 
                                                    placeholder="0.00"
                                                    required>
                                         </div>
@@ -471,7 +788,7 @@
                         </div>
                     </div>
 
-                    {{-- ✅ BIAYA ONGKIR SECTION - IMPROVED --}}
+                    {{-- BIAYA ONGKIR SECTION --}}
                     <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
                         <h4 class="font-bold text-lg text-orange-900 mb-4 flex items-center gap-2">
                             <i class="bi bi-truck"></i> Biaya Ongkir
@@ -549,22 +866,22 @@
                         </div>
                     </div>
 
-                    {{-- ✅ TANGGAL ESTIMASI SELESAI --}}
-                    <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-teal-900 mb-4 flex items-center gap-2">
+                    {{-- TANGGAL ESTIMASI SELESAI --}}
+                    <div class="bg-gradient-to-r from-yellow-50 to-cyan-50 border-2 border-yellow-200 rounded-xl p-5">
+                        <h4 class="font-bold text-lg text-yellow-600 mb-4 flex items-center gap-2">
                             <i class="bi bi-calendar-check"></i> Estimasi Selesai
                         </h4>
 
                         <div class="mb-4">
                             <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-calendar-event text-teal-600"></i> Tanggal Estimasi <span class="text-red-500">*</span>
+                                <i class="bi bi-calendar-event text-yellow-600"></i> Tanggal Estimasi <span class="text-red-500">*</span>
                             </label>
                             <input type="date" 
                                    name="tgl_estimasi" 
                                    id="tgl_estimasi"
                                    value="{{ $pesanan->tgl_estimasi ?? date('Y-m-d', strtotime('+3 days')) }}"
                                    min="{{ date('Y-m-d') }}"
-                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition"
                                    required>
                         </div>
 
@@ -574,31 +891,31 @@
                             <div class="grid grid-cols-4 gap-2">
                                 <button type="button" 
                                         onclick="setEstimasiDate(1)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-teal-300 rounded-xl hover:bg-teal-50 hover:border-teal-400 transition font-semibold">
-                                    <i class="bi bi-lightning-fill text-teal-600"></i><br>1 Hari
+                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                                    <i class="bi bi-lightning-fill text-yellow-600"></i><br>1 Hari
                                 </button>
                                 <button type="button" 
                                         onclick="setEstimasiDate(2)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-teal-300 rounded-xl hover:bg-teal-50 hover:border-teal-400 transition font-semibold">
-                                    <i class="bi bi-clock text-teal-600"></i><br>2 Hari
+                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                                    <i class="bi bi-clock text-yellow-600"></i><br>2 Hari
                                 </button>
                                 <button type="button" 
                                         onclick="setEstimasiDate(3)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-teal-300 rounded-xl hover:bg-teal-50 hover:border-teal-400 transition font-semibold">
-                                    <i class="bi bi-calendar text-teal-600"></i><br>3 Hari
+                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                                    <i class="bi bi-calendar text-yellow-600"></i><br>3 Hari
                                 </button>
                                 <button type="button" 
                                         onclick="setEstimasiDate(7)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-teal-300 rounded-xl hover:bg-teal-50 hover:border-teal-400 transition font-semibold">
-                                    <i class="bi bi-calendar-week text-teal-600"></i><br>1 Minggu
+                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                                    <i class="bi bi-calendar-week text-yellow-600"></i><br>1 Minggu
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     {{-- UPLOAD FOTO BUKTI CUCIAN --}}
-                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-indigo-900 mb-4 flex items-center gap-2">
+                    <div class="bg-gradient-to-r from-from-orange-600 to-red-600-50 to-from-orange-600 to-red-600-50 border-2 border-orange-200 rounded-xl p-5">
+                        <h4 class="font-bold text-lg text-orange-900 mb-4 flex items-center gap-2">
                             <i class="bi bi-camera"></i> Foto Bukti Cucian <span class="text-sm text-gray-600 font-normal">(Opsional)</span>
                         </h4>
 
@@ -609,8 +926,8 @@
                             <div class="relative inline-block">
                                 <img src="{{ asset('storage/' . $pesanan->foto_bukti) }}" 
                                      alt="Bukti Cucian" 
-                                     class="w-40 h-40 object-cover rounded-xl border-2 border-indigo-200 shadow-md">
-                                <div class="absolute -top-2 -right-2 bg-indigo-600 text-white rounded-full p-2 shadow-lg">
+                                     class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
+                                <div class="absolute -top-2 -right-2 bg-from-orange-600 to-red-600-600 text-white rounded-full p-2 shadow-lg">
                                     <i class="bi bi-check text-sm"></i>
                                 </div>
                             </div>
@@ -619,13 +936,13 @@
 
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-upload text-indigo-600"></i> {{ $pesanan->foto_bukti ? 'Ganti Foto' : 'Upload Foto' }}
+                                <i class="bi bi-upload text-from-orange-600 to-red-600-600"></i> {{ $pesanan->foto_bukti ? 'Ganti Foto' : 'Upload Foto' }}
                             </label>
                             <input type="file" 
                                    name="foto_bukti" 
                                    id="foto_bukti"
                                    accept="image/jpeg,image/jpg,image/png"
-                                   class="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                                   class="w-full px-4 py-3 text-sm border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-from-orange-600 to-red-600-500 transition file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-from-orange-600 to-red-600-200 cursor-pointer">
                             <p class="text-xs text-gray-600 mt-2 flex items-start gap-1">
                                 <i class="bi bi-info-circle mt-0.5"></i>
                                 <span>Format: JPG, JPEG, PNG. Maksimal 2MB.</span>
@@ -635,7 +952,7 @@
                         {{-- Preview Gambar Sebelum Upload --}}
                         <div id="imagePreview" class="mt-4 hidden">
                             <p class="text-sm font-semibold text-gray-700 mb-2">Preview:</p>
-                            <img id="previewImg" src="" alt="Preview" class="w-40 h-40 object-cover rounded-xl border-2 border-indigo-200 shadow-md">
+                            <img id="previewImg" src="" alt="Preview" class="w-40 h-40 object-cover rounded-xl border-2 border-orange-200 shadow-md">
                         </div>
                     </div>
 
@@ -701,7 +1018,7 @@
                 <i class="bi bi-x-circle"></i> Batal
             </button>
             <button type="submit" form="formIsiData"
-                    class="flex-1 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl hover:from-purple-600 hover:to-indigo-600 font-bold shadow-lg hover:shadow-xl transition">
+                    class="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:from-yellow-600 hover:to-orange-600 font-bold shadow-lg hover:shadow-xl transition">
                 <i class="bi bi-save"></i> Simpan Data
             </button>
         </div>
@@ -758,7 +1075,6 @@ function closeAlert() {
     }
 }
 
-// Auto close alert after 5 seconds
 setTimeout(() => {
     closeAlert();
 }, 5000);
@@ -784,7 +1100,6 @@ function closeImageModal() {
     document.body.style.overflow = 'auto';
 }
 
-// ✅ Function untuk toggle ongkir method
 function toggleOngkirMethod() {
     const method = document.querySelector('input[name="ongkir_method"]:checked').value;
     const presetSection = document.getElementById('presetOngkirSection');
@@ -795,21 +1110,10 @@ function toggleOngkirMethod() {
     if (method === 'preset') {
         presetSection.classList.remove('hidden');
         manualSection.classList.add('hidden');
-        // Reset manual input
         ongkirManualInput.value = 0;
     } else {
         presetSection.classList.add('hidden');
         manualSection.classList.remove('hidden');
-        // Reset preset select
-        idBiayaTambahanSelect.value = '';
-    }
-}
-
-// ✅ Function untuk set estimasi date berdasarkan jumlah hari
-function setEstimasiDate(days) {
-    const today = new Date();
-    today.setDate(today.getDate() + days);
-    
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
@@ -829,13 +1133,11 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Preview image sebelum upload
 document.getElementById('foto_bukti')?.addEventListener('change', function(e) {
     const file = e.target.files[0];
     
     if (file) {
-        // Validasi ukuran file (max 2MB)
-        const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+        const maxSize = 2 * 1024 * 1024;
         if (file.size > maxSize) {
             alert('Ukuran file terlalu besar! Maksimal 2MB.');
             e.target.value = '';
@@ -843,7 +1145,6 @@ document.getElementById('foto_bukti')?.addEventListener('change', function(e) {
             return;
         }
 
-        // Validasi tipe file
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         if (!validTypes.includes(file.type)) {
             alert('Format file tidak valid! Gunakan JPG, JPEG, atau PNG.');
@@ -852,7 +1153,6 @@ document.getElementById('foto_bukti')?.addEventListener('change', function(e) {
             return;
         }
 
-        // Show preview
         const reader = new FileReader();
         reader.onload = function(event) {
             document.getElementById('previewImg').src = event.target.result;
@@ -863,19 +1163,15 @@ document.getElementById('foto_bukti')?.addEventListener('change', function(e) {
         document.getElementById('imagePreview').classList.add('hidden');
     }
 });
-script>
-// ✅ GANTI FUNCTION INI DI BAGIAN <script> 
 
 function sendNotificationSelesaiDicuci() {
     const btn = document.getElementById('btnSendNotification');
     const originalContent = btn.innerHTML;
     
-    // Konfirmasi dulu
     if (!confirm('Kirim notifikasi ke pelanggan bahwa cucian sudah selesai dicuci?')) {
         return;
     }
     
-    // Disable button dan show loading
     btn.disabled = true;
     btn.innerHTML = `
         <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -885,28 +1181,44 @@ function sendNotificationSelesaiDicuci() {
         <span>Mengirim...</span>
     `;
     
-    // TODO: IMPLEMENTASI FCM AKAN DITAMBAHKAN NANTI
-    // Sementara simulasi dengan timeout
-    setTimeout(() => {
-        // Success
-        btn.innerHTML = `
-            <i class="bi bi-check-circle-fill text-lg"></i>
-            <span>Notifikasi Terkirim!</span>
-        `;
-        btn.classList.remove('from-blue-500', 'to-indigo-500', 'hover:from-blue-600', 'hover:to-indigo-600');
-        btn.classList.add('from-green-500', 'to-emerald-500');
-        
-        // Show success alert
-        alert('✅ Notifikasi berhasil dikirim ke pelanggan!');
-        
-        // Reset button after 3 seconds
-        setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.classList.remove('from-green-500', 'to-emerald-500');
-            btn.classList.add('from-blue-500', 'to-indigo-500', 'hover:from-blue-600', 'hover:to-indigo-600');
-            btn.disabled = false;
-        }, 3000);
-    }, 2000);
+    fetch('{{ route("admin2.pesanan.online.send-fcm-notification", $pesanan->id_transaksi) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            notification_type: 'selesai_dicuci'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.innerHTML = `
+                <i class="bi bi-check-circle-fill text-lg"></i>
+                <span>Notifikasi Terkirim!</span>
+            `;
+            btn.classList.remove('from-from-orange-600 to-red-600-500', 'to-from-orange-600 to-red-600-500', 'hover:from-from-orange-600 to-red-600-600', 'hover:to-from-orange-600 to-red-600-600');
+            btn.classList.add('from-green-500', 'to-emerald-500');
+            
+            alert('✅ ' + data.message);
+            
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.classList.remove('from-green-500', 'to-emerald-500');
+                btn.classList.add('from-from-orange-600 to-red-600-500', 'to-from-orange-600 to-red-600-500', 'hover:from-from-orange-600 to-red-600-600', 'hover:to-from-orange-600 to-red-600-600');
+                btn.disabled = false;
+            }, 3000);
+        } else {
+            throw new Error(data.message || 'Gagal mengirim notifikasi');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ ' + error.message);
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+    });
 }
 </script>
 

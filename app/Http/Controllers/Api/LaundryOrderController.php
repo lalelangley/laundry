@@ -203,61 +203,84 @@ class LaundryOrderController extends Controller
         ]);
     }
 
-    // ======================
-    // GET INVOICE (ORDER SUDAH ADA HARGA)
-    // ======================
-    public function getInvoice($id)
-    {
-        $order = Transaksi::with([
-            'detail.layanan',
-            'detail.jenis',
-            'detail.parfum',
-            'delivery',
-            'biayaTambahan' // ✅ TAMBAHKAN ONGKIR
-        ])
-        ->where('id_transaksi', $id)
-        ->whereNotNull('total_harga')
-        ->where('total_harga', '>', 0)
-        ->first();
+// GET INVOICE (ORDER SUDAH ADA HARGA) 
+// ====================== 
+public function getInvoice($id) 
+{ 
+    $order = Transaksi::with([ 
+        'detail.layanan', 
+        'detail.jenis', 
+        'detail.parfum', 
+        'delivery', 
+        'biayaTambahan' 
+    ]) 
+    ->where('id_transaksi', $id) 
+    ->whereNotNull('total_harga') 
+    ->where('total_harga', '>', 0) 
+    ->first(); 
 
-        if (!$order) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Invoice belum tersedia atau order tidak ditemukan'
-            ], 404);
-        }
+    if (!$order) { 
+        return response()->json([ 
+            'status' => false, 
+            'message' => 'Invoice belum tersedia atau order tidak ditemukan' 
+        ], 404); 
+    } 
 
-        // ✅ HITUNG SUBTOTAL
-        $subtotal = $order->detail->sum(function($item) {
-            return $item->harga * ($item->qty ?? 1);
-        });
+    /* ========================= 
+     * SUBTOTAL 
+     * ========================= */ 
+    $subtotal = $order->detail->sum(function ($item) { 
+        return $item->harga * ($item->qty ?? 1); 
+    }); 
 
-        // ✅ BIAYA ONGKIR
-        $biayaOngkir = $order->biayaTambahan ? $order->biayaTambahan->biaya : 0;
+    /* ========================= 
+     * BIAYA TAMBAHAN 
+     * ========================= */ 
+    $biayaTambahan = $order->biayaTambahan->biaya ?? 0; 
 
-        return response()->json([
-            'status' => true,
-            'data'   => [
-                'invoice_no'   => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT),
-                'tanggal'      => $order->tgl_transaksi,
-                'pelanggan'    => [
-                    'nama' => $order->nama_pelanggan,
-                    'hp'   => $order->no_hp,
-                ],
-                'items'        => $order->detail,
-                'subtotal'     => $subtotal, // ✅ TAMBAHKAN
-                'biaya_ongkir' => $biayaOngkir, // ✅ TAMBAHKAN
-                'diskon'       => $order->diskon,
-                'tipe_diskon'  => $order->tipe_diskon,
-                'total_bayar'  => $order->total_bayar,
-                'dp'           => $order->dp,
-                'status_bayar' => $order->status_bayar,
-                'delivery'     => $order->delivery,
-                'total_item'   => $order->detail->sum('qty') ?? $order->detail->count(),
-                'tgl_estimasi' => $order->tgl_estimasi, // ✅ TAMBAHKAN ESTIMASI
-            ]
-        ]);
-    }
+    /* ========================= 
+     * DISKON 
+     * ========================= */ 
+    $nominalDiskon = 0; 
+    if ($order->tipe_diskon === 'percent') { 
+        $nominalDiskon = ($subtotal * $order->diskon) / 100; 
+    } elseif ($order->tipe_diskon === 'nominal') { 
+        $nominalDiskon = $order->diskon; 
+    } 
+
+    /* ========================= 
+     * TOTAL 
+     * ========================= */ 
+    $totalBayar = max(0, ($subtotal + $biayaTambahan) - $nominalDiskon); 
+    $totalDibayar = $order->dp ?? 0;
+    $sisaPembayaran = max(0, $totalBayar - $totalDibayar); 
+
+    return response()->json([ 
+        'status' => true, 
+        'data' => [ 
+            'invoice_no' => 'INV-' . str_pad($order->id_transaksi, 6, '0', STR_PAD_LEFT), 
+            'tanggal' => $order->tgl_transaksi, 
+            'pelanggan' => [ 
+                'nama' => $order->nama_pelanggan, 
+                'hp' => $order->no_hp, 
+            ], 
+            'items' => $order->detail, 
+            'subtotal' => $subtotal, 
+            'biaya_tambahan' => $biayaTambahan, 
+            'diskon' => $order->diskon ?? 0, 
+            'tipe_diskon' => $order->tipe_diskon, 
+            'nominal_diskon' => $nominalDiskon,
+            'total_bayar' => $totalBayar,
+            'total_dibayar' => $totalDibayar,
+            'sisa_pembayaran' => $sisaPembayaran,
+            'status_bayar' => $order->status_bayar ?? 'belum_lunas', 
+            'delivery' => $order->delivery, 
+            'total_item' => $order->detail->sum('qty') ?: $order->detail->count(), 
+            'tgl_estimasi' => $order->tgl_estimasi, 
+        ] 
+    ]); 
+}
+
 
     // ======================
     // GET LIST INVOICE (SUDAH ADA HARGA)

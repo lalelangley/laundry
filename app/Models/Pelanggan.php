@@ -33,4 +33,9 @@ class Pelanggan extends Authenticatable
         'email',
         'jk',
     ];
+
+    public function fcmTokens()
+{
+    return $this->hasMany(FcmToken::class, 'pelanggan_id', 'id_pelanggan');
+}
 }
