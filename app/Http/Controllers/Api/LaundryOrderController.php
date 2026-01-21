@@ -213,6 +213,7 @@ return response()->json([
         'delivery'         => $order->delivery,
         'total_item'       => $totalItem,
         'tgl_estimasi'     => $order->tgl_estimasi,
+        'status_transaksi' => $order->status_transaksi,
 
         // ✅ INI FOTONYA
         'foto_bukti' => $order->foto_bukti

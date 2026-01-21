@@ -324,10 +324,74 @@ class UserManagerController extends Controller
         ));
     }
 
-   public function saveHakRole(Request $request)
+// ✅ PERBAIKAN: Ganti method hakRoleAdmin2() dengan ini
+
+public function hakRoleAdmin2()
 {
     $admin = auth('admin')->user();
-    if (!$admin || $admin->role_id != 1) abort(403);
+    
+    // ✅ FIX: Izinkan Admin2 (role_id = 2) akses halaman ini
+    if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+        abort(403, 'Akses ditolak. Hanya Super Admin dan Admin2 yang dapat mengatur hak akses.');
+    }
+    
+    // Default ke role kasir (id = 3)
+    $selectedRoleId = request('role_id') ?? 3;
+    
+    $roles = Role::orderBy('id')->get();
+    
+    // ✅ Tambahkan variable $role untuk view
+    $role = Role::findOrFail($selectedRoleId);
+    
+    // ✅ PERBAIKAN: Filter menu berdasarkan role_id yang dipilih (kasir = 3)
+    $menus = Menu::where('role_id', $selectedRoleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->with(['children' => function ($q) use ($selectedRoleId) {
+            $q->where('status', 1)
+                ->where('role_id', $selectedRoleId)
+                ->orderBy('urutan');
+        }])
+        ->orderBy('urutan')
+        ->get();
+    
+    $permissions = MenuRole::where('role_id', $selectedRoleId)
+        ->get()
+        ->keyBy('menu_id');
+    
+    $menuActions = [
+        'layanan'         => ['view','add','edit','delete'],
+        'satuan'          => ['view','add','edit','delete'],
+        'parfum'          => ['view','add','edit','delete'],
+        'pelanggan'       => ['view','add','edit','delete'],
+        'pengeluaran'     => ['view','add','edit','delete'],
+        'transaksi'       => ['view','edit','delete'],
+        'pesanan_online'  => ['view','edit','delete'],
+        'riwayat'         => ['view','edit','delete'],
+        'metode_bayar'    => ['view','add','delete'],
+        'laporan'         => ['view'],
+        'pengaturan'      => ['view','restore','hapus_backup','password','logout'],
+        'data'            => ['view','restore','hapus_backup','password','logout'],
+    ];
+    
+    return view('admin2.manager.menu-role.hak', compact(
+        'role',           // ✅ Tambahkan ini
+        'roles',
+        'menus',
+        'permissions',
+        'selectedRoleId',
+        'menuActions'
+    ));
+}
+
+  public function saveHakRole(Request $request)
+{
+    $admin = auth('admin')->user();
+    
+    // ✅ Security check
+    if (!$admin || (int)$admin->role_id !== 1) {
+        abort(403, 'Hanya Super Admin yang dapat mengubah hak akses');
+    }
 
     $request->validate([
         'role_id' => 'required|exists:roles,id',
@@ -336,32 +400,119 @@ class UserManagerController extends Controller
 
     $roleId = $request->role_id;
 
+    // ✅ Hapus semua permission role ini dulu
     MenuRole::where('role_id', $roleId)->delete();
 
+    // ✅ Ambil SEMUA menu (parent + child) yang sesuai dengan role
     $allMenus = Menu::where('role_id', $roleId)
         ->where('status', 1)
-        ->whereNull('parent_id')
+        ->get(); // ✅ PERBAIKAN: Ambil semua, bukan hanya parent
+
+    foreach ($allMenus as $menu) {
+        $menuId = $menu->id;
+        $menuData = $request->menus[$menuId] ?? null;
+
+        // ✅ Default inactive jika tidak ada data
+        if (!$menuData) {
+            MenuRole::create([
+                'role_id'    => $roleId,
+                'menu_id'    => $menuId,
+                'is_active'  => false,
+                'can_view'   => false,
+                'can_add'    => false,
+                'can_edit'   => false,
+                'can_delete' => false,
+                'can_cancel' => false,
+                'can_change_password' => false,
+                'can_restore_data' => false,
+                'show_delete_backup' => false,
+                'show_logout' => false,
+                'can_access_settings' => false,
+            ]);
+            continue;
+        }
+
+        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
+        $perms = $menuData['permissions'] ?? [];
+
+        MenuRole::create([
+            'role_id'    => $roleId,
+            'menu_id'    => $menuId,
+            'is_active'  => $isActive,
+            'can_view'   => in_array('view', $perms),
+            'can_add'    => in_array('add', $perms),
+            'can_edit'   => in_array('edit', $perms),
+            'can_delete' => in_array('delete', $perms),
+            'can_cancel' => false,
+            'can_change_password' => false,
+            'can_restore_data' => false,
+            'show_delete_backup' => false,
+            'show_logout' => true, // ✅ Default show logout
+            'can_access_settings' => false,
+        ]);
+    }
+
+    return back()->with('success', 'Hak akses role berhasil disimpan');
+}
+
+public function saveHakRoleAdmin2(Request $request)
+{
+    $admin = auth('admin')->user();
+    
+    // ✅ Security check - Admin2 (role_id = 2)
+    if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+        abort(403, 'Anda tidak memiliki izin untuk mengubah hak akses kasir');
+    }
+
+    $request->validate([
+        'menus' => 'array',
+    ]);
+
+    // ✅ Admin2 hanya bisa edit kasir (role_id = 3)
+    $roleId = 3;
+
+    // Hapus semua permission kasir
+    MenuRole::where('role_id', $roleId)->delete();
+
+    // Ambil semua menu kasir
+    $allMenus = Menu::where('role_id', $roleId)
+        ->where('status', 1)
         ->get();
 
     foreach ($allMenus as $menu) {
         $menuId = $menu->id;
         $menuData = $request->menus[$menuId] ?? null;
 
-        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
+        if (!$menuData) {
+            MenuRole::create([
+                'role_id'    => $roleId,
+                'menu_id'    => $menuId,
+                'is_active'  => false,
+                'can_view'   => false,
+                'can_add'    => false,
+                'can_edit'   => false,
+                'can_delete' => false,
+                'can_cancel' => false,
+                'can_change_password' => false,
+                'can_restore_data' => false,
+                'show_delete_backup' => false,
+                'show_logout' => false,
+                'can_access_settings' => false,
+            ]);
+            continue;
+        }
 
+        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
         $perms = $menuData['permissions'] ?? [];
 
         MenuRole::create([
             'role_id'    => $roleId,
             'menu_id'    => $menuId,
-            
             'is_active'  => $isActive,
-            
             'can_view'   => in_array('view', $perms),
             'can_add'    => in_array('add', $perms),
             'can_edit'   => in_array('edit', $perms),
             'can_delete' => in_array('delete', $perms),
-            
             'can_cancel' => false,
             'can_change_password' => false,
             'can_restore_data' => false,
@@ -371,7 +522,7 @@ class UserManagerController extends Controller
         ]);
     }
 
-    return back()->with('success', 'Hak akses role berhasil disimpan');
+    return back()->with('success', 'Hak akses kasir berhasil disimpan');
 }
 
     public function aksesUser($type, $id)

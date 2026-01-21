@@ -55,7 +55,7 @@ class PaymentController extends Controller
             Pembayaran::create([
                 'id_transaksi' => $transaksi->id_transaksi,
                 'id_metode_bayar' => $request->id_metode_bayar,
-                'tipe_pembayaran' => $metode === 'Cash' ? 'dp' : 'lunas',
+                'tipe_pembayaran' => $metode === 'Cash' ? 'lunas' : 'lunas',
                 'nominal' => $request->nominal ?? 0,
                 'foto_bukti' => $fotoPath,
                 'keterangan' => $request->keterangan,
