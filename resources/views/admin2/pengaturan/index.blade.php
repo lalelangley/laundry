@@ -148,7 +148,6 @@
             </p>
         </div>
     </div>
-
 </div>
 
 {{-- BUTTON SIMPAN FIXED --}}
@@ -195,20 +194,6 @@
     </div>
 </div>
 
-{{-- POPUP NO ACCESS --}}
-<div id="popupNoAccess" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-7 text-center animate__animated animate__shakeX">
-        <div class="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-5">
-            <i class="bi bi-shield-x text-white text-5xl"></i>
-        </div>
-        <h1 class="text-2xl font-bold mb-2 text-red-600">Akses Ditolak</h1>
-        <p class="text-gray-600 mb-6">Anda tidak memiliki izin untuk melakukan aksi ini</p>
-        <button id="btnCloseNoAccess" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
-            Tutup
-        </button>
-    </div>
-</div>
-
 @endsection
 
 @section('scripts')
@@ -248,21 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     /* ===============================
-       NO ACCESS POPUP
-    =============================== */
-    const popupNoAccess = document.getElementById('popupNoAccess');
-    const btnCloseNoAccess = document.getElementById('btnCloseNoAccess');
-    
-    function showNoAccessPopup() {
-        popupNoAccess.classList.remove('hidden');
-    }
-    
-    btnCloseNoAccess.addEventListener('click', () => {
-        popupNoAccess.classList.add('hidden');
-    });
-
-    /* ===============================
-       SIMPAN PENGATURAN
+       SIMPAN PENGATURAN - FIXED ERROR 403
     =============================== */
     const btnSimpan = document.getElementById('btnSimpanPengaturan');
     const popupLoading = document.getElementById('popupLoading');
@@ -276,46 +247,62 @@ document.addEventListener("DOMContentLoaded", () => {
         const alamatOutlet = document.getElementById('alamatOutlet').value.trim();
 
         if (!namaOutlet || !alamatOutlet) {
-            alert('Nama & alamat outlet wajib diisi');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Perhatian!',
+                    text: 'Nama & alamat outlet wajib diisi',
+                    confirmButtonColor: '#f59e0b'
+                });
+            } else {
+                alert('Nama & alamat outlet wajib diisi');
+            }
             return;
         }
 
         loadingMessage.textContent = 'Menyimpan pengaturan...';
         popupLoading.classList.remove('hidden');
 
-        try {
-            const formData = new FormData();
-            formData.append('nama_outlet', namaOutlet);
-            formData.append('alamat_outlet', alamatOutlet);
-            if (fotoOutlet) formData.append('foto_outlet', fotoOutlet);
+        const formData = new FormData();
+        formData.append('nama_outlet', namaOutlet);
+        formData.append('alamat_outlet', alamatOutlet);
+        if (fotoOutlet) {
+            formData.append('foto_outlet', fotoOutlet);
+        }
 
-            const res = await fetch("{{ route('admin2.pengaturan.update') }}", {
-                method: "POST",
-                headers: {
-                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                },
-                body: formData
-            });
+        // ✅ MENGGUNAKAN GLOBAL ERROR HANDLER
+        const data = await fetchWithErrorHandling("{{ route('admin2.pengaturan.update') }}", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: formData
+        });
 
-            const data = await res.json();
+        popupLoading.classList.add('hidden');
 
-            popupLoading.classList.add('hidden');
-            
-            if (data.status) {
-                successMessage.textContent = 'Pengaturan telah disimpan';
-                popupSuccess.classList.remove('hidden');
+        if (!data) return; // Error sudah ditangani oleh global handler
+
+        if (data.status) {
+            successMessage.textContent = data.message || 'Pengaturan telah disimpan';
+            popupSuccess.classList.remove('hidden');
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: data.message || 'Gagal menyimpan pengaturan',
+                    confirmButtonColor: '#ef4444'
+                });
             } else {
-                alert('Gagal menyimpan pengaturan');
+                alert(data.message || 'Gagal menyimpan pengaturan');
             }
-
-        } catch (e) {
-            popupLoading.classList.add('hidden');
-            alert('Gagal menyimpan pengaturan: ' + e.message);
         }
     });
 
     btnCloseSuccess.addEventListener('click', () => {
         popupSuccess.classList.add('hidden');
+        location.reload(); // Reload untuk update gambar
     });
 
     /* ===============================
@@ -327,7 +314,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const timestamp = new Date().getTime();
             const res = await fetch("{{ route('admin2.pengaturan.backups.list') }}?t=" + timestamp);
-            console.log('📥 Response status:', res.status);
+            
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
             
             const data = await res.json();
             console.log('📦 Data received:', data);
@@ -336,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const listContainer = document.getElementById('backupListContainer');
             
             if (!container || !listContainer) {
-                console.error('❌ Element backupList atau backupListContainer tidak ditemukan!');
+                console.error('❌ Element tidak ditemukan!');
                 return;
             }
             
@@ -347,15 +337,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 listContainer.classList.remove('hidden');
                 container.innerHTML = '';
                 
-                data.backups.forEach((backup, index) => {
-                    console.log(`➕ Backup ${index + 1}:`, backup.filename);
-                    
+                data.backups.forEach(backup => {
                     const div = document.createElement('div');
                     div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition';
                     
                     // ✅ BUILD HTML WITH CONDITIONAL DELETE BUTTON
                     let actionsHTML = `
-                        <a href="{{ url('admin2/pengaturan/backups/download') }}/${backup.filename}" 
+                        <a href="{{ url('kasir/pengaturan/backups/download') }}/${backup.filename}" 
                            class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1"
                            download>
                             <i class="bi bi-download"></i>
@@ -386,8 +374,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     container.appendChild(div);
                 });
                 
-                console.log('✅ Total backup di DOM:', container.children.length);
-                
             } else {
                 console.log('⚠️ Tidak ada backup');
                 listContainer.classList.add('hidden');
@@ -397,17 +383,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-   /* ===============================
-   DELETE BACKUP FUNCTION
+/* ===============================
+   DELETE BACKUP FUNCTION - FIXED
 =============================== */
 window.deleteBackup = async function(filename) {
     // ✅ CHECK PERMISSION
     if (!permissions.can_delete_backup) {
-        showNoAccessPopup();
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak',
+                text: 'Anda tidak memiliki izin untuk menghapus backup',
+                confirmButtonColor: '#ef4444'
+            });
+        }
         return;
     }
     
-    Swal.fire({
+    console.log('🗑️ Deleting backup:', filename);
+    
+    const result = await Swal.fire({
         title: 'Hapus Backup?',
         html: `
             <div class="text-left">
@@ -439,56 +434,64 @@ window.deleteBackup = async function(filename) {
             confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
             cancelButton: 'rounded-xl px-6 py-3 font-bold'
         }
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            // Show loading
-            Swal.fire({
-                title: 'Menghapus...',
-                html: 'Mohon tunggu sebentar',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            try {
-                const res = await fetch("{{ url('admin2/pengaturan/backups/delete') }}/" + filename, {
-                    method: "DELETE",
-                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-                });
-                
-                const data = await res.json();
-                
-                if (data.status) {
-                    await loadBackupList();
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: 'Backup berhasil dihapus',
-                        confirmButtonColor: '#22c55e',
-                        timer: 2000,
-                        timerProgressBar: true
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal!',
-                        text: 'Gagal menghapus backup: ' + (data.message || 'Unknown error'),
-                        confirmButtonColor: '#ef4444'
-                    });
-                }
-            } catch (e) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan: ' + e.message,
-                    confirmButtonColor: '#ef4444'
-                });
-            }
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    // Show loading
+    Swal.fire({
+        title: 'Menghapus...',
+        html: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
     });
+    
+    // Generate delete URL
+    let deleteUrl;
+    try {
+        deleteUrl = "{{ route('admin2.pengaturan.backups.delete', ['filename' => '__FILENAME__']) }}".replace('__FILENAME__', filename);
+    } catch (e) {
+        const baseUrl = window.location.origin;
+        deleteUrl = `${baseUrl}/admin2/pengaturan/backups/delete/${filename}`;
+    }
+    
+    console.log('🗑️ Delete URL:', deleteUrl);
+    
+    // ✅ MENGGUNAKAN GLOBAL ERROR HANDLER
+    const data = await fetchWithErrorHandling(deleteUrl, {
+        method: "DELETE",
+        headers: { 
+            "X-CSRF-TOKEN": "{{ csrf_token() }}",
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+    });
+    
+    if (!data) return; // Error sudah ditangani oleh global handler
+    
+    if (data.status) {
+        console.log('✅ Delete successful, refreshing list...');
+        await loadBackupList();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: 'Backup berhasil dihapus',
+            confirmButtonColor: '#22c55e',
+            timer: 2000,
+            timerProgressBar: true
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: data.message || 'Gagal menghapus backup',
+            confirmButtonColor: '#ef4444'
+        });
+    }
 };
 
     /* ===============================
@@ -499,42 +502,53 @@ window.deleteBackup = async function(filename) {
         btnBackup.addEventListener('click', async () => {
             // ✅ CHECK PERMISSION
             if (!permissions.can_backup) {
-                showNoAccessPopup();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Akses Ditolak',
+                        text: 'Anda tidak memiliki izin untuk membuat backup',
+                        confirmButtonColor: '#ef4444'
+                    });
+                } else {
+                    alert('⛔ Akses Ditolak\n\nAnda tidak memiliki izin untuk membuat backup');
+                }
                 return;
             }
             
             loadingMessage.textContent = 'Membuat backup...';
             popupLoading.classList.remove('hidden');
             
-            try {
-                const res = await fetch("{{ route('admin2.pengaturan.backup') }}", {
-                    method: "POST",
-                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-                });
-                
-                const data = await res.json();
-                console.log('🔥 Backup response:', data);
-                
-                popupLoading.classList.add('hidden');
-                
-                if (data.status) {
-                    console.log('⏳ Menunggu 2 detik sebelum refresh list...');
-                    
-                    setTimeout(async () => {
-                        console.log('🔄 Memulai refresh list backup...');
-                        await loadBackupList();
-                        console.log('✅ Refresh selesai!');
-                        
-                        document.getElementById('backupTitle').textContent = 'Backup Berhasil!';
-                        document.getElementById('backupMessage').textContent = 'Data berhasil di-backup!';
-                        document.getElementById('popupBackup').classList.remove('hidden');
-                    }, 2000);
+            // ✅ MENGGUNAKAN GLOBAL ERROR HANDLER
+            const data = await fetchWithErrorHandling("{{ route('admin2.pengaturan.backup') }}", {
+                method: "POST",
+                headers: { 
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json"
+                }
+            });
+            
+            popupLoading.classList.add('hidden');
+            
+            if (!data) return; // Error sudah ditangani oleh global handler
+            
+            if (data.status) {
+                setTimeout(async () => {
+                    await loadBackupList();
+                    document.getElementById('backupTitle').textContent = 'Backup Berhasil!';
+                    document.getElementById('backupMessage').textContent = data.message || 'Data berhasil di-backup!';
+                    document.getElementById('popupBackup').classList.remove('hidden');
+                }, 2000);
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Backup Gagal!',
+                        text: data.message || 'Gagal membuat backup',
+                        confirmButtonColor: '#ef4444'
+                    });
                 } else {
                     alert('Backup gagal: ' + data.message);
                 }
-            } catch (e) {
-                popupLoading.classList.add('hidden');
-                alert('Error: ' + e.message);
             }
         });
     }
@@ -544,35 +558,68 @@ window.deleteBackup = async function(filename) {
         btnRestore.addEventListener('click', async () => {
             // ✅ CHECK PERMISSION
             if (!permissions.can_restore) {
-                showNoAccessPopup();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Akses Ditolak',
+                        text: 'Anda tidak memiliki izin untuk restore database',
+                        confirmButtonColor: '#ef4444'
+                    });
+                } else {
+                    alert('⛔ Akses Ditolak\n\nAnda tidak memiliki izin untuk restore database');
+                }
                 return;
             }
             
-            if (!confirm('Restore database ke backup terakhir?\n\n⚠️ Data saat ini akan diganti!')) return;
+            // ✅ CONFIRMATION
+            if (typeof Swal !== 'undefined') {
+                const result = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Konfirmasi Restore',
+                    html: 'Restore database ke backup terakhir?<br><br><strong>⚠️ Data saat ini akan diganti!</strong>',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Ya, Restore',
+                    cancelButtonText: 'Batal'
+                });
+                
+                if (!result.isConfirmed) return;
+            } else {
+                if (!confirm('Restore database ke backup terakhir?\n\n⚠️ Data saat ini akan diganti!')) return;
+            }
             
             loadingMessage.textContent = 'Melakukan restore...';
             popupLoading.classList.remove('hidden');
             
-            try {
-                const res = await fetch("{{ route('admin2.pengaturan.restore') }}", {
-                    method: "POST",
-                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
-                });
-                
-                const data = await res.json();
-                
-                popupLoading.classList.add('hidden');
-                
-                if (data.status) {
-                    document.getElementById('backupTitle').textContent = 'Restore Berhasil!';
-                    document.getElementById('backupMessage').textContent = 'Database berhasil dipulihkan!';
-                    document.getElementById('popupBackup').classList.remove('hidden');
+            // ✅ MENGGUNAKAN GLOBAL ERROR HANDLER
+            const data = await fetchWithErrorHandling("{{ route('admin2.pengaturan.restore') }}", {
+                method: "POST",
+                headers: { 
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                    "Content-Type": "application/json"
+                }
+            });
+            
+            popupLoading.classList.add('hidden');
+            
+            if (!data) return; // Error sudah ditangani oleh global handler
+            
+            if (data.status) {
+                document.getElementById('backupTitle').textContent = 'Restore Berhasil!';
+                document.getElementById('backupMessage').textContent = data.message || 'Database berhasil dipulihkan!';
+                document.getElementById('popupBackup').classList.remove('hidden');
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Restore Gagal!',
+                        text: data.message || 'Gagal restore database',
+                        confirmButtonColor: '#ef4444'
+                    });
                 } else {
                     alert('Restore gagal: ' + data.message);
                 }
-            } catch (e) {
-                popupLoading.classList.add('hidden');
-                alert('Error: ' + e.message);
             }
         });
     }
@@ -614,7 +661,8 @@ window.deleteBackup = async function(filename) {
             popupLoading.classList.remove('hidden');
             modalOmzet.classList.add('hidden');
 
-            const res = await fetch("{{ route('admin2.pengaturan.omzet') }}", {
+            // ✅ MENGGUNAKAN GLOBAL ERROR HANDLER
+            const data = await fetchWithErrorHandling("{{ route('admin2.pengaturan.omzet') }}", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -623,35 +671,52 @@ window.deleteBackup = async function(filename) {
                 body: JSON.stringify({ hitung_omzet_dari: selectedOmzet })
             });
             
-            const data = await res.json();
-
             popupLoading.classList.add('hidden');
+            
+            if (!data) return; // Error sudah ditangani oleh global handler
             
             if (data.status) {
                 successMessage.textContent = 'Pengaturan omzet disimpan!';
                 popupSuccess.classList.remove('hidden');
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: data.message || 'Gagal menyimpan setting omzet',
+                        confirmButtonColor: '#ef4444'
+                    });
+                } else {
+                    alert(data.message || 'Gagal menyimpan setting omzet');
+                }
             }
         });
-
-    /* ===============================
-       CHANGE PASSWORD HANDLER
-    =============================== */
-    const btnChangePassword = document.getElementById('btnChangePassword');
-    if (btnChangePassword) {
-        btnChangePassword.addEventListener('click', () => {
-            // TODO: Implement change password modal/page
-            alert('Fitur ganti password akan segera ditambahkan');
-        });
-    }
 
     /* ===============================
        LOGOUT HANDLER
     =============================== */
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            if (confirm('Apakah Anda yakin ingin keluar?')) {
-                window.location.href = "{{ route('admin2.logout') }}";
+        btnLogout.addEventListener('click', async () => {
+            if (typeof Swal !== 'undefined') {
+                const result = await Swal.fire({
+                    icon: 'question',
+                    title: 'Konfirmasi Logout',
+                    text: 'Apakah Anda yakin ingin keluar?',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Ya, Logout',
+                    cancelButtonText: 'Batal'
+                });
+                
+                if (result.isConfirmed) {
+                    window.location.href = "{{ route('admin2.logout') }}";
+                }
+            } else {
+                if (confirm('Apakah Anda yakin ingin keluar?')) {
+                    window.location.href = "{{ route('admin2.logout') }}";
+                }
             }
         });
     }

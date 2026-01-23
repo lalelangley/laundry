@@ -280,49 +280,55 @@ class UserManagerController extends Controller
     }
 
     public function hakRole()
-    {
-        $admin = auth('admin')->user();
-        if (!$admin || $admin->role_id != 1) abort(403);
+{
+    $admin = auth('admin')->user();
+    if (!$admin || $admin->role_id != 1) abort(403);
 
-        $selectedRoleId = request('role_id') ?? 1;
+    $selectedRoleId = request('role_id') ?? 1;
 
-        $roles = Role::orderBy('id')->get();
+    $roles = Role::orderBy('id')->get();
 
-        $menus = Menu::where('role_id', $selectedRoleId)
-            ->where('status', 1)
-            ->whereNull('parent_id')
-            ->with(['children' => function ($q) use ($selectedRoleId) {
-                $q->where('status', 1)
-                  ->where('role_id', $selectedRoleId)
-                  ->orderBy('urutan');
-            }])
-            ->orderBy('urutan')
-            ->get();
+    $menus = Menu::where('role_id', $selectedRoleId)
+        ->where('status', 1)
+        ->whereNull('parent_id')
+        ->with(['children' => function ($q) use ($selectedRoleId) {
+            $q->where('status', 1)
+              ->where('role_id', $selectedRoleId)
+              ->orderBy('urutan');
+        }])
+        ->orderBy('urutan')
+        ->get();
 
-        $permissions = MenuRole::where('role_id', $selectedRoleId)
-            ->get()
-            ->keyBy('menu_id');
+    $permissions = MenuRole::where('role_id', $selectedRoleId)
+        ->get()
+        ->keyBy('menu_id');
 
-        $menuActions = [
-            'layanan'       => ['view','add','edit','delete'],
-            'satuan'        => ['view','add','edit','delete'],
-            'parfum'        => ['view','add','edit','delete'],
-            'pelanggan'     => ['view','add','edit','delete'],
-            'pengeluaran'   => ['view','add','edit','delete'],
-            'transaksi'     => ['view','edit','delete'],
-            'metode-bayar'  => ['view','add','edit','delete'],
-            'laporan'       => ['view'],
-            'data'          => ['view','edit','delete'],
-        ];
+    // ✅ PERBAIKAN: Tambahkan semua permission actions
+    $menuActions = [
+        'layanan'         => ['view','add','edit','delete'],
+        'satuan'          => ['view','add','edit','delete'],
+        'parfum'          => ['view','add','edit','delete'],
+        'pelanggan'       => ['view','add','edit','delete'],
+        'pengeluaran'     => ['view','add','edit','delete'],
+        'transaksi'       => ['view','edit','delete'],
+        'pesanan_online'  => ['view','edit','delete'],
+         'riwayat'         => ['view','add','edit','delete'], // ✅ TAMBAHKAN 'add'
+        'metode_bayar'    => ['view','add','delete'],
+        'laporan'         => ['view'],
+        'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'], // ✅ LENGKAP!
+        'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
+        'user_manager'    => ['view','add','edit','delete'],
+    ];
 
-        return view('manager.menu-role.hak', compact(
-            'roles',
-            'menus',
-            'permissions',
-            'selectedRoleId',
-            'menuActions'
-        ));
-    }
+    return view('manager.menu-role.hak', compact(
+        'roles',
+        'menus',
+        'permissions',
+        'selectedRoleId',
+        'menuActions'
+    ));
+}
+
 
 // ✅ PERBAIKAN: Ganti method hakRoleAdmin2() dengan ini
 
@@ -359,6 +365,7 @@ public function hakRoleAdmin2()
         ->get()
         ->keyBy('menu_id');
     
+    // ✅ PERBAIKAN: Tambahkan semua permission untuk pengaturan
     $menuActions = [
         'layanan'         => ['view','add','edit','delete'],
         'satuan'          => ['view','add','edit','delete'],
@@ -367,15 +374,15 @@ public function hakRoleAdmin2()
         'pengeluaran'     => ['view','add','edit','delete'],
         'transaksi'       => ['view','edit','delete'],
         'pesanan_online'  => ['view','edit','delete'],
-        'riwayat'         => ['view','edit','delete'],
+        'riwayat'         => ['view','add','edit','delete'], // ✅ TAMBAHKAN 'add'
         'metode_bayar'    => ['view','add','delete'],
         'laporan'         => ['view'],
-        'pengaturan'      => ['view','restore','hapus_backup','password','logout'],
-        'data'            => ['view','restore','hapus_backup','password','logout'],
+        'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'], // ✅ LENGKAP!
+        'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
     ];
     
     return view('admin2.manager.menu-role.hak', compact(
-        'role',           // ✅ Tambahkan ini
+        'role',
         'roles',
         'menus',
         'permissions',
@@ -384,11 +391,12 @@ public function hakRoleAdmin2()
     ));
 }
 
+
   public function saveHakRole(Request $request)
 {
     $admin = auth('admin')->user();
     
-    // ✅ Security check
+    // ✅ Security check - Hanya Super Admin
     if (!$admin || (int)$admin->role_id !== 1) {
         abort(403, 'Hanya Super Admin yang dapat mengubah hak akses');
     }
@@ -406,7 +414,7 @@ public function hakRoleAdmin2()
     // ✅ Ambil SEMUA menu (parent + child) yang sesuai dengan role
     $allMenus = Menu::where('role_id', $roleId)
         ->where('status', 1)
-        ->get(); // ✅ PERBAIKAN: Ambil semua, bukan hanya parent
+        ->get();
 
     foreach ($allMenus as $menu) {
         $menuId = $menu->id;
@@ -435,6 +443,7 @@ public function hakRoleAdmin2()
         $isActive = isset($menuData['active']) && $menuData['active'] == 1;
         $perms = $menuData['permissions'] ?? [];
 
+        // ✅ PERBAIKAN: Handle semua permission termasuk special permissions
         MenuRole::create([
             'role_id'    => $roleId,
             'menu_id'    => $menuId,
@@ -443,17 +452,18 @@ public function hakRoleAdmin2()
             'can_add'    => in_array('add', $perms),
             'can_edit'   => in_array('edit', $perms),
             'can_delete' => in_array('delete', $perms),
-            'can_cancel' => false,
-            'can_change_password' => false,
-            'can_restore_data' => false,
-            'show_delete_backup' => false,
-            'show_logout' => true, // ✅ Default show logout
-            'can_access_settings' => false,
+            'can_cancel' => in_array('cancel', $perms),
+            'can_change_password' => in_array('password', $perms),
+            'can_restore_data' => in_array('restore', $perms),
+            'show_delete_backup' => in_array('hapus_backup', $perms),
+            'show_logout' => in_array('logout', $perms),
+            'can_access_settings' => in_array('view', $perms),
         ]);
     }
 
     return back()->with('success', 'Hak akses role berhasil disimpan');
 }
+
 
 public function saveHakRoleAdmin2(Request $request)
 {
@@ -505,6 +515,7 @@ public function saveHakRoleAdmin2(Request $request)
         $isActive = isset($menuData['active']) && $menuData['active'] == 1;
         $perms = $menuData['permissions'] ?? [];
 
+        // ✅ PERBAIKAN: Handle special permissions untuk pengaturan
         MenuRole::create([
             'role_id'    => $roleId,
             'menu_id'    => $menuId,
@@ -513,12 +524,12 @@ public function saveHakRoleAdmin2(Request $request)
             'can_add'    => in_array('add', $perms),
             'can_edit'   => in_array('edit', $perms),
             'can_delete' => in_array('delete', $perms),
-            'can_cancel' => false,
-            'can_change_password' => false,
-            'can_restore_data' => false,
-            'show_delete_backup' => false,
-            'show_logout' => true,
-            'can_access_settings' => false,
+            'can_cancel' => in_array('cancel', $perms),
+            'can_change_password' => in_array('password', $perms),
+            'can_restore_data' => in_array('restore', $perms),
+            'show_delete_backup' => in_array('hapus_backup', $perms),
+            'show_logout' => in_array('logout', $perms),
+            'can_access_settings' => in_array('view', $perms),
         ]);
     }
 
@@ -1363,4 +1374,162 @@ public function saveHakRoleAdmin2(Request $request)
     
 }
 
+// =============================
+// QUICK SAVE HAK ROLE - SUPER ADMIN
+// =============================
+public function quickSaveHakRole(Request $request)
+{
+    try {
+        $admin = auth('admin')->user();
+        
+        // ✅ Security check - Hanya Super Admin
+        if (!$admin || (int)$admin->role_id !== 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Hanya Super Admin yang dapat mengubah hak akses.'
+            ], 403);
+        }
+
+        $request->validate([
+            'role_id' => 'required|exists:roles,id',
+            'menus' => 'required|array',
+        ]);
+
+        $roleId = $request->role_id;
+        
+        \Log::info('Quick Save Request (Super Admin):', [
+            'admin_id' => $admin->id_admin,
+            'role_id' => $roleId,
+            'menus' => $request->menus
+        ]);
+
+        foreach ($request->menus as $menuId => $data) {
+            $isActive = isset($data['active']) && $data['active'] == 1;
+            $permissions = $data['permissions'] ?? [];
+
+            \Log::info("Processing menu {$menuId}:", [
+                'is_active' => $isActive,
+                'permissions' => $permissions
+            ]);
+
+            // ✅ FIXED: Ganti 'menu_role_permissions' ke 'menu_role'
+            \DB::table('menu_role')->updateOrInsert(
+                [
+                    'role_id' => $roleId,
+                    'menu_id' => $menuId
+                ],
+                [
+                    'is_active' => $isActive,
+                    'can_view' => in_array('view', $permissions),
+                    'can_add' => in_array('add', $permissions),
+                    'can_edit' => in_array('edit', $permissions),
+                    'can_delete' => in_array('delete', $permissions),
+                    'can_cancel' => in_array('cancel', $permissions),
+                    'can_change_password' => in_array('password', $permissions),
+                    'can_restore_data' => in_array('restore', $permissions),
+                    'show_delete_backup' => in_array('hapus_backup', $permissions),
+                    'show_logout' => in_array('logout', $permissions),
+                    'can_access_settings' => in_array('view', $permissions),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
+        \Log::info('Quick save successful (Super Admin)');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hak akses berhasil disimpan'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Quick save error (Super Admin):', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+// =============================
+// QUICK SAVE HAK ROLE - ADMIN2
+// =============================
+public function quickSaveHakRoleAdmin2(Request $request)
+{
+    try {
+        $admin = auth('admin')->user();
+        
+        // ✅ Security check - Admin2 atau Super Admin
+        if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak'
+            ], 403);
+        }
+
+        // Admin2 hanya bisa edit kasir (role_id = 3)
+        $roleId = 3;
+        
+        \Log::info('Quick Save Request (Admin2):', [
+            'admin_id' => $admin->id_admin,
+            'role_id' => $roleId,
+            'menus' => $request->menus
+        ]);
+
+        foreach ($request->menus as $menuId => $data) {
+            $isActive = isset($data['active']) && $data['active'] == 1;
+            $permissions = $data['permissions'] ?? [];
+
+            \Log::info("Processing menu {$menuId}:", [
+                'is_active' => $isActive,
+                'permissions' => $permissions
+            ]);
+
+            // ✅ FIXED: Ganti 'menu_role_permissions' ke 'menu_role'
+            \DB::table('menu_role')->updateOrInsert(
+                [
+                    'role_id' => $roleId,
+                    'menu_id' => $menuId
+                ],
+                [
+                    'is_active' => $isActive,
+                    'can_view' => in_array('view', $permissions),
+                    'can_add' => in_array('add', $permissions),
+                    'can_edit' => in_array('edit', $permissions),
+                    'can_delete' => in_array('delete', $permissions),
+                    'can_cancel' => in_array('cancel', $permissions),
+                    'can_change_password' => in_array('password', $permissions),
+                    'can_restore_data' => in_array('restore', $permissions),
+                    'show_delete_backup' => in_array('hapus_backup', $permissions),
+                    'show_logout' => in_array('logout', $permissions),
+                    'can_access_settings' => in_array('view', $permissions),
+                    'updated_at' => now()
+                ]
+            );
+        }
+
+        \Log::info('Quick save successful (Admin2)');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hak akses kasir berhasil disimpan'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Quick save error (Admin2):', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

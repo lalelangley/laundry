@@ -26,18 +26,16 @@ class TransaksiExport implements FromCollection, WithHeadings, WithMapping, With
     }
 
     /**
-     * ✅ Collection dengan handling NULL values pada tanggal
+     * ✅ Collection dengan filter yang DIPERBAIKI
      */
     public function collection()
     {
-        $query = Transaksi::query()
-            ->select('transaksi.*')
-            ->where('status_transaksi', 'selesai');
+        $query = Transaksi::query()->select('transaksi.*');
 
-        // ✅ Filter berdasarkan kolom tanggal dengan handling NULL
+        // ✅ Filter berdasarkan kolom tanggal yang BENAR
         switch($this->filterType) {
             case 'tanggal_masuk':
-                // Filter berdasarkan tgl_transaksi (ALWAYS NOT NULL karena required)
+                // Filter berdasarkan tgl_transaksi (tanggal order masuk)
                 $query->whereBetween('tgl_transaksi', [
                     $this->tanggalAwal . ' 00:00:00', 
                     $this->tanggalAkhir . ' 23:59:59'
@@ -45,26 +43,23 @@ class TransaksiExport implements FromCollection, WithHeadings, WithMapping, With
                 break;
                 
             case 'tanggal_selesai':
-                // Filter berdasarkan tgl_estimasi (bisa NULL)
-                // ✅ Gunakan whereDate untuk handle date saja, bukan datetime
-                $query->where(function($q) {
-                    $q->whereBetween(DB::raw('DATE(tgl_estimasi)'), [
-                        $this->tanggalAwal, 
-                        $this->tanggalAkhir
-                    ])
-                    ->orWhereNull('tgl_estimasi'); // ✅ Sertakan yang NULL juga
-                });
+                // ✅ DIPERBAIKI: Pakai tgl_lunas (bukan tgl_estimasi!)
+                // tgl_lunas = tanggal actual selesai/bayar lunas
+                // tgl_estimasi = cuma perkiraan saja
+                $query->whereNotNull('tgl_lunas')
+                      ->whereBetween(DB::raw('DATE(tgl_lunas)'), [
+                          $this->tanggalAwal, 
+                          $this->tanggalAkhir
+                      ]);
                 break;
                 
             case 'tanggal_bayar':
-                // Filter berdasarkan tgl_lunas (bisa NULL)
-                $query->where(function($q) {
-                    $q->whereBetween(DB::raw('DATE(tgl_lunas)'), [
-                        $this->tanggalAwal, 
-                        $this->tanggalAkhir
-                    ])
-                    ->orWhereNull('tgl_lunas'); // ✅ Sertakan yang NULL juga
-                });
+                // Filter berdasarkan tgl_lunas (tanggal pembayaran lunas)
+                $query->whereNotNull('tgl_lunas')
+                      ->whereBetween(DB::raw('DATE(tgl_lunas)'), [
+                          $this->tanggalAwal, 
+                          $this->tanggalAkhir
+                      ]);
                 break;
                 
             default:
@@ -75,11 +70,9 @@ class TransaksiExport implements FromCollection, WithHeadings, WithMapping, With
                 ]);
         }
 
-        // ✅ Filter status bayar (handle case sensitivity)
+        // ✅ Filter status bayar
         if ($this->statusBayar !== 'semua') {
-            // Normalize status bayar untuk handle 'DP' vs 'dp'
-            $statusBayar = strtolower($this->statusBayar) === 'dp' ? 'DP' : $this->statusBayar;
-            $query->where('status_bayar', $statusBayar);
+            $query->where('status_bayar', $this->statusBayar);
         }
 
         return $query->orderBy('tgl_transaksi', 'desc')->get();

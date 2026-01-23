@@ -62,12 +62,6 @@
                         </p>
                     </div>
                 </div>
-
-                <div class="flex gap-3">
-                    <button class="bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-xl shadow-sm hover:shadow-md transition-all hover:scale-105">
-                        <i class="bi bi-share-fill text-xl"></i>
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -109,14 +103,14 @@
                                         <i class="bi bi-tag-fill text-orange-500"></i>
                                         Rp {{ number_format($item->harga_jenis,0,',','.') }} / {{ $item->satuan }}
                                     </p>
-                                    <div class="bg-green-50 px-3 py-2 rounded-lg inline-block border border-green-200">
-                                        <p class="font-semibold text-green-700">
+                                    <div class="bg-orange-50 px-3 py-2 rounded-lg inline-block border border-orange-200">
+                                        <p class="font-semibold text-orange-700">
                                             SubTotal: Rp {{ number_format($item->total_harga,0,',','.') }}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div class="bg-blue-500 px-6 py-4 rounded-xl font-bold text-white text-center whitespace-nowrap shadow-sm">
+                                <div class="bg-orange-500 px-6 py-4 rounded-xl font-bold text-white text-center whitespace-nowrap shadow-sm">
                                     {{ $item->qty }} {{ $item->satuan }}
                                 </div>
                             </div>
@@ -129,33 +123,33 @@
                     {{-- INFORMASI TRANSAKSI --}}
                     <div class="bg-white shadow-sm rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-all">
                         <h3 class="font-bold text-xl mb-5 text-gray-800 flex items-center gap-3 pb-4 border-b border-gray-200">
-                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                                <i class="bi bi-info-circle-fill text-blue-500 text-xl"></i>
+                            <div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center">
+                                <i class="bi bi-info-circle-fill text-yellow-500 text-xl"></i>
                             </div>
                             Informasi Transaksi
                         </h3>
                         <div class="space-y-3">
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm">No Nota:</span>
                                 <span class="font-bold text-gray-800">TRX/{{ $transaksi->id_transaksi }}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm">Tanggal Masuk:</span>
                                 <span class="text-gray-800 font-bold">{{ $transaksi->tgl_transaksi }}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm">Tanggal Lunas:</span>
                                 <span class="text-gray-800 font-bold">{{ $transaksi->tgl_lunas ?? '-' }}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm">Estimasi Selesai:</span>
                                 <span class="text-gray-800 font-bold">{{ $transaksi->tgl_estimasi ?? '-' }}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm">Kasir:</span>
                                 <span class="text-gray-800 font-bold">{{ $transaksi->nama_kasir ?? 'Admin' }}</span>
                             </div>
-                            <div class="flex flex-col p-3 bg-blue-50 rounded-xl border border-blue-100">
+                            <div class="flex flex-col p-3 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="text-gray-600 font-medium text-sm mb-2">Keterangan:</span>
                                 <span class="text-gray-800 font-bold">{{ $transaksi->keterangan ?? '-' }}</span>
                             </div>
@@ -165,22 +159,22 @@
                     {{-- STATUS --}}
                     <div class="bg-white shadow-sm rounded-2xl p-6 border border-gray-200 hover:shadow-md transition-all">
                         <h3 class="font-bold text-xl mb-5 text-gray-800 pb-4 border-b border-gray-200 flex items-center gap-3">
-                            <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                                <i class="bi bi-bookmark-check-fill text-purple-500 text-xl"></i>
+                            <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+                                <i class="bi bi-bookmark-check-fill text-orange-500 text-xl"></i>
                             </div>
                             Status
                         </h3>
                         <div class="space-y-4">
-                            <div class="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                            <div class="p-4 bg-orange-50 rounded-xl border border-orange-100">
                                 <span class="font-medium text-gray-700 block mb-3 text-sm">Status Transaksi</span>
-                                <span class="inline-block px-5 py-3 rounded-xl bg-purple-100 text-purple-700 capitalize font-bold w-full text-center border border-purple-200">
+                                <span class="inline-block px-5 py-3 rounded-xl bg-orange-100 text-orange-700 capitalize font-bold w-full text-center border border-orange-200">
                                     {{ $transaksi->status_transaksi }}
                                 </span>
                             </div>
-                            <div class="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <div class="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
                                 <span class="font-medium text-gray-700 block mb-3 text-sm">Status Pembayaran</span>
                                 <span id="statusBayarDisplay" class="inline-block px-5 py-3 rounded-xl 
-                                    {{ $statusBayar == 'lunas' ? 'bg-green-100 text-green-700 border border-green-200' : ($statusBayar == 'DP' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-red-100 text-red-700 border border-red-200') }} 
+                                    {{ $statusBayar == 'lunas' ? 'bg-orange-100 text-orange-700 border border-orange-200' : ($statusBayar == 'DP' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-red-100 text-red-700 border border-red-200') }} 
                                     capitalize font-bold w-full text-center">
                                     {{ $statusBayar }}
                                 </span>
@@ -206,13 +200,13 @@
                             <span class="text-gray-600 font-medium text-sm">Metode Bayar</span>
                             <span class="font-bold text-gray-800">{{ $transaksi->nama_metode_bayar ?? '-' }}</span>
                         </div>
-                        <div class="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div class="flex justify-between items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                             <span class="text-gray-600 font-medium text-sm">SubTotal</span>
                             <span class="font-bold text-gray-800">Rp {{ number_format($subtotal,0,',','.') }}</span>
                         </div>
-                        <div id="dpDisplay" class="flex justify-between items-center p-4 bg-yellow-50 rounded-xl border-l-4 border-yellow-400 {{ $dp > 0 ? '' : 'hidden' }}">
+                        <div id="dpDisplay" class="flex justify-between items-center p-4 bg-orange-50 rounded-xl border-l-4 border-orange-400 {{ $dp > 0 ? '' : 'hidden' }}">
                             <span class="text-gray-600 font-medium text-sm">DP</span>
-                            <span class="font-bold text-yellow-700" id="dpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
+                            <span class="font-bold text-orange-700" id="dpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
                         </div>
                         <div class="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-200">
                             <span class="text-gray-600 font-medium text-sm">Diskon</span>
@@ -230,7 +224,7 @@
                     {{-- Tombol Proses --}}
                     @if($transaksi->status_transaksi == 'antrian')
                         <a href="{{ route('riwayat.proses', $transaksi->id_transaksi) }}" 
-                        class="bg-blue-500 hover:bg-blue-600 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
+                        class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
                             <i class="bi bi-play-fill text-xl"></i> Proses Order
                         </a>
                     @endif
@@ -238,7 +232,7 @@
                     {{-- Tombol Selesaikan --}}
                     @if($transaksi->status_transaksi == 'proses')
                         <a href="{{ route('riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
-                        class="bg-teal-500 hover:bg-teal-600 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
+                        class="bg-orange-400 hover:bg-orange-500 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
                             <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
                         </a>
                     @endif
@@ -253,7 +247,7 @@
 
                     {{-- Tombol Bayar --}}
                     <button id="btnBayarSekarang" onclick="openModalBayar()"
-                        class="bg-green-500 hover:bg-green-600 w-full text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105 {{ $statusBayar === 'lunas' ? 'hidden' : '' }}">
+                        class="bg-orange-500 hover:bg-orange-600 w-full text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105 {{ $statusBayar === 'lunas' ? 'hidden' : '' }}">
                         <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
                     </button>
 
@@ -267,7 +261,7 @@
                         @csrf
                         @method('PATCH')
                         <button type="button" onclick="confirmBatal()"
-                            class="bg-orange-400 hover:bg-orange-500 w-full text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
+                            class="bg-red-500 hover:bg-red-600 w-full text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
                             <i class="bi bi-x-lg text-lg"></i> Batalkan Transaksi
                         </button>
                     </form>
@@ -306,15 +300,15 @@
                     <span class="font-medium">SubTotal:</span>
                     <span class="font-bold">Rp {{ number_format($subtotal,0,',','.') }}</span>
                 </div>
-                <div id="modalDpDisplay" class="flex justify-between items-center p-4 bg-yellow-50 rounded-xl border-l-4 border-yellow-400 {{ $dp > 0 ? '' : 'hidden' }}">
+                <div id="modalDpDisplay" class="flex justify-between items-center p-4 bg-orange-50 rounded-xl border-l-4 border-orange-400 {{ $dp > 0 ? '' : 'hidden' }}">
                     <span class="font-medium text-gray-700">DP Terbayar:</span>
-                    <span class="font-bold text-yellow-700" id="modalDpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
+                    <span class="font-bold text-orange-700" id="modalDpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
                 </div>
                 <div class="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-200">
                     <span class="font-medium text-gray-700">Diskon:</span>
                     <span class="font-bold text-red-600">- Rp {{ number_format($diskon,0,',','.') }}</span>
                 </div>
-                <div class="flex justify-between items-center p-5 bg-green-500 rounded-xl shadow-sm">
+                <div class="flex justify-between items-center p-5 bg-orange-500 rounded-xl shadow-sm">
                     <span class="font-bold text-white text-lg">Sisa Bayar:</span>
                     <span class="font-bold text-white text-2xl" id="sisaBayarDisplay">Rp {{ number_format($sisaBayar,0,',','.') }}</span>
                 </div>
@@ -338,7 +332,7 @@
                         <input type="hidden" name="jumlah_bayar" id="jumlahBayar" value="{{ $sisaBayar }}">
                     </div>
                     <p class="text-xs text-gray-500 mt-2">
-                        <i class="bi bi-info-circle-fill text-blue-500"></i>
+                        <i class="bi bi-info-circle-fill text-yellow-500"></i>
                         Kosongkan atau isi 0 untuk status "Belum Bayar"
                     </p>
                 </div>
@@ -349,7 +343,7 @@
                         Batal
                     </button>
                     <button type="submit"
-                        class="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-sm hover:shadow-md transition-all">
+                        class="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-sm hover:shadow-md transition-all">
                         Konfirmasi
                     </button>
                 </div>
@@ -435,7 +429,7 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
             html: '<div class="text-gray-600">Anda tidak memasukkan DP.<br>Status pembayaran akan tetap <strong class="text-red-600">BELUM BAYAR</strong>.<br><br>Lanjutkan?</div>',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#3b82f6',
+            confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Ya, Lanjutkan',
             cancelButtonText: 'Batal',
@@ -523,26 +517,26 @@ function prosesSubmitPembayaran(jumlahBayar) {
                     title: 'Pembayaran Berhasil!',
                     html: `
                         <div class="text-left space-y-2 mt-4">
-                            <div class="flex justify-between p-3 bg-blue-50 rounded-lg">
+                            <div class="flex justify-between p-3 bg-yellow-50 rounded-lg">
                                 <span class="text-gray-600">Jumlah Bayar:</span>
                                 <span class="font-bold">Rp ${formatRupiah(jumlahBayar)}</span>
                             </div>
-                            <div class="flex justify-between p-3 bg-yellow-50 rounded-lg">
+                            <div class="flex justify-between p-3 bg-orange-50 rounded-lg">
                                 <span class="text-gray-600">Total DP:</span>
-                                <span class="font-bold text-yellow-700">Rp ${formatRupiah(dpTerbayar)}</span>
+                                <span class="font-bold text-orange-700">Rp ${formatRupiah(dpTerbayar)}</span>
                             </div>
-                            <div class="flex justify-between p-3 bg-green-50 rounded-lg">
+                            <div class="flex justify-between p-3 bg-orange-50 rounded-lg">
                                 <span class="text-gray-600">Sisa Bayar:</span>
-                                <span class="font-bold text-green-700">Rp ${formatRupiah(sisaBayar)}</span>
+                                <span class="font-bold text-orange-700">Rp ${formatRupiah(sisaBayar)}</span>
                             </div>
-                            <div class="flex justify-between p-4 bg-purple-50 rounded-lg border-2 ${sisaBayar <= 0 ? 'border-green-500' : 'border-purple-300'}">
+                            <div class="flex justify-between p-4 bg-orange-50 rounded-lg border-2 ${sisaBayar <= 0 ? 'border-orange-500' : 'border-orange-300'}">
                                 <span class="text-gray-600 font-semibold">Status:</span>
-                                <span class="font-bold ${sisaBayar <= 0 ? 'text-green-600' : 'text-yellow-600'} uppercase">${currentStatusBayar}</span>
+                                <span class="font-bold ${sisaBayar <= 0 ? 'text-orange-600' : 'text-yellow-600'} uppercase">${currentStatusBayar}</span>
                             </div>
                         </div>
                     `,
                     confirmButtonText: 'OK',
-                    confirmButtonColor: '#22c55e',
+                    confirmButtonColor: '#f97316',
                     customClass: {
                         popup: 'rounded-2xl',
                         confirmButton: 'rounded-xl px-6 py-3 font-bold'
@@ -582,7 +576,7 @@ function prosesSubmitPembayaran(jumlahBayar) {
             confirmButtonText: 'Refresh Halaman',
             showCancelButton: true,
             cancelButtonText: 'Tutup',
-            confirmButtonColor: '#3b82f6',
+            confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
             customClass: {
                 popup: 'rounded-2xl',
@@ -618,7 +612,7 @@ function updatePaymentUI() {
     statusBayarDisplay.className = 'inline-block px-5 py-3 rounded-xl capitalize font-bold w-full text-center';
     
     if (currentStatusBayar === 'lunas') {
-        statusBayarDisplay.classList.add('bg-green-100', 'text-green-700', 'border', 'border-green-200');
+        statusBayarDisplay.classList.add('bg-orange-100', 'text-orange-700', 'border', 'border-orange-200');
         statusBayarDisplay.textContent = 'Lunas';
         document.getElementById('btnBayarSekarang').classList.add('hidden');
     } else if (currentStatusBayar === 'DP') {
@@ -636,7 +630,7 @@ function confirmBatal() {
         html: '<div class="text-gray-600">Transaksi <strong>TRX/{{ $transaksi->id_transaksi }}</strong> akan dibatalkan.<br>Tindakan ini tidak dapat diurungkan.</div>',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#fb923c',
+        confirmButtonColor: '#ef4444',
         cancelButtonColor: '#6b7280',
         confirmButtonText: '<i class="bi bi-x-lg"></i> Ya, Batalkan!',
         cancelButtonText: 'Tidak',

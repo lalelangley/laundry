@@ -444,9 +444,18 @@ document.addEventListener("DOMContentLoaded", () => {
             const tgl_estimasi_value = document.getElementById("tgl_estimasi").value || null;
             const langsung = parseInt(hiddenBayar.value);
 
-            // ✅ VALIDASI BARU - Sesuaikan dengan status belum_lunas/DP/lunas
-            
-            // 1. Jika langsung bayar AKTIF, harus bayar penuh
+            console.log("📤 SENDING DATA:", {
+                dp: bayar,
+                langsung_bayar: langsung,
+                diskon: diskonValue,
+                tipe_diskon: tipe_diskon,
+                keterangan: keterangan,
+                id_metode_bayar: id_metode_bayar,
+                tgl_estimasi: tgl_estimasi_value,
+                totalAkhir: totalAkhir
+            });
+
+            // ✅ VALIDASI
             if (langsung === 1) {
                 if (bayar === 0) {
                     showAlert("Silakan masukkan jumlah pembayaran!");
@@ -458,9 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // 2. Jika langsung bayar TIDAK AKTIF
             if (langsung === 0) {
-                // Boleh kosong (belum_lunas), boleh isi DP (asal < total)
                 if (bayar > 0 && bayar >= totalAkhir) {
                     showAlert("Jika bayar penuh, silakan aktifkan Langsung Bayar!");
                     return;
@@ -468,6 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // ✅ KIRIM DATA KE SERVER
+            console.log("🌐 Fetching to:", "{{ route('transaksi.bayar') }}");
+            
             const res = await fetch("{{ route('transaksi.bayar') }}", {
                 method: "POST",
                 headers: {
@@ -475,7 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     "X-CSRF-TOKEN": "{{ csrf_token() }}"
                 },
                 body: JSON.stringify({
-                    dp: bayar, // Boleh 0 jika belum bayar
+                    dp: bayar,
                     langsung_bayar: langsung,
                     diskon: diskonValue,
                     tipe_diskon: tipe_diskon,
@@ -485,26 +494,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
+            console.log("📡 RESPONSE STATUS:", res.status, res.statusText);
+            console.log("📡 RESPONSE HEADERS:", res.headers);
+
             if (!res.ok) {
-                const errorData = await res.json();
-                showAlert(errorData.message || "Gagal menyimpan transaksi. Silakan coba lagi!");
+                const errorText = await res.text();
+                console.error("❌ ERROR RESPONSE TEXT:", errorText);
+                
+                try {
+                    const errorData = JSON.parse(errorText);
+                    showAlert(errorData.message || "Gagal menyimpan transaksi!");
+                } catch (e) {
+                    showAlert(`Server error (${res.status}): ${errorText.substring(0, 100)}`);
+                }
                 return;
             }
 
             const data = await res.json();
+            console.log("✅ SUCCESS RESPONSE:", data);
+            
             popupBayar.classList.add("hidden");
 
-            // ✅ UPDATE POPUP SUCCESS
+            // UPDATE POPUP SUCCESS
             succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
             succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
             succNama.textContent = data.nama;
             succHp.textContent = data.hp;
             succBayar.textContent = "Rp " + parseInt(data.total_bayar ?? 0).toLocaleString("id-ID");
 
-            // Hapus label status lama
             document.getElementById("labelStatusBayar")?.remove();
 
-            // Tambah label status
             const label = document.createElement("p");
             label.id = "labelStatusBayar";
             label.classList.add("font-bold", "mt-2");
@@ -524,8 +543,12 @@ document.addEventListener("DOMContentLoaded", () => {
             popupSuccess.classList.remove("hidden");
 
         } catch (err) {
-            console.error(err);
-            showAlert("Terjadi kesalahan pada sistem. Silakan coba lagi!");
+            console.error('❌ FULL ERROR:', err);
+            console.error('❌ ERROR NAME:', err.name);
+            console.error('❌ ERROR MESSAGE:', err.message);
+            console.error('❌ ERROR STACK:', err.stack);
+            
+            showAlert(`Terjadi kesalahan: ${err.message}\n\n${err.name}`);
         }
     });
 

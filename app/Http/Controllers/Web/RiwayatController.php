@@ -842,83 +842,83 @@ class RiwayatController extends Controller
     }
 
     public function addLayananKasir(Request $request, $id)
-    {
-        // ✅ CHECK PERMISSION ADD
-        requirePermission('riwayat', 'add');
-        
-        try {
-            $validated = $request->validate([
-                'id_layanan' => 'required|exists:layanan,id_layanan',
-                'id_jenis_layanan' => 'required|exists:jenis_layanan,id_jenis_layanan',
-                'qty' => 'required|numeric|min:0.01',
-                'parfum' => 'nullable|exists:parfum,id_parfum',
-            ]);
+{
+    // ✅ CHECK PERMISSION EDIT (bukan ADD)
+    requirePermission('riwayat', 'edit');
+    
+    try {
+        $validated = $request->validate([
+            'id_layanan' => 'required|exists:layanan,id_layanan',
+            'id_jenis_layanan' => 'required|exists:jenis_layanan,id_jenis_layanan',
+            'qty' => 'required|numeric|min:0.01',
+            'parfum' => 'nullable|exists:parfum,id_parfum',
+        ]);
 
-            $jenis = JenisLayanan::with('satuan')
-                ->findOrFail($validated['id_jenis_layanan']);
+        $jenis = JenisLayanan::with('satuan')
+            ->findOrFail($validated['id_jenis_layanan']);
 
-            $transaksi = Transaksi::findOrFail($id);
+        $transaksi = Transaksi::findOrFail($id);
 
-            $detail = $transaksi->detail()->create([
-                'id_layanan' => $validated['id_layanan'],
-                'id_jenis_layanan' => $jenis->id_jenis_layanan,
-                'id_parfum' => $validated['parfum'] ?? null,
-                'harga' => $jenis->harga,
-                'qty' => $validated['qty'],
-                'id_satuan' => $jenis->satuan->id_satuan ?? null,
-            ]);
+        $detail = $transaksi->detail()->create([
+            'id_layanan' => $validated['id_layanan'],
+            'id_jenis_layanan' => $jenis->id_jenis_layanan,
+            'id_parfum' => $validated['parfum'] ?? null,
+            'harga' => $jenis->harga,
+            'qty' => $validated['qty'],
+            'id_satuan' => $jenis->satuan->id_satuan ?? null,
+        ]);
 
-            $transaksi->total_harga = $transaksi->detail()->sum(DB::raw('harga * qty'));
-            $transaksi->save();
+        $transaksi->total_harga = $transaksi->detail()->sum(DB::raw('harga * qty'));
+        $transaksi->save();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Layanan berhasil ditambahkan',
-                'data' => [
-                    'detail' => $detail,
-                    'total_harga' => $transaksi->total_harga
-                ]
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error Add Layanan Kasir:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Layanan berhasil ditambahkan',
+            'data' => [
+                'detail' => $detail,
+                'total_harga' => $transaksi->total_harga
+            ]
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error Add Layanan Kasir:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function addLayananPageKasir($id)
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('riwayat', 'view');
-        
-        $riwayat = Transaksi::findOrFail($id);
-        $layananUtama = Layanan::with('jenis.satuan')->get();
-        $parfum = Parfum::all();
+{
+    // ✅ CHECK PERMISSION EDIT (bukan VIEW)
+    requirePermission('riwayat', 'edit');
+    
+    $riwayat = Transaksi::findOrFail($id);
+    $layananUtama = Layanan::with('jenis.satuan')->get();
+    $parfum = Parfum::all();
 
-        $jenisLayananData = [];
-        foreach ($layananUtama as $layanan) {
-            $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
-                return [
-                    'id' => $jenis->id_jenis_layanan,
-                    'nama' => $jenis->nama_jenis,
-                    'harga' => $jenis->harga,
-                    'satuan' => $jenis->satuan->nama_satuan ?? ''
-                ];
-            })->toArray();
-        }
-
-        return view('kasir.riwayat.addlayanan', compact(
-            'riwayat',
-            'layananUtama',
-            'parfum',
-            'jenisLayananData'
-        ));
+    $jenisLayananData = [];
+    foreach ($layananUtama as $layanan) {
+        $jenisLayananData[$layanan->id_layanan] = $layanan->jenis->map(function($jenis) {
+            return [
+                'id' => $jenis->id_jenis_layanan,
+                'nama' => $jenis->nama_jenis,
+                'harga' => $jenis->harga,
+                'satuan' => $jenis->satuan->nama_satuan ?? ''
+            ];
+        })->toArray();
     }
+
+    return view('kasir.riwayat.addlayanan', compact(
+        'riwayat',
+        'layananUtama',
+        'parfum',
+        'jenisLayananData'
+    ));
+}
 
     public function destroyKasir($id)
     {
@@ -1174,7 +1174,7 @@ class RiwayatController extends Controller
     public function addLayananAdmin2(Request $request, $id)
     {
         // ✅ CHECK PERMISSION ADD
-        requirePermission('riwayat', 'add');
+        requirePermission('riwayat', 'edit');
         
         try {
             $request->validate([
