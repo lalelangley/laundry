@@ -290,111 +290,168 @@ class LaporanController extends Controller
     // =========================================
     // LAPORAN TRANSAKSI
     // =========================================
+    // =========================================
+// LAPORAN TRANSAKSI - UPDATE UNTUK 3 ROLE
+// =========================================
+
+// ADMIN
+public function transaksiIndex(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
     
-    public function transaksiIndex(Request $request)
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
-
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-        return view('laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    $query = Transaksi::with(['pelanggan', 'metodeBayar', 'kasir'])
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
 
-    public function transaksiIndexKasir(Request $request)
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
-
-        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
-
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-        return view('kasir.laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    // Pagination (10 per halaman)
+    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
+                       ->paginate(10)
+                       ->withQueryString();
+    
+    // Hitung total omzet dan jumlah dari semua data (bukan hanya halaman saat ini)
+    $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+    
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $queryTotal->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
 
-    public function transaksiIndexAdmin2(Request $request)
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
+    return view('laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $queryTotal->sum('total_bayar'),
+        'jumlah'     => $queryTotal->count(),
+    ]);
+}
 
-        $query = Transaksi::with(['pelanggan', 'metodeBayar'])
-            ->where('status_transaksi', 'selesai')
-            ->whereBetween('tgl_transaksi', [
-                $tglAwal.' 00:00:00',
-                $tglAkhir.' 23:59:59'
-            ]);
+// KASIR
+public function transaksiIndexKasir(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        if ($request->filled('q')) {
-            $q = $request->q;
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nama_pelanggan', 'like', "%$q%")
-                    ->orWhere('no_hp', 'like', "%$q%")
-                    ->orWhere('id_transaksi', 'like', "%$q%");
-            });
-        }
-
-        $transaksi = $query->orderBy('tgl_transaksi', 'DESC')->get();
-
-        return view('admin2.laporan.transaksi.index', [
-            'transaksi'  => $transaksi,
-            'tglAwal'    => $tglAwal,
-            'tglAkhir'   => $tglAkhir,
-            'totalOmzet' => $transaksi->sum('total_bayar'),
-            'jumlah'     => $transaksi->count(),
+    $query = Transaksi::with(['pelanggan', 'metodeBayar', 'kasir'])
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
         ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
     }
+
+    // Pagination (10 per halaman)
+    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
+                       ->paginate(10)
+                       ->withQueryString();
+    
+    // Hitung total omzet dan jumlah dari semua data
+    $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
+        ]);
+    
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $queryTotal->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
+    }
+
+    return view('kasir.laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $queryTotal->sum('total_bayar'),
+        'jumlah'     => $queryTotal->count(),
+    ]);
+}
+
+// ADMIN2
+public function transaksiIndexAdmin2(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
+
+    $query = Transaksi::with(['pelanggan', 'metodeBayar', 'kasir'])
+        ->whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
+        ]);
+
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $query->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
+    }
+
+    // Pagination (10 per halaman)
+    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
+                       ->paginate(10)
+                       ->withQueryString();
+    
+    // Hitung total omzet dan jumlah dari semua data
+    $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
+            $tglAwal.' 00:00:00',
+            $tglAkhir.' 23:59:59'
+        ]);
+    
+    if ($request->filled('q')) {
+        $q = $request->q;
+        $queryTotal->where(function ($sub) use ($q) {
+            $sub->where('nama_pelanggan', 'like', "%$q%")
+                ->orWhere('no_hp', 'like', "%$q%")
+                ->orWhere('id_transaksi', 'like', "%$q%");
+        });
+    }
+
+    return view('admin2.laporan.transaksi.index', [
+        'transaksi'  => $transaksi,
+        'tglAwal'    => $tglAwal,
+        'tglAkhir'   => $tglAkhir,
+        'totalOmzet' => $queryTotal->sum('total_bayar'),
+        'jumlah'     => $queryTotal->count(),
+    ]);
+}
 
     // =========================================
     // LAPORAN KASIR

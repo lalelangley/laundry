@@ -63,25 +63,58 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
     Route::get('/dashboard', [AuthWebController::class, 'kasirDashboard'])
         ->name('kasir.dashboard');
 
-    // ================= TRANSAKSI (KASIR) =================
+    // ================= TRANSAKSI (KASIR) - WITH PERMISSION =================
     Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
-        // View
-        Route::get('/pelanggan', [TransaksiController::class, 'pelangganKasir'])->name('pelanggan');
-        Route::get('/create', [TransaksiController::class, 'createKasir'])->name('create');
-        Route::get('/confirm', [TransaksiController::class, 'confirmKasir'])->name('confirm');
-        Route::get('/print/{id}', [TransaksiController::class, 'printKasir'])->name('print');
+        // View - butuh permission:view untuk akses halaman transaksi
+        Route::get('/pelanggan', [TransaksiController::class, 'pelangganKasir'])
+            ->middleware('permission:view')
+            ->name('pelanggan');
         
-        // Add/Create
-        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])->name('setPelanggan');
-        Route::post('/checkout', [TransaksiController::class, 'checkoutKasir'])->name('checkout');
-        Route::post('/bayar', [TransaksiController::class, 'bayarKasir'])->name('bayar');
-        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananKasir'])->name('addLayanan');
-        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisKasir'])->name('addJenis');
-        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananKasir'])->name('temp_store_layanan');
-        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganKasir'])->name('updateKeterangan');
+        Route::get('/create', [TransaksiController::class, 'createKasir'])
+            ->middleware('permission:view')
+            ->name('create');
         
-        // Delete
-        Route::post('/remove/{id}', [TransaksiController::class, 'removeKasir'])->name('remove');
+        Route::get('/confirm', [TransaksiController::class, 'confirmKasir'])
+            ->middleware('permission:view')
+            ->name('confirm');
+        
+        Route::get('/print/{id}', [TransaksiController::class, 'printKasir'])
+            ->middleware('permission:view')
+            ->name('print');
+        
+        // Add/Create - butuh permission:add untuk membuat transaksi baru
+        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])
+            ->middleware('permission:add')
+            ->name('setPelanggan');
+        
+        Route::post('/checkout', [TransaksiController::class, 'checkoutKasir'])
+            ->middleware('permission:add')
+            ->name('checkout');
+        
+        Route::post('/bayar', [TransaksiController::class, 'bayarKasir'])
+            ->middleware('permission:add')
+            ->name('bayar');
+        
+        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananKasir'])
+            ->middleware('permission:add')
+            ->name('addLayanan');
+        
+        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisKasir'])
+            ->middleware('permission:add')
+            ->name('addJenis');
+        
+        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananKasir'])
+            ->middleware('permission:add')
+            ->name('temp_store_layanan');
+        
+        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganKasir'])
+            ->middleware('permission:edit')
+            ->name('updateKeterangan');
+        
+        // Delete - butuh permission:delete
+        Route::post('/remove/{id}', [TransaksiController::class, 'removeKasir'])
+            ->middleware('permission:delete')
+            ->name('remove');
         
         // Reset (no permission needed)
         Route::get('/reset', function () {
@@ -331,11 +364,11 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             ->name('bayar.submit');
         
         Route::get('/{id}/add-layanan', [RiwayatController::class, 'addLayananPageKasir'])
-            ->middleware('permission:add')
-            ->name('addlayanan');
-        Route::post('/{id}/add-layanan', [RiwayatController::class, 'addLayananKasir'])
-            ->middleware('permission:add')
-            ->name('storelayanan');
+        ->middleware('permission:edit')  // ✅ Ubah ke 'edit'
+        ->name('addlayanan');
+       Route::post('/{id}/add-layanan', [RiwayatController::class, 'addLayananKasir'])
+        ->middleware('permission:edit')  // ✅ Ubah ke 'edit'
+        ->name('storelayanan');
         Route::post('/detail/{id}/update', [RiwayatController::class, 'updateDetail'])
             ->middleware('permission:edit')
             ->name('updateDetail');
@@ -527,6 +560,8 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         ->group(function () {
             Route::get('/', [UserManagerController::class, 'index'])->name('index');
             Route::get('/akses/{user_type}/{user_id}', [UserManagerController::class, 'aksesUser'])->name('akses');
+            Route::post('/role/hak-akses/quick', [UserManagerController::class, 'quickSaveHakRole'])
+            ->name('role.hak.quick');
             
             // ✅ ADMIN ROUTES
             Route::prefix('admin')->name('admin.')->group(function() {
@@ -599,27 +634,60 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             ->name('destroy');
     });
 
-    // ================= TRANSAKSI (ADMIN) =================
+    // ================= TRANSAKSI (ADMIN) - WITH PERMISSION =================
     Route::prefix('transaksi')->name('transaksi.')->group(function () {
-        // View
-        Route::get('/pelanggan', [TransaksiController::class, 'pilihPelanggan'])->name('pelanggan');
-        Route::get('/create', [TransaksiController::class, 'create'])->name('create');
-        Route::get('/checkout', [TransaksiController::class, 'confirm'])->name('confirm');
-        Route::get('/print/{id}', [TransaksiController::class, 'print'])->name('print');
+        // View - butuh permission:view untuk akses halaman transaksi
+        Route::get('/pelanggan', [TransaksiController::class, 'pilihPelanggan'])
+            ->middleware('permission:view')
+            ->name('pelanggan');
         
-        // Add/Create
-        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelanggan'])->name('setPelanggan');
-        Route::post('/checkout', [TransaksiController::class, 'checkout'])->name('checkout');
-        Route::post('/bayar', [TransaksiController::class, 'bayar'])->name('bayar');
-        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayanan'])->name('addLayanan');
-        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenis'])->name('addJenis');
-        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayanan'])->name('temp_store_layanan');
-        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeterangan'])->name('updateKeterangan');
+        Route::get('/create', [TransaksiController::class, 'create'])
+            ->middleware('permission:view')
+            ->name('create');
         
-        // Delete
-        Route::post('/remove/{id}', [TransaksiController::class, 'remove'])->name('remove');
+        Route::get('/checkout', [TransaksiController::class, 'confirm'])
+            ->middleware('permission:view')
+            ->name('confirm');
         
-        // Reset
+        Route::get('/print/{id}', [TransaksiController::class, 'print'])
+            ->middleware('permission:view')
+            ->name('print');
+        
+        // Add/Create - butuh permission:add untuk membuat transaksi baru
+        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelanggan'])
+            ->middleware('permission:add')
+            ->name('setPelanggan');
+        
+        Route::post('/checkout', [TransaksiController::class, 'checkout'])
+            ->middleware('permission:add')
+            ->name('checkout');
+        
+        Route::post('/bayar', [TransaksiController::class, 'bayar'])
+            ->middleware('permission:add')
+            ->name('bayar');
+        
+        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayanan'])
+            ->middleware('permission:add')
+            ->name('addLayanan');
+        
+        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenis'])
+            ->middleware('permission:add')
+            ->name('addJenis');
+        
+        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayanan'])
+            ->middleware('permission:add')
+            ->name('temp_store_layanan');
+        
+        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeterangan'])
+            ->middleware('permission:edit')
+            ->name('updateKeterangan');
+        
+        // Delete - butuh permission:delete
+        Route::post('/remove/{id}', [TransaksiController::class, 'remove'])
+            ->middleware('permission:delete')
+            ->name('remove');
+        
+        // Reset (no permission needed)
         Route::get('/reset', function () {
             session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
             return redirect()->route('admin.dashboard');
@@ -900,56 +968,56 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
     });
 
     // ================= PENGATURAN (ADMIN) - ✅ WITH PERMISSION =================
-Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
-    
-    // View routes - butuh permission:view
-    Route::get('/', [PengaturanController::class, 'index'])
-        ->middleware('permission:view')
-        ->name('index');
-    
-    Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayar'])
-        ->middleware('permission:view')
-        ->name('metode');
-    
-    Route::get('/backups/list', [PengaturanController::class, 'listBackups'])
-        ->middleware('permission:view')
-        ->name('backups.list');
-    
-    Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackup'])
-        ->middleware('permission:view')
-        ->name('backups.download');
-    
-    // Edit/Update routes - butuh permission:edit
-    Route::post('/update', [PengaturanController::class, 'update'])
-        ->middleware('permission:edit')
-        ->name('update');
-    
-    Route::post('/omzet', [PengaturanController::class, 'updateOmzet'])
-        ->middleware('permission:edit')
-        ->name('omzet');
-    
-    Route::post('/backup', [PengaturanController::class, 'backup'])
-        ->middleware('permission:edit')
-        ->name('backup');
-    
-    Route::post('/restore', [PengaturanController::class, 'restore'])
-        ->middleware('permission:edit')
-        ->name('restore');
-    
-    // Add routes - butuh permission:add
-    Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayar'])
-        ->middleware('permission:add')
-        ->name('metode.store');
-    
-    // Delete routes - butuh permission:delete
-    Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackup'])
-        ->middleware('permission:delete')
-        ->name('backups.delete');
-    
-    Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayar'])
-        ->middleware('permission:delete')
-        ->name('metode.delete');
-});
+    Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
+        
+        // View routes - butuh permission:view
+        Route::get('/', [PengaturanController::class, 'index'])
+            ->middleware('permission:view')
+            ->name('index');
+        
+        Route::get('/metode-bayar', [PengaturanController::class, 'metodeBayar'])
+            ->middleware('permission:view')
+            ->name('metode');
+        
+        Route::get('/backups/list', [PengaturanController::class, 'listBackups'])
+            ->middleware('permission:view')
+            ->name('backups.list');
+        
+        Route::get('/backups/download/{filename}', [PengaturanController::class, 'downloadBackup'])
+            ->middleware('permission:view')
+            ->name('backups.download');
+        
+        // Edit/Update routes - butuh permission:edit
+        Route::post('/update', [PengaturanController::class, 'update'])
+            ->middleware('permission:edit')
+            ->name('update');
+        
+        Route::post('/omzet', [PengaturanController::class, 'updateOmzet'])
+            ->middleware('permission:edit')
+            ->name('omzet');
+        
+        Route::post('/backup', [PengaturanController::class, 'backup'])
+            ->middleware('permission:edit')
+            ->name('backup');
+        
+        Route::post('/restore', [PengaturanController::class, 'restore'])
+            ->middleware('permission:edit')
+            ->name('restore');
+        
+        // Add routes - butuh permission:add
+        Route::post('/metode-bayar/store', [PengaturanController::class, 'storeMetodeBayar'])
+            ->middleware('permission:add')
+            ->name('metode.store');
+        
+        // Delete routes - butuh permission:delete
+        Route::delete('/backups/delete/{filename}', [PengaturanController::class, 'deleteBackup'])
+            ->middleware('permission:delete')
+            ->name('backups.delete');
+        
+        Route::delete('/metode-bayar/{id}', [PengaturanController::class, 'deleteMetodeBayar'])
+            ->middleware('permission:delete')
+            ->name('metode.delete');
+    });
 
     // ================= LAPORAN (View Permission Only) =================
     Route::prefix('laporan')->name('laporan.')->group(function () {
@@ -1042,25 +1110,63 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
             ->name('destroy');
     });
 
-    // ================= TRANSAKSI (ADMIN2) =================
+    // ================= TRANSAKSI (ADMIN2) - WITH PERMISSION =================
     Route::prefix('transaksi')->name('admin2.transaksi.')->group(function () {
-        // View
-        Route::get('/pelanggan', [TransaksiController::class, 'pelangganAdmin2'])->name('pelanggan');
-        Route::get('/create', [TransaksiController::class, 'createAdmin2'])->name('create');
-        Route::get('/checkout', [TransaksiController::class, 'confirmAdmin2'])->name('confirm');
-        Route::get('/print/{id}', [TransaksiController::class, 'printAdmin2'])->whereNumber('id')->name('print');
+        // View - butuh permission:view untuk akses halaman transaksi
+        Route::get('/pelanggan', [TransaksiController::class, 'pelangganAdmin2'])
+            ->middleware('permission:view')
+            ->name('pelanggan');
         
-        // Add/Create
-        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganAdmin2'])->whereNumber('id')->name('setPelanggan');
-        Route::post('/checkout', [TransaksiController::class, 'checkoutAdmin2'])->name('checkout');
-        Route::post('/bayar', [TransaksiController::class, 'bayarAdmin2'])->name('bayar');
-        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananAdmin2'])->whereNumber('id')->name('addLayanan');
-        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisAdmin2'])->whereNumber('id')->name('addJenis');
-        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananAdmin2'])->name('temp_store_layanan');
-        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganAdmin2'])->name('updateKeterangan');
+        Route::get('/create', [TransaksiController::class, 'createAdmin2'])
+            ->middleware('permission:view')
+            ->name('create');
         
-        // Delete
-        Route::post('/remove/{id}', [TransaksiController::class, 'removeAdmin2'])->whereNumber('id')->name('remove');
+        Route::get('/checkout', [TransaksiController::class, 'confirmAdmin2'])
+            ->middleware('permission:view')
+            ->name('confirm');
+        
+        Route::get('/print/{id}', [TransaksiController::class, 'printAdmin2'])
+            ->middleware('permission:view')
+            ->whereNumber('id')
+            ->name('print');
+        
+        // Add/Create - butuh permission:add untuk membuat transaksi baru
+        Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganAdmin2'])
+            ->middleware('permission:add')
+            ->whereNumber('id')
+            ->name('setPelanggan');
+        
+        Route::post('/checkout', [TransaksiController::class, 'checkoutAdmin2'])
+            ->middleware('permission:add')
+            ->name('checkout');
+        
+        Route::post('/bayar', [TransaksiController::class, 'bayarAdmin2'])
+            ->middleware('permission:add')
+            ->name('bayar');
+        
+        Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananAdmin2'])
+            ->middleware('permission:add')
+            ->whereNumber('id')
+            ->name('addLayanan');
+        
+        Route::post('/add-jenis/{id}', [TransaksiController::class, 'addJenisAdmin2'])
+            ->middleware('permission:add')
+            ->whereNumber('id')
+            ->name('addJenis');
+        
+        Route::post('/temp-store-layanan', [TransaksiController::class, 'tempStoreLayananAdmin2'])
+            ->middleware('permission:add')
+            ->name('temp_store_layanan');
+        
+        Route::post('/update-keterangan', [TransaksiController::class, 'updateKeteranganAdmin2'])
+            ->middleware('permission:edit')
+            ->name('updateKeterangan');
+        
+        // Delete - butuh permission:delete
+        Route::post('/remove/{id}', [TransaksiController::class, 'removeAdmin2'])
+            ->middleware('permission:delete')
+            ->whereNumber('id')
+            ->name('remove');
         
         // Reset (no permission needed)
         Route::get('/reset', function () {

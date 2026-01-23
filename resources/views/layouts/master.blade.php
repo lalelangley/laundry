@@ -86,27 +86,42 @@
     {{-- Bootstrap JS --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
+        {{-- ✅ PASS USER PERMISSIONS TO JAVASCRIPT --}}
+    @php
+        $permissions = [
+            'parfum' => canDelete('parfum'),
+            'satuan' => canDelete('satuan'),
+            'pelanggan' => canDelete('pelanggan'),
+            'transaksi' => canDelete('transaksi'),
+            'pengeluaran' => canDelete('pengeluaran'),
+            'layanan' => canDelete('layanan'),
+            'jenis' => canDelete('jenis'),
+        ];
+    @endphp
+
+    <script>
+        window.userPermissions = @json($permissions);
+    </script>
+    
     {{-- ============================================
          🗑️ REUSABLE DELETE CONFIRMATION FUNCTION
          ============================================ --}}
     <script>
     /**
      * 🗑️ REUSABLE DELETE CONFIRMATION
+     * ✅ AUTO CEK PERMISSION dari layout - Tidak perlu attribute tambahan di blade
      * 
      * CARA PAKAI:
      * 
-     * 1. SIMPLE (hanya nama item):
-     *    <button onclick="confirmDelete(this)" data-nama="Parfum Lavender">Hapus</button>
-     * 
-     * 2. DENGAN DETAIL TAMBAHAN:
-     *    <button onclick="confirmDelete(this)" 
-     *            data-nama="Cuci Kering" 
-     *            data-harga="Rp 50.000"
-     *            data-tanggal="10/01/2025">Hapus</button>
-     * 
-     * 3. DENGAN CUSTOM TYPE:
+     * 1. SIMPLE:
      *    <button onclick="confirmDelete(this, 'parfum')" data-nama="Lavender">Hapus</button>
-     *    Types: parfum, satuan, pelanggan, transaksi, pengeluaran, layanan, jenis
+     * 
+     * 2. DENGAN DETAIL:
+     *    <button onclick="confirmDelete(this, 'parfum')" 
+     *            data-nama="Lavender" 
+     *            data-harga="Rp 50.000">Hapus</button>
+     * 
+     * Types: parfum, satuan, pelanggan, transaksi, pengeluaran, layanan, jenis
      */
     function confirmDelete(button, type = 'item') {
         const form = button.closest('form');
@@ -114,6 +129,47 @@
             console.error('Form not found!');
             return;
         }
+        
+    // ✅ AUTO-CHECK PERMISSION dari window.userPermissions
+    if (window.userPermissions && window.userPermissions[type] === false) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Akses Ditolak!',
+            html: `
+                <div class="text-center">
+                    <p class="text-gray-700 text-lg mb-4">
+                        Anda tidak memiliki izin untuk menghapus data ini.
+                    </p>
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-lg p-4 mx-auto max-w-md">
+                        <div class="flex items-start gap-3">
+                            <i class="bi bi-info-circle-fill text-red-500 text-lg flex-shrink-0 mt-0.5"></i>
+                            <div class="text-left">
+                                <p class="text-sm font-semibold text-red-800 mb-1">Butuh Akses?</p>
+                                <p class="text-xs text-red-700">
+                                    Hubungi administrator sistem untuk mendapatkan izin penghapusan data.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Mengerti',
+            width: '500px',
+            backdrop: `rgba(0,0,0,0.4)`,
+            customClass: {
+                popup: 'rounded-3xl shadow-2xl',
+                confirmButton: 'rounded-xl px-8 py-3 font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200'
+            },
+            showClass: {
+                popup: 'animate__animated animate__fadeIn animate__faster'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__fadeOut animate__faster'
+            }
+        });
+        return; // Stop execution
+    }
         
         // Get data from attributes
         const nama = button.getAttribute('data-nama') || 'Item ini';
@@ -392,37 +448,31 @@
     </script>
     
     {{-- ===============================================
-     FLASH MESSAGE HANDLER dengan SweetAlert2
-     ===============================================
-     Letakkan kode ini di layouts/master.blade.php
-     SEBELUM tag </body> atau SETELAH @yield('content')
-================================================== --}}
+         FLASH MESSAGE HANDLER dengan SweetAlert2
+         =============================================== --}}
 
-{{-- SweetAlert2 CDN (pastikan hanya ada 1x di master layout) --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-{{-- SUCCESS MESSAGE --}}
-@if(session('success'))
-<script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Berhasil!',
-        text: '{{ session('success') }}',
-        confirmButtonColor: '#10b981',
-        confirmButtonText: 'OK',
-        timer: 3000,
-        timerProgressBar: true,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown'
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp'
-        },
-        customClass: {
-            popup: 'rounded-2xl shadow-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
-        }
-    });
+    {{-- SUCCESS MESSAGE --}}
+    @if(session('success'))
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: '{{ session('success') }}',
+            confirmButtonColor: '#10b981',
+            confirmButtonText: 'OK',
+            timer: 3000,
+            timerProgressBar: true,
+            showClass: {
+                popup: 'animate__animated animate__fadeInDown'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__fadeOutUp'
+            },
+            customClass: {
+                popup: 'rounded-2xl shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg hover:scale-105 transition-transform'
+            }
+        });
     </script>
     @endif
 
@@ -479,6 +529,172 @@
         });
     </script>
     @endif
+
+    {{-- ===============================================
+         🌐 GLOBAL FETCH ERROR HANDLER
+         Handles common HTTP errors (401, 403, 500, etc.)
+         =============================================== --}}
+    <script>
+    /**
+     * ✅ GLOBAL FETCH ERROR HANDLER
+     * Automatically handles common HTTP errors with user-friendly messages
+     * 
+     * CARA PAKAI:
+     * 
+     * const res = await fetch(url, options);
+     * const handled = await handleFetchError(res);
+     * if (handled) return; // Error sudah ditangani
+     * 
+     * // Lanjut proses normal
+     * const data = await res.json();
+     */
+    window.handleFetchError = async function(response, customMessages = {}) {
+        const defaultMessages = {
+            401: {
+                title: 'Sesi Berakhir',
+                text: 'Sesi Anda telah berakhir. Silakan login kembali.',
+                icon: 'warning',
+                showConfirmButton: true,
+                timer: 3000,
+                callback: () => {
+                    setTimeout(() => {
+                        window.location.href = "{{ route('login') ?? '/login' }}";
+                    }, 2000);
+                }
+            },
+            403: {
+                title: 'Akses Ditolak',
+                text: 'Anda tidak memiliki izin untuk melakukan tindakan ini.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            },
+            404: {
+                title: 'Tidak Ditemukan',
+                text: 'Data atau halaman yang Anda cari tidak ditemukan.',
+                icon: 'warning',
+                confirmButtonColor: '#f59e0b'
+            },
+            422: {
+                title: 'Validasi Gagal',
+                text: 'Data yang Anda masukkan tidak valid. Silakan periksa kembali.',
+                icon: 'warning',
+                confirmButtonColor: '#f59e0b'
+            },
+            429: {
+                title: 'Terlalu Banyak Permintaan',
+                text: 'Anda melakukan terlalu banyak permintaan. Silakan tunggu sebentar.',
+                icon: 'warning',
+                confirmButtonColor: '#f59e0b'
+            },
+            500: {
+                title: 'Kesalahan Server',
+                text: 'Terjadi kesalahan pada server. Silakan coba lagi nanti.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            },
+            502: {
+                title: 'Server Tidak Tersedia',
+                text: 'Server sedang tidak tersedia. Silakan coba lagi nanti.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            },
+            503: {
+                title: 'Layanan Tidak Tersedia',
+                text: 'Layanan sedang dalam pemeliharaan. Silakan coba lagi nanti.',
+                icon: 'info',
+                confirmButtonColor: '#3b82f6'
+            }
+        };
+
+        // Jika response OK, tidak ada error
+        if (response.ok) {
+            return false;
+        }
+
+        const status = response.status;
+        const config = customMessages[status] || defaultMessages[status];
+
+        // Jika tidak ada config untuk status ini, return false
+        if (!config) {
+            return false;
+        }
+
+        // Tampilkan SweetAlert
+        const result = await Swal.fire({
+            title: config.title,
+            text: config.text,
+            icon: config.icon,
+            confirmButtonColor: config.confirmButtonColor || '#3b82f6',
+            confirmButtonText: config.confirmButtonText || 'OK',
+            timer: config.timer,
+            timerProgressBar: config.timer ? true : false,
+            showConfirmButton: config.showConfirmButton !== false,
+            customClass: {
+                popup: 'rounded-2xl shadow-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg'
+            }
+        });
+
+        // Execute callback if exists
+        if (config.callback) {
+            config.callback(result);
+        }
+
+        return true; // Error sudah ditangani
+    };
+
+    /**
+     * ✅ FETCH WRAPPER WITH AUTO ERROR HANDLING
+     * 
+     * CARA PAKAI (Recommended):
+     * 
+     * const data = await fetchWithErrorHandling(url, {
+     *     method: 'POST',
+     *     body: formData
+     * });
+     * 
+     * if (!data) return; // Error sudah ditangani otomatis
+     * 
+     * // Lanjut proses data
+     * console.log(data);
+     */
+    window.fetchWithErrorHandling = async function(url, options = {}, customMessages = {}) {
+        try {
+            const response = await fetch(url, options);
+            
+            // Handle HTTP errors
+            const errorHandled = await handleFetchError(response, customMessages);
+            if (errorHandled) {
+                return null;
+            }
+
+            // Parse response
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return await response.json();
+            }
+            
+            return await response.text();
+            
+        } catch (error) {
+            console.error('Fetch error:', error);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Kesalahan Koneksi',
+                text: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+                confirmButtonColor: '#ef4444',
+                customClass: {
+                    popup: 'rounded-2xl shadow-2xl',
+                    confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg'
+                }
+            });
+            
+            return null;
+        }
+    };
+    </script>
+
     {{-- Script tambahan dari halaman --}}
     @yield('scripts')
 

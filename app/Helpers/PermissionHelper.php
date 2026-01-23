@@ -39,7 +39,8 @@ if (!function_exists('requirePermission')) {
         }
 
         if (!checkPermission($menuIdentifier, $action)) {
-            abort(403, "Anda tidak memiliki izin untuk {$action} di menu ini");
+            // ✅ LANGSUNG ABORT - JANGAN REDIRECT
+            abort(403, "Anda tidak memiliki hak akses untuk {$action} pada menu ini");
         }
     }
 }
@@ -61,7 +62,6 @@ if (!function_exists('isMenuActive')) {
         // ✅ PERBAIKAN: Hapus filter menu.role_id
         $permission = \App\Models\MenuRole::join('menu', 'menu_role.menu_id', '=', 'menu.id')
             ->where('menu_role.role_id', $user->role_id)
-            // ❌ HAPUS: ->where('menu.role_id', $user->role_id)
             ->where(function($query) use ($menuIdentifier) {
                 $query->where('menu.route', 'like', "%{$menuIdentifier}%")
                       ->orWhere('menu.nama_menu', 'like', "%{$menuIdentifier}%");
@@ -91,23 +91,17 @@ if (!function_exists('checkPermission')) {
             return true;
         }
 
-        // ✅ Normalisasi menu identifier
-        $normalizedIdentifiers = [
-            $menuIdentifier,
-            str_replace('.', '-', $menuIdentifier),
-            str_replace('.', ' ', $menuIdentifier),
-            ucwords(str_replace('.', ' ', $menuIdentifier)),
-        ];
-
-        // ✅ PERBAIKAN UTAMA: Hapus filter menu.role_id
+        // ✅ Query dengan flexible route matching
         $permission = \App\Models\MenuRole::join('menu', 'menu_role.menu_id', '=', 'menu.id')
             ->where('menu_role.role_id', $user->role_id)
-            // ❌ HAPUS LINE INI: ->where('menu.role_id', $user->role_id)
-            ->where(function($query) use ($normalizedIdentifiers) {
-                foreach ($normalizedIdentifiers as $identifier) {
-                    $query->orWhere('menu.route', 'like', "%{$identifier}%")
-                          ->orWhere('menu.nama_menu', 'like', "%{$identifier}%");
-                }
+            ->where(function($query) use ($menuIdentifier) {
+                // Match route patterns: kasir.transaksi.create, admin.transaksi.create, dll
+                $query->where('menu.route', 'like', "%.{$menuIdentifier}.%")
+                      ->orWhere('menu.route', 'like', "{$menuIdentifier}.%")
+                      ->orWhere('menu.route', 'like', "%.{$menuIdentifier}")
+                      ->orWhere('menu.route', '=', $menuIdentifier)
+                      // Match nama menu (case insensitive)
+                      ->orWhereRaw('LOWER(menu.nama_menu) LIKE ?', ['%' . strtolower($menuIdentifier) . '%']);
             })
             ->select('menu_role.*')
             ->first();
@@ -117,7 +111,6 @@ if (!function_exists('checkPermission')) {
                 'menu_identifier' => $menuIdentifier,
                 'user_role' => $user->role_id,
                 'action' => $action,
-                'tried_identifiers' => $normalizedIdentifiers
             ]);
             return false;
         }
@@ -172,7 +165,6 @@ if (!function_exists('getUserPermissions')) {
         // ✅ PERBAIKAN: Hapus filter menu.role_id
         $permissions = \App\Models\MenuRole::where('menu_role.role_id', $user->role_id)
             ->join('menu', 'menu_role.menu_id', '=', 'menu.id')
-            // ❌ HAPUS: ->where('menu.role_id', $user->role_id)
             ->select('menu_role.*', 'menu.route', 'menu.nama_menu')
             ->get()
             ->mapWithKeys(function($perm) {

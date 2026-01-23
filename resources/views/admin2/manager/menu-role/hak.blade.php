@@ -32,10 +32,11 @@
                 <div class="text-sm text-blue-900">
                     <p class="font-semibold mb-1">📋 Cara Penggunaan:</p>
                     <ul class="space-y-1 ml-2">
-                        <li>• Toggle ON/OFF untuk mengaktifkan/nonaktifkan akses ke menu tersebut</li>
-                        <li>• Setiap menu memiliki permission yang berbeda sesuai fiturnya</li>
-                        <li>• Pengaturan ini berlaku untuk semua kasir di sistem</li>
-                        <li>• Perubahan akan tersimpan otomatis</li>
+                        <li>• <strong>Permission "Lihat"</strong> = Menentukan menu muncul/tidak di sidebar</li>
+                        <li>• <strong>Lihat ON</strong> = Menu muncul di sidebar</li>
+                        <li>• <strong>Lihat OFF</strong> = Menu tidak muncul di sidebar</li>
+                        <li>• <strong>Permission lain</strong> = Fitur yang bisa dilakukan (Tambah, Edit, Hapus, dll)</li>
+                        <li>• Perubahan akan tersimpan otomatis setiap kali toggle diubah</li>
                     </ul>
                 </div>
             </div>
@@ -68,6 +69,7 @@
                         
                         $menuSlug = strtolower(str_replace([' ', '-'], '_', $menu->nama_menu));
                         
+                        // ✅ FIXED: Tambahkan permission untuk menu Transaksi
                         $availablePerms = [];
                         switch($menuSlug) {
                             case 'layanan':
@@ -76,36 +78,53 @@
                             case 'pelanggan':
                             case 'pengeluaran':
                                 $availablePerms = [
-                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
                                     ['value' => 'add', 'label' => 'Tambah', 'icon' => 'plus-circle-fill'],
                                     ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
                                     ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
                                 ];
                                 break;
+                            
+                            // ✅ FIXED: Tambahkan case untuk transaksi
+                            case 'transaksi':
+                                $availablePerms = [
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
+                                    ['value' => 'add', 'label' => 'Tambah', 'icon' => 'plus-circle-fill'],  // ✅ ADDED!
+                                    ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
+                                    ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                    ['value' => 'cancel', 'label' => 'Batal', 'icon' => 'x-circle-fill'],
+                                ];
+                                break;
+                            
                             case 'pesanan_online':
                             case 'riwayat':
                                 $availablePerms = [
-                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
                                     ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
                                     ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
                                 ];
                                 break;
+                            
                             case 'laporan':
                                 $availablePerms = [
-                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
                                 ];
                                 break;
+                            
                             case 'pengaturan':
                                 $availablePerms = [
-                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
                                     ['value' => 'edit', 'label' => 'Edit', 'icon' => 'pencil-fill'],
-                                    ['value' => 'add', 'label' => 'Tambah', 'icon' => 'plus-circle-fill'],
+                                    ['value' => 'add', 'label' => 'Metode Bayar', 'icon' => 'credit-card-fill'],
                                     ['value' => 'delete', 'label' => 'Hapus', 'icon' => 'trash-fill'],
+                                    ['value' => 'restore', 'label' => 'Restore Data', 'icon' => 'arrow-repeat'],
+                                    ['value' => 'hapus_backup', 'label' => 'Hapus Backup', 'icon' => 'trash-fill'],
                                 ];
                                 break;
+                            
                             default:
                                 $availablePerms = [
-                                    ['value' => 'view', 'label' => 'Kunci', 'icon' => 'lock-fill'],
+                                    ['value' => 'view', 'label' => 'Lihat', 'icon' => 'eye-fill'],
                                 ];
                         }
                     @endphp
@@ -142,12 +161,32 @@
                         {{-- CARD BODY - PERMISSIONS --}}
                         <div class="px-6 py-5 space-y-2.5 bg-gray-50/50">
                             @foreach($availablePerms as $perm)
+                                @php
+                                    // ✅ FIXED: Mapping permission value ke field database yang benar
+                                    $fieldName = match($perm['value']) {
+                                        'view' => 'can_view',
+                                        'add' => match($menuSlug) {
+                                            'pengaturan' => 'can_access_settings', // Metode Bayar
+                                            default => 'can_add'
+                                        },
+                                        'edit' => 'can_edit',
+                                        'delete' => 'can_delete',
+                                        'cancel' => 'can_cancel',
+                                        'restore' => 'can_restore_data',
+                                        'hapus_backup' => 'show_delete_backup',
+                                        default => 'can_view'
+                                    };
+                                    
+                                    // Cek apakah permission ini aktif
+                                    $isChecked = $permData && isset($permData->{$fieldName}) && $permData->{$fieldName};
+                                @endphp
+                                
                                 <div class="flex items-center justify-between py-3 px-4 bg-white hover:bg-yellow-50/50 rounded-xl transition-all border border-gray-100 hover:border-yellow-200 hover:shadow-sm">
                                     <div class="flex items-center gap-3">
                                         <div class="w-9 h-9 bg-yellow-400/10 rounded-lg flex items-center justify-center">
                                             <i class="bi bi-{{ $perm['icon'] }} text-yellow-600 text-base"></i>
                                         </div>
-                                        <span class="text-gray-800 font-semibold text-sm">{{ $perm['label'] }} {{ $menu->nama_menu }}</span>
+                                        <span class="text-gray-800 font-semibold text-sm">{{ $perm['label'] }}</span>
                                     </div>
                                     
                                     <label class="relative inline-flex items-center cursor-pointer group">
@@ -155,7 +194,7 @@
                                                name="menus[{{ $menu->id }}][permissions][]"
                                                value="{{ $perm['value'] }}"
                                                class="perm-toggle-{{ $menu->id }} sr-only peer"
-                                               @checked($permData && isset($permData->{'can_'.$perm['value']}) && $permData->{'can_'.$perm['value']})>
+                                               @checked($isChecked)>
                                         <div class="toggle-perm w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-3 peer-focus:ring-yellow-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-500 shadow-inner"></div>
                                     </label>
                                 </div>
@@ -183,10 +222,12 @@ function autoSave(menuId, field, value) {
         permissions: []
     };
     
+    // Collect all checked permissions
     document.querySelectorAll(`.perm-toggle-${menuId}:checked`).forEach(cb => {
         menuData.permissions.push(cb.value);
     });
     
+    // Update specific permission if needed
     if (field.startsWith('can_')) {
         let permValue = field.replace('can_', '');
         if (value && !menuData.permissions.includes(permValue)) {
@@ -202,6 +243,9 @@ function autoSave(menuId, field, value) {
     
     formData.menus[menuId] = menuData;
     
+    // ✅ DEBUG: Log data yang dikirim
+    console.log('Auto-save data:', formData);
+    
     fetch('{{ route("admin2.manager.role.hak.quick") }}', {
         method: 'POST',
         headers: {
@@ -212,6 +256,7 @@ function autoSave(menuId, field, value) {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Save response:', data);
         showToast('success', '✓ Tersimpan');
     })
     .catch(error => {
@@ -252,6 +297,8 @@ document.querySelectorAll('input[type="checkbox"][name*="permissions"]').forEach
         let permission = this.value;
         let isChecked = this.checked;
         
+        console.log(`Permission changed: Menu ${menuId}, ${permission} = ${isChecked}`);
+        
         autoSave(menuId, 'can_' + permission, isChecked);
     });
 });
@@ -289,9 +336,14 @@ function bulkAction(action) {
             toggle.dispatchEvent(new Event('change'));
         });
         
+        // Small delay between each permission to avoid overwhelming the server
+        let delay = 0;
         document.querySelectorAll('input[type="checkbox"][name*="permissions"]').forEach(cb => {
-            cb.checked = true;
-            cb.dispatchEvent(new Event('change'));
+            setTimeout(() => {
+                cb.checked = true;
+                cb.dispatchEvent(new Event('change'));
+            }, delay);
+            delay += 50; // 50ms delay between each
         });
     } 
     else if (action === 'disable') {
@@ -304,7 +356,6 @@ function bulkAction(action) {
         
         document.querySelectorAll('input[type="checkbox"][name*="permissions"]').forEach(cb => {
             cb.checked = false;
-            cb.dispatchEvent(new Event('change'));
         });
     }
 }
@@ -313,6 +364,8 @@ function bulkAction(action) {
 // INITIAL STATE
 // =============================
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded. Setting initial states...');
+    
     document.querySelectorAll('.menu-toggle').forEach(toggle => {
         let menuId = toggle.dataset.menu;
         let card = document.querySelector(`[data-menu-id="${menuId}"]`);

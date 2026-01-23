@@ -110,7 +110,7 @@
                                 data-id="{{ $t->id_transaksi }}"
                                 data-nama="{{ addslashes($t->nama_pelanggan ?? 'Guest') }}"
                                 data-total="{{ number_format($t->total_harga, 0, ',', '.') }}"
-                                data-tanggal="{{ $t->tgl_transaksi }}"
+                                data-tanggal="{{ \Carbon\Carbon::parse($t->tgl_transaksi)->format('d/m/Y') }}"
                                 class="delete-btn bg-red-600 text-white p-3 rounded-xl 
                                        hover:bg-red-700 shadow-lg border-2 border-white
                                        cursor-pointer">
@@ -160,20 +160,26 @@
                                     </div>
                                     <div class="flex-1">
                                         <p class="text-gray-500 text-xs">Tanggal Masuk</p>
-                                        <p class="font-semibold text-gray-800">{{ $t->tgl_transaksi }}</p>
+                                        <p class="font-semibold text-gray-800">
+                                            {{ \Carbon\Carbon::parse($t->tgl_transaksi)->format('d/m/Y') }}
+                                        </p>
                                     </div>
                                 </div>
 
                                 {{-- Estimasi Selesai --}}
+                                @if($t->tgl_estimasi)
                                 <div class="flex items-center gap-3 text-sm">
                                     <div class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <i class="bi bi-calendar-check text-green-500"></i>
                                     </div>
                                     <div class="flex-1">
                                         <p class="text-gray-500 text-xs">Estimasi Selesai</p>
-                                        <p class="font-semibold text-gray-800">{{ $t->tgl_estimasi }}</p>
+                                        <p class="font-semibold text-gray-800">
+                                            {{ \Carbon\Carbon::parse($t->tgl_estimasi)->format('d/m/Y') }}
+                                        </p>
                                     </div>
                                 </div>
+                                @endif
 
                                 {{-- Diskon (if exists) --}}
                                 @if($t->diskon > 0)
