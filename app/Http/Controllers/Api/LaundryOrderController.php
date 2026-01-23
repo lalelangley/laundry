@@ -164,6 +164,7 @@ class LaundryOrderController extends Controller
     public function getOrderDetail($id)
 {
     $order = Transaksi::with([
+        'pelanggan:id_pelanggan,nama_pelanggan,no_hp',
         'detail.layanan:id_layanan,nama_layanan',
         'detail.jenis:id_jenis_layanan,nama_jenis',
         'detail.parfum:id_parfum,nama_parfum',
@@ -199,7 +200,7 @@ return response()->json([
         'tanggal'          => $order->created_at,
         'pelanggan'        => [
             'nama' => $order->nama_pelanggan,
-            'hp'   => $order->hp_pelanggan
+           'hp' => $order->pelanggan->no_hp ?? null
         ],
         'items'            => $order->detail,
         'subtotal'         => $subtotal,
@@ -231,6 +232,7 @@ return response()->json([
    public function getInvoice($id)
     {
         $order = Transaksi::with([
+            'pelanggan:id_pelanggan,nama_pelanggan,no_hp',
             'detail.layanan',
             'detail.jenis',
             'detail.parfum',
@@ -278,7 +280,7 @@ return response()->json([
         'tanggal' => $order->created_at,
         'pelanggan' => [
             'nama' => $order->nama_pelanggan,
-            'hp'   => $order->hp_pelanggan
+            'hp'   => $order->pelanggan->no_hp ?? null
         ],
         'items' => $order->detail,
         'subtotal' => $subtotal,
