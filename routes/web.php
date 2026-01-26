@@ -1514,6 +1514,8 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
             Route::get('/create', [UserManagerController::class, 'createKasirAdmin2'])->name('create');
             Route::post('/', [UserManagerController::class, 'storeKasirAdmin2'])->name('store');
             Route::get('/{id}/edit', [UserManagerController::class, 'editKasirAdmin2'])->name('edit');
+            // ✅ TAMBAHKAN ROUTE UPDATE INI
+            Route::put('/{id}', [UserManagerController::class, 'updateKasirAdmin2'])->name('update');
         });
         
         Route::prefix('driver')->name('driver.')->group(function () {

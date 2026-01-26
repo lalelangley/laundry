@@ -54,7 +54,7 @@ class ProfileController extends Controller
     {
         $admin = auth()->guard('admin')->user();
 
-        return view('profile.edit', compact('admin'));
+        return view('admin2.profile.edit', compact('admin')); // ✅ BENAR
     }
 
     // =============================

@@ -80,7 +80,13 @@ class Transaksi extends Model
 
     public function biayaTambahan()
     {
-        return $this->belongsTo(BiayaTambahan::class, 'id_biaya_tambahan', 'id_biaya_tambahan');
+        return $this->hasMany(BiayaTambahan::class, 'id_transaksi', 'id_transaksi');
+    }
+
+    // Helper untuk total biaya tambahan
+    public function getTotalBiayaTambahanAttribute()
+    {
+        return $this->biayaTambahan()->sum('nominal');
     }
 
     public function delivery()

@@ -2,7 +2,41 @@
 
 @section('content')
 <div class="min-h-screen bg-gray-50 pb-10">
+<style>
+    @keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+}
+
+.biaya-item {
+    transition: all 0.3s ease;
+}
+</style>
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
         <a href="{{ route('pesanan.online.index', ['tab' => request()->get('from_tab', 'pickup')]) }}"
@@ -311,7 +345,7 @@
                 </div>
             </div>
 
-            {{-- ✅ AKSI SECTION - CLEAN & NO DUPLICATE --}}
+        {{-- ✅ AKSI SECTION - CLEAN & FIXED --}}
 <div class="bg-white rounded-xl shadow p-5 space-y-3">
     <h2 class="font-bold mb-2">Aksi</h2>
 
@@ -323,21 +357,11 @@
         // ✅ AMBIL METODE BAYAR DARI TABEL PEMBAYARAN (prioritas utama)
         $pembayaranTerbaru = $pesanan->pembayaran()->latest()->first();
         
-        // Jika ada pembayaran, gunakan metode dari pembayaran
-        // Jika tidak ada, gunakan dari transaksi
         if ($pembayaranTerbaru && $pembayaranTerbaru->id_metode_bayar) {
             $metodeBayar = $pembayaranTerbaru->metodeBayar;
         } else {
             $metodeBayar = $pesanan->metodeBayar;
         }
-        
-        // Debug info
-        $debugInfo = [
-            'transaksi_id_metode' => $pesanan->id_metode_bayar ?? 'NULL',
-            'pembayaran_terbaru_id' => $pembayaranTerbaru ? $pembayaranTerbaru->id_metode_bayar : 'NULL',
-            'metode_bayar_found' => $metodeBayar ? 'YES' : 'NO',
-            'nama_metode' => $metodeBayar ? $metodeBayar->nama_metode_bayar : 'NULL'
-        ];
         
         $isTransfer = false;
         $isCash = false;
@@ -348,15 +372,13 @@
             $isCash = (stripos($namaMetode, 'cash') !== false || stripos($namaMetode, 'tunai') !== false);
         }
         
-        // Cek apakah sudah lunas
         $sudahLunas = $pesanan->status_bayar === 'lunas';
     @endphp
 
     {{-- ========== STATUS: PICK_UP ========== --}}
     @if($pesanan->status_transaksi === 'pick_up')
-        {{-- ✅ Cek apakah driver sudah sampai di laundry --}}
+        {{-- Driver sudah sampai di laundry --}}
         @if($deliveryPickup && $deliveryPickup->status === 'arrived_at_laundry')
-            {{-- ✅ DRIVER SUDAH SAMPAI - LANGSUNG TAMPILKAN ISI DATA PESANAN --}}
             <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-3">
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
@@ -384,14 +406,14 @@
                 </div>
             </div>
 
-            {{-- ✅ TOMBOL ISI DATA PESANAN --}}
+            {{-- Tombol Isi Data Pesanan --}}
             <button onclick="openIsiDataModal()" 
                     class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition-all hover:shadow-xl hover:scale-105">
                 <i class="bi bi-pencil-square text-lg"></i> 
                 <span>{{ $dataLengkap ? 'Edit' : 'Isi' }} Data Pesanan</span>
             </button>
 
-            {{-- ✅ INFO: Data akan otomatis masuk antrian setelah disimpan --}}
+            {{-- Info otomatis ke antrian --}}
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
                 <div class="flex items-start gap-2">
                     <i class="bi bi-info-circle-fill text-orange-600 mt-0.5"></i>
@@ -401,8 +423,8 @@
                 </div>
             </div>
 
+        {{-- Driver sudah assigned tapi belum sampai --}}
         @elseif($deliveryPickup && $deliveryPickup->id_driver && $deliveryPickup->driver)
-            {{-- ✅ DRIVER SUDAH ASSIGNED TAPI BELUM SAMPAI --}}
             <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
                 <div class="flex items-start gap-3 mb-3">
                     <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shrink-0">
@@ -443,7 +465,7 @@
                     </div>
                 </div>
                 
-                {{-- ✅ TOMBOL DRIVER SAMPAI --}}
+                {{-- Tombol Driver Sampai --}}
                 <a href="{{ route('pesanan.online.driver-arrive', $pesanan->id_transaksi) }}" 
                    class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 transition flex items-center justify-center gap-2 shadow-lg">
                     <i class="bi bi-check-circle-fill"></i> 
@@ -451,8 +473,8 @@
                 </a>
             </div>
 
+        {{-- Belum ada driver --}}
         @else
-            {{-- ✅ BELUM ADA DRIVER ATAU DATA TIDAK LENGKAP --}}
             <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-3">
                 <p class="text-orange-800 font-semibold mb-2">
                     <i class="bi bi-exclamation-triangle-fill"></i> Perlu Driver Pickup
@@ -460,20 +482,6 @@
                 <p class="text-sm text-orange-700">
                     Silakan tentukan driver untuk menjemput cucian pelanggan.
                 </p>
-                
-                @if($deliveryPickup && !$deliveryPickup->id_driver)
-                <p class="text-xs text-orange-600 mt-2">
-                    <i class="bi bi-info-circle"></i> Delivery sudah dibuat (ID: {{ $deliveryPickup->id_delivery }}), 
-                    tapi belum ada driver yang ditugaskan.
-                </p>
-                @endif
-                
-                @if($deliveryPickup && $deliveryPickup->id_driver && !$deliveryPickup->driver)
-                <p class="text-xs text-red-600 mt-2">
-                    <i class="bi bi-exclamation-circle"></i> Driver ID {{ $deliveryPickup->id_driver }} 
-                    tidak ditemukan di database. Silakan assign ulang.
-                </p>
-                @endif
             </div>
             
             <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}?from_tab=pickup" 
@@ -486,7 +494,7 @@
 
     {{-- ========== STATUS: ANTRIAN ========== --}}
     @if($pesanan->status_transaksi === 'antrian')
-        {{-- ✅ INFO: Tampilkan info delivery pickup jika ada --}}
+        {{-- Info Delivery Pickup jika ada --}}
         @if($deliveryPickup && $deliveryPickup->driver)
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
             <p class="text-xs text-gray-600 font-semibold mb-1">
@@ -510,45 +518,64 @@
             <span>{{ $dataLengkap ? 'Edit' : 'Isi' }} Data Pesanan</span>
         </button>
         
-        {{-- Warning jika belum lengkap --}}
+        {{-- Warning atau Tombol Proses --}}
         @if(!$dataLengkap)
-        <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-            <div class="flex items-start gap-2">
-                <i class="bi bi-exclamation-triangle-fill text-amber-600 mt-0.5"></i>
-                <div class="text-sm text-amber-800">
-                    <p class="font-semibold">Data Pesanan Belum Lengkap</p>
-                    <p class="text-xs mt-1">Silakan isi data pesanan terlebih dahulu sebelum melanjutkan proses.</p>
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                <div class="flex items-start gap-2">
+                    <i class="bi bi-exclamation-triangle-fill text-amber-600 mt-0.5"></i>
+                    <div class="text-sm text-amber-800">
+                        <p class="font-semibold">Data Pesanan Belum Lengkap</p>
+                        <p class="text-xs mt-1">Silakan isi data pesanan terlebih dahulu sebelum melanjutkan proses.</p>
+                    </div>
                 </div>
             </div>
-        </div>
         @else
-        {{-- Tombol Proses hanya muncul jika data lengkap --}}
-        <a href="{{ route('pesanan.online.proses', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:from-orange-700 hover:to-red-700 transition shadow-lg flex items-center justify-center">
-            <i class="bi bi-play-circle-fill"></i> Mulai Proses
-        </a>
+            {{-- ✅ TOMBOL PROSES - TAMPIL HANYA JIKA DATA LENGKAP --}}
+            <a href="{{ route('pesanan.online.proses', $pesanan->id_transaksi) }}" 
+               class="w-full py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold hover:from-orange-700 hover:to-red-700 transition shadow-lg flex items-center justify-center gap-2">
+                <i class="bi bi-play-circle-fill text-lg"></i>
+                <span>Mulai Proses</span>
+            </a>
         @endif
     @endif
 
     {{-- ========== STATUS: PROSES ========== --}}
     @if($pesanan->status_transaksi === 'proses')
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+            <div class="flex items-center gap-2">
+                <i class="bi bi-hourglass-split text-orange-600 text-lg"></i>
+                <p class="text-sm text-orange-700 font-semibold">Pesanan Sedang Diproses</p>
+            </div>
+        </div>
+
         <a href="{{ route('pesanan.online.selesai_di_cuci', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg flex items-center justify-center">
-            <i class="bi bi-check2-circle"></i> Tandai Selesai Dicuci
+           class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 transition shadow-lg flex items-center justify-center gap-2">
+            <i class="bi bi-check2-circle text-lg"></i>
+            <span>Tandai Selesai Dicuci</span>
         </a>
     @endif
 
     {{-- ========== STATUS: SELESAI_DICUCI ========== --}}
     @if($pesanan->status_transaksi === 'selesai_dicuci')
+        <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+            <div class="flex items-center gap-2">
+                <i class="bi bi-check-circle-fill text-green-600 text-lg"></i>
+                <p class="text-sm text-green-700 font-semibold">Cucian Sudah Selesai</p>
+            </div>
+            <p class="text-xs text-green-600 mt-1">Pilih metode pengiriman ke pelanggan</p>
+        </div>
+
         {{-- Pilih: Antar atau Ambil Sendiri --}}
         <a href="{{ route('pesanan.online.siap_di_antar', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition shadow-lg flex items-center justify-center mb-2">
-            <i class="bi bi-truck"></i> Siap Diantar (Butuh Driver)
+           class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition shadow-lg flex items-center justify-center gap-2 mb-2">
+            <i class="bi bi-truck text-lg"></i>
+            <span>Siap Diantar (Butuh Driver)</span>
         </a>
         
         <a href="{{ route('pesanan.online.siap_di_ambil', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition shadow-lg flex items-center justify-center">
-            <i class="bi bi-shop"></i> Siap Diambil (Pelanggan Ambil)
+           class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 transition shadow-lg flex items-center justify-center gap-2">
+            <i class="bi bi-shop text-lg"></i>
+            <span>Siap Diambil (Pelanggan Ambil)</span>
         </a>
     @endif
 
@@ -581,20 +608,27 @@
             {{-- Tombol Selesai hanya muncul setelah delivered --}}
             @if($deliveryAntar->status === 'delivered' || $sudahLunas)
             <a href="{{ route('pesanan.online.selesai', $pesanan->id_transaksi) }}" 
-               class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center">
-                <i class="bi bi-check-circle-fill"></i> Selesaikan Pesanan
+               class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center gap-2">
+                <i class="bi bi-check-circle-fill text-lg"></i>
+                <span>Selesaikan Pesanan</span>
             </a>
             @else
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
-                <p class="text-yellow-700 font-semibold"><i class="bi bi-hourglass-split"></i> Menunggu Delivery</p>
+                <p class="text-yellow-700 font-semibold">
+                    <i class="bi bi-hourglass-split"></i> Menunggu Delivery
+                </p>
                 <p class="text-xs text-yellow-600 mt-1">Driver sedang dalam perjalanan...</p>
             </div>
             @endif
         @else
             {{-- Belum ada driver delivery --}}
             <div class="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-3">
-                <p class="text-orange-800 font-semibold mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Perlu Driver Delivery</p>
-                <p class="text-sm text-orange-700">Silakan tentukan driver untuk mengantar cucian ke pelanggan.</p>
+                <p class="text-orange-800 font-semibold mb-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Perlu Driver Delivery
+                </p>
+                <p class="text-sm text-orange-700">
+                    Silakan tentukan driver untuk mengantar cucian ke pelanggan.
+                </p>
             </div>
             
             <a href="{{ route('pesanan.online.list-driver', $pesanan->id_transaksi) }}" 
@@ -609,44 +643,41 @@
     @if($pesanan->status_transaksi === 'siap_di_ambil')
         @if($sudahLunas)
         <a href="{{ route('pesanan.online.selesai', $pesanan->id_transaksi) }}" 
-           class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center">
-            <i class="bi bi-check-circle-fill"></i> Selesaikan Pesanan
+           class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition shadow-lg flex items-center justify-center gap-2">
+            <i class="bi bi-check-circle-fill text-lg"></i>
+            <span>Selesaikan Pesanan</span>
         </a>
         @else
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center mb-3">
-            <p class="text-yellow-700 font-semibold"><i class="bi bi-hourglass-split"></i> Menunggu Pengambilan</p>
+            <p class="text-yellow-700 font-semibold">
+                <i class="bi bi-hourglass-split"></i> Menunggu Pengambilan
+            </p>
             <p class="text-xs text-yellow-600 mt-1">Pelanggan belum mengambil cuciannya</p>
         </div>
         @endif
     @endif
 
-   {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
+    {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
     @php
-        // ✅ PERBAIKAN: Logika yang lebih sederhana dan jelas dengan pengecekan null yang lebih baik
         $showBuktiPembayaran = false;
         $labelButton = 'Input Bukti Pembayaran';
         
-        // ✅ CEK METODE BAYAR - Jika null, tetap tampilkan tombol dengan pesan khusus
         if ($metodeBayar) {
             if ($isTransfer) {
-                // ✅ TRANSFER: Muncul mulai dari antrian sampai siap_di_ambil
                 $allowedStatusTransfer = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
                 $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusTransfer);
                 $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
                 
             } elseif ($isCash) {
-                // ✅ CASH: Muncul di siap_di_antar dan siap_di_ambil
                 $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
                 $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash);
                 $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
             } else {
-                // ✅ METODE BAYAR LAIN: Tampilkan tombol di status yang sama dengan transfer
                 $allowedStatusOther = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
                 $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusOther);
                 $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran' : 'Input Bukti Pembayaran';
             }
         } else {
-            // ✅ JIKA BELUM ADA METODE BAYAR: Tetap tampilkan tombol untuk setup pembayaran
             $allowedStatusNoMethod = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
             $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusNoMethod);
             $labelButton = 'Atur Metode Pembayaran';
@@ -654,9 +685,9 @@
     @endphp
 
     @if($showBuktiPembayaran)
-        <hr class="my-3">
+        <hr class="my-4">
         
-        {{-- ✅ WARNING JIKA BELUM ADA METODE BAYAR --}}
+        {{-- Warning jika belum ada metode bayar --}}
         @if(!$metodeBayar)
         <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
             <div class="flex items-start gap-2">
@@ -669,7 +700,7 @@
         </div>
         @endif
         
-        {{-- ✅ INFO BERBEDA UNTUK TRANSFER VS CASH --}}
+        {{-- Info metode pembayaran --}}
         @if($isTransfer)
             @if($sudahLunas)
             <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
@@ -716,21 +747,23 @@
             @endif
         @endif
         
-        {{-- ✅ TOMBOL BUKTI PEMBAYARAN --}}
+        {{-- Tombol Bukti Pembayaran --}}
         <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
-        class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
-            <i class="bi bi-receipt"></i>
+           class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
+            <i class="bi bi-receipt text-lg"></i>
             <span>{{ $labelButton }}</span>
         </a>
     @endif
 
-    {{-- CETAK NOTA --}}
+    {{-- ========== TOMBOL CETAK NOTA ========== --}}
+    <hr class="my-4">
+    
     <button onclick="window.print()"
-            class="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2 mt-3">
+            class="w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center justify-center gap-2 transition">
         <i class="bi bi-printer"></i>
         <span>Cetak Nota</span>
     </button>
-    </div>
+</div>
         </div>
     </div>
 </div>
@@ -812,83 +845,118 @@
                         </div>
                     </div>
 
-                    {{-- BIAYA ONGKIR SECTION --}}
-                    <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-orange-900 mb-4 flex items-center gap-2">
-                            <i class="bi bi-truck"></i> Biaya Ongkir
-                        </h4>
+                   {{-- BIAYA TAMBAHAN SECTION (SIMPLE INPUT) --}}
+<div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
+    <h4 class="font-bold text-lg text-orange-900 mb-4 flex items-center gap-2">
+        <i class="bi bi-plus-circle"></i> Biaya Tambahan
+    </h4>
 
-                        {{-- Toggle Ongkir Type --}}
-                        <div class="mb-4 bg-white rounded-lg p-4 border-2 border-orange-100">
-                            <label class="block text-sm font-bold text-gray-700 mb-3">Pilih Metode Ongkir:</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="flex items-center cursor-pointer group">
-                                    <input type="radio" name="ongkir_method" value="preset" 
-                                           {{ ($pesanan->id_biaya_tambahan ?? '') ? 'checked' : '' }}
-                                           onchange="toggleOngkirMethod()"
-                                           class="mr-3 text-orange-600 focus:ring-orange-500 w-5 h-5">
-                                    <div class="flex items-center gap-2">
-                                        <i class="bi bi-list-check text-orange-600"></i>
-                                        <span class="text-sm font-semibold group-hover:text-orange-600 transition">Pilih dari List</span>
-                                    </div>
-                                </label>
-                                <label class="flex items-center cursor-pointer group">
-                                    <input type="radio" name="ongkir_method" value="manual" 
-                                           {{ !($pesanan->id_biaya_tambahan ?? '') ? 'checked' : '' }}
-                                           onchange="toggleOngkirMethod()"
-                                           class="mr-3 text-orange-600 focus:ring-orange-500 w-5 h-5">
-                                    <div class="flex items-center gap-2">
-                                        <i class="bi bi-pencil-square text-orange-600"></i>
-                                        <span class="text-sm font-semibold group-hover:text-orange-600 transition">Input Manual</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        {{-- Preset Ongkir --}}
-                        <div id="presetOngkirSection" class="{{ ($pesanan->id_biaya_tambahan ?? '') ? '' : 'hidden' }}">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-list-ul text-orange-600"></i> Pilih Biaya Ongkir
-                            </label>
-                            <select name="id_biaya_tambahan" 
-                                    id="id_biaya_tambahan"
-                                    class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
-                                <option value="">-- Tidak Ada Ongkir --</option>
-                                @foreach($biayaTambahan as $bt)
-                                <option value="{{ $bt->id_biaya_tambahan }}" 
-                                        {{ ($pesanan->id_biaya_tambahan ?? '') == $bt->id_biaya_tambahan ? 'selected' : '' }}>
-                                    Rp {{ number_format($bt->nominal, 0, ',', '.') }}
-                                </option>
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-gray-600 mt-2 flex items-start gap-1">
-                                <i class="bi bi-info-circle mt-0.5"></i>
-                                <span>Pilih biaya ongkir yang sudah tersedia di sistem.</span>
-                            </p>
-                        </div>
-
-                        {{-- Manual Ongkir --}}
-                        <div id="manualOngkirSection" class="{{ !($pesanan->id_biaya_tambahan ?? '') ? '' : 'hidden' }}">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-currency-dollar text-orange-600"></i> Input Ongkir Manual
-                            </label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">Rp</span>
-                                <input type="number" 
-                                       name="ongkir_manual" 
-                                       id="ongkir_manual"
-                                       step="1000" 
-                                       min="0"
-                                       value="0"
-                                       placeholder="0"
-                                       class="w-full pl-12 pr-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
-                            </div>
-                            <p class="text-xs text-gray-600 mt-2 flex items-start gap-1">
-                                <i class="bi bi-info-circle mt-0.5"></i>
-                                <span>Masukkan nominal ongkir secara manual jika tidak ada di list.</span>
-                            </p>
-                        </div>
+    {{-- List Biaya Tambahan yang Sudah Ada --}}
+    <div id="biayaTambahanList" class="space-y-3 mb-4">
+        @if($pesanan->biayaTambahan && $pesanan->biayaTambahan->count() > 0)
+            @foreach($pesanan->biayaTambahan as $index => $bt)
+            <div class="biaya-item bg-white border-2 border-orange-200 rounded-lg p-3" data-index="{{ $index }}" data-id="{{ $bt->id_biaya_tambahan }}">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
+                        {{ $index + 1 }}
                     </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-sm">{{ $bt->nama_biaya }}</p>
+                        <p class="text-xs text-gray-600">Rp {{ number_format($bt->nominal, 0, ',', '.') }}</p>
+                    </div>
+                    <button type="button" onclick="removeBiayaTambahan({{ $index }}, {{ $bt->id_biaya_tambahan }})" 
+                            class="text-red-600 hover:text-red-800 hover:scale-110 transition">
+                        <i class="bi bi-trash text-lg"></i>
+                    </button>
+                </div>
+                <input type="hidden" name="existing_biaya_id[]" value="{{ $bt->id_biaya_tambahan }}">
+            </div>
+            @endforeach
+        @else
+            <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="emptyMessage">
+                <i class="bi bi-inbox text-gray-400 text-3xl mb-2"></i>
+                <p class="text-gray-500 text-sm italic">Belum ada biaya tambahan</p>
+                <p class="text-xs text-gray-400 mt-1">Tambahkan biaya di bawah ini</p>
+            </div>
+        @endif
+    </div>
+
+    {{-- Form Input Biaya Tambahan --}}
+    <div class="bg-white rounded-xl p-5 border-2 border-orange-100 shadow-sm">
+        <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <i class="bi bi-plus-lg text-white"></i>
+            </div>
+            <h5 class="font-bold text-gray-800">Tambah Biaya Baru</h5>
+        </div>
+
+        <div class="space-y-4">
+            {{-- Input Nama Biaya --}}
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">
+                    <i class="bi bi-tag text-orange-600"></i> Nama Biaya <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       id="inputNamaBiaya" 
+                       placeholder="Contoh: Ongkir, Service Express, Pewangi Premium"
+                       class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder:text-gray-400">
+            </div>
+
+            {{-- Input Nominal --}}
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">
+                    <i class="bi bi-cash text-orange-600"></i> Nominal <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-lg">Rp</span>
+                    <input type="number" 
+                           id="inputNominalBiaya" 
+                           step="1000" 
+                           min="0" 
+                           placeholder="0"
+                           class="w-full pl-14 pr-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition placeholder:text-gray-400">
+                </div>
+                <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                    <i class="bi bi-lightbulb"></i>
+                    <span>Tip: Gunakan kelipatan 1000 untuk nominal yang rapi</span>
+                </p>
+            </div>
+
+            {{-- Quick Amount Buttons --}}
+            <div>
+                <p class="text-sm font-bold text-gray-700 mb-2">Quick Amount:</p>
+                <div class="grid grid-cols-4 gap-2">
+                    <button type="button" onclick="setNominal(5000)" 
+                            class="px-3 py-2 text-sm bg-orange-50 border-2 border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition font-semibold text-orange-700">
+                        5K
+                    </button>
+                    <button type="button" onclick="setNominal(10000)" 
+                            class="px-3 py-2 text-sm bg-orange-50 border-2 border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition font-semibold text-orange-700">
+                        10K
+                    </button>
+                    <button type="button" onclick="setNominal(15000)" 
+                            class="px-3 py-2 text-sm bg-orange-50 border-2 border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition font-semibold text-orange-700">
+                        15K
+                    </button>
+                    <button type="button" onclick="setNominal(20000)" 
+                            class="px-3 py-2 text-sm bg-orange-50 border-2 border-orange-200 rounded-lg hover:bg-orange-100 hover:border-orange-300 transition font-semibold text-orange-700">
+                        20K
+                    </button>
+                </div>
+            </div>
+
+            {{-- Tombol Tambah --}}
+            <button type="button" onclick="addBiayaTambahan()"
+                    class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center gap-2">
+                <i class="bi bi-plus-circle-fill text-lg"></i>
+                <span>Tambah Biaya</span>
+            </button>
+        </div>
+    </div>
+
+    {{-- Hidden inputs untuk biaya tambahan baru --}}
+    <div id="newBiayaTambahanInputs"></div>
+</div>
 
                     {{-- TANGGAL ESTIMASI SELESAI --}}
                     <div class="bg-gradient-to-r from-yellow-50 to-cyan-50 border-2 border-yellow-200 rounded-xl p-5">
@@ -1252,6 +1320,208 @@ function sendNotificationSelesaiDicuci() {
         btn.disabled = false;
     });
 }
+
+// =====================================
+// BIAYA TAMBAHAN FUNCTIONS
+// =====================================
+
+let biayaIndex = {{ $pesanan->biayaTambahan ? $pesanan->biayaTambahan->count() : 0 }};
+let biayaToDelete = [];
+
+// SET NOMINAL QUICK BUTTON
+function setNominal(amount) {
+    document.getElementById('inputNominalBiaya').value = amount;
+    document.getElementById('inputNominalBiaya').focus();
+}
+
+// TAMBAH BIAYA TAMBAHAN
+function addBiayaTambahan() {
+    const namaBiaya = document.getElementById('inputNamaBiaya').value.trim();
+    const nominal = parseFloat(document.getElementById('inputNominalBiaya').value) || 0;
+    
+    // Validasi
+    if (!namaBiaya) {
+        showErrorNotif('Nama biaya harus diisi!');
+        document.getElementById('inputNamaBiaya').focus();
+        return;
+    }
+    
+    if (nominal <= 0) {
+        showErrorNotif('Nominal harus lebih dari 0!');
+        document.getElementById('inputNominalBiaya').focus();
+        return;
+    }
+    
+    // Hapus pesan "Belum ada biaya tambahan"
+    const emptyMsg = document.getElementById('emptyMessage');
+    if (emptyMsg) emptyMsg.remove();
+    
+    // Hitung nomor urut
+    const currentItems = document.querySelectorAll('.biaya-item').length;
+    const nomorUrut = currentItems + 1;
+    
+    // Tambahkan item ke list
+    const listContainer = document.getElementById('biayaTambahanList');
+    const newItem = document.createElement('div');
+    newItem.className = 'biaya-item bg-white border-2 border-green-200 rounded-lg p-3 animate-slideIn';
+    newItem.dataset.index = biayaIndex;
+    newItem.dataset.new = 'true';
+    
+    newItem.innerHTML = `
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
+                ${nomorUrut}
+            </div>
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <p class="font-semibold text-sm">${namaBiaya}</p>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">BARU</span>
+                </div>
+                <p class="text-xs text-gray-600">Rp ${nominal.toLocaleString('id-ID')}</p>
+            </div>
+            <button type="button" onclick="removeBiayaTambahan(${biayaIndex}, null)" 
+                    class="text-red-600 hover:text-red-800 hover:scale-110 transition">
+                <i class="bi bi-trash text-lg"></i>
+            </button>
+        </div>
+    `;
+    
+    listContainer.appendChild(newItem);
+    
+    // Tambahkan hidden input untuk dikirim ke backend
+    const inputsContainer = document.getElementById('newBiayaTambahanInputs');
+    const hiddenInputs = document.createElement('div');
+    hiddenInputs.id = `new-biaya-${biayaIndex}`;
+    hiddenInputs.innerHTML = `
+        <input type="hidden" name="new_biaya_nama[]" value="${namaBiaya}">
+        <input type="hidden" name="new_biaya_nominal[]" value="${nominal}">
+    `;
+    inputsContainer.appendChild(hiddenInputs);
+    
+    biayaIndex++;
+    
+    // Reset form
+    document.getElementById('inputNamaBiaya').value = '';
+    document.getElementById('inputNominalBiaya').value = '';
+    document.getElementById('inputNamaBiaya').focus();
+    
+    // Update nomor urut semua item
+    updateNomorUrut();
+    
+    // Tampilkan notifikasi
+    showSuccessNotif(`${namaBiaya} berhasil ditambahkan!`);
+}
+
+// HAPUS BIAYA TAMBAHAN
+function removeBiayaTambahan(index, biayaId) {
+    if (!confirm('Hapus biaya tambahan ini?')) return;
+    
+    const item = document.querySelector(`.biaya-item[data-index="${index}"]`);
+    if (item) {
+        // Jika biaya sudah ada di database, tandai untuk dihapus
+        if (biayaId) {
+            biayaToDelete.push(biayaId);
+            // Tambahkan hidden input untuk delete
+            const inputsContainer = document.getElementById('newBiayaTambahanInputs');
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = 'delete_biaya_id[]';
+            deleteInput.value = biayaId;
+            inputsContainer.appendChild(deleteInput);
+        } else {
+            // Hapus hidden input untuk biaya baru
+            const hiddenInputs = document.getElementById(`new-biaya-${index}`);
+            if (hiddenInputs) hiddenInputs.remove();
+        }
+        
+        // Animasi fade out
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+            item.remove();
+            
+            // Update nomor urut
+            updateNomorUrut();
+            
+            // Cek apakah masih ada item
+            const items = document.querySelectorAll('.biaya-item');
+            if (items.length === 0) {
+                const listContainer = document.getElementById('biayaTambahanList');
+                listContainer.innerHTML = `
+                    <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="emptyMessage">
+                        <i class="bi bi-inbox text-gray-400 text-3xl mb-2"></i>
+                        <p class="text-gray-500 text-sm italic">Belum ada biaya tambahan</p>
+                        <p class="text-xs text-gray-400 mt-1">Tambahkan biaya di bawah ini</p>
+                    </div>
+                `;
+            }
+        }, 300);
+    }
+}
+
+// UPDATE NOMOR URUT
+function updateNomorUrut() {
+    const items = document.querySelectorAll('.biaya-item');
+    items.forEach((item, index) => {
+        const nomorElement = item.querySelector('.w-8.h-8');
+        if (nomorElement) {
+            nomorElement.textContent = index + 1;
+        }
+    });
+}
+
+// NOTIFIKASI SUCCESS
+function showSuccessNotif(message) {
+    const notif = document.createElement('div');
+    notif.className = 'fixed bottom-4 right-4 bg-green-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[9999] animate-slideUp';
+    notif.innerHTML = `
+        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+            <i class="bi bi-check-lg font-bold"></i>
+        </div>
+        <span class="font-semibold">${message}</span>
+    `;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        notif.style.transform = 'translateY(10px)';
+        setTimeout(() => notif.remove(), 300);
+    }, 2500);
+}
+
+// NOTIFIKASI ERROR
+function showErrorNotif(message) {
+    const notif = document.createElement('div');
+    notif.className = 'fixed bottom-4 right-4 bg-red-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[9999] animate-slideUp';
+    notif.innerHTML = `
+        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+            <i class="bi bi-exclamation-lg font-bold"></i>
+        </div>
+        <span class="font-semibold">${message}</span>
+    `;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        notif.style.transform = 'translateY(10px)';
+        setTimeout(() => notif.remove(), 300);
+    }, 2500);
+}
+
+// KEYBOARD SHORTCUT (ENTER untuk tambah)
+document.getElementById('inputNamaBiaya')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('inputNominalBiaya').focus();
+    }
+});
+
+document.getElementById('inputNominalBiaya')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addBiayaTambahan();
+    }
+});
 </script>
 
 @endsection

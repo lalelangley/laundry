@@ -13,10 +13,13 @@ class BiayaTambahan extends Model
     protected $primaryKey = 'id_biaya_tambahan';
 
     protected $fillable = [
+        'id_transaksi',
+        'nama_biaya',
         'nominal',
     ];
 
     protected $casts = [
+        'nama_biaya' => 'string',
         'nominal' => 'double',
     ];
 
@@ -25,4 +28,5 @@ class BiayaTambahan extends Model
     {
         return $this->hasMany(Transaksi::class, 'id_biaya_tambahan', 'id_biaya_tambahan');
     }
+    
 }

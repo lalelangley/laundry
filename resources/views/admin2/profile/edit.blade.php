@@ -1,117 +1,276 @@
 @extends('layouts.master')
-
 @section('title', 'Edit Profile')
-
 @section('content')
-<div class="min-h-screen bg-gray-50">
 
-     {{-- HEADER --}}
-   <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
+<div class="min-h-screen bg-gray-50">
+    {{-- HEADER --}}
+    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
         <a href="{{ route('admin2.dashboard') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
         <span class="text-2xl font-bold text-white">Edit Profile</span>
     </div>
 
-    <div class="px-6 md:px-12 py-10">
-        <div class="bg-white rounded-2xl shadow-xl max-w-4xl mx-auto overflow-hidden">
-
-            {{-- HEADER CARD --}}
-            <div class="px-8 py-8 border-b bg-yellow-50 flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-yellow-400 rounded-2xl flex items-center justify-center">
-                        <i class="bi bi-person-gear text-white text-2xl"></i>
+    {{-- FORM SECTION --}}
+    <div class="px-12 py-10">
+        {{-- Card --}}
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {{-- Card Header --}}
+            <div class="bg-gradient-to-r from-yellow-50 to-white px-12 py-10 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="bi bi-person-circle text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Edit Profile Admin</h3>
+                            <p class="text-sm text-gray-600 mt-1">Update informasi akun: <strong>{{ $admin->nama }}</strong></p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="font-bold text-lg">Edit Profil Saya</h3>
-                        <p class="text-sm text-gray-600">{{ $admin->email }}</p>
+                    <div class="bg-orange-50 px-5 py-3 rounded-xl border border-orange-200">
+                        <p class="text-xs text-orange-600 font-medium">Role</p>
+                        <p class="text-xl font-bold text-orange-700">{{ $admin->role_id == 1 ? 'SUPER ADMIN' : 'ADMIN' }}</p>
                     </div>
-                </div>
-
-                <div class="text-right">
-                    <p class="text-xs text-yellow-600 font-semibold">ROLE</p>
-                    <p class="font-bold text-yellow-700">
-                        {{ $admin->role_id == 1 ? 'Super Admin' : 'Admin' }}
-                    </p>
                 </div>
             </div>
 
-            {{-- BODY --}}
-            <div class="p-8">
-
-                {{-- SUCCESS --}}
+            {{-- Card Body --}}
+            <div class="px-12 py-12">
+                {{-- Alert Success --}}
                 @if(session('success'))
-                <div class="mb-6 bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-xl">
-                    <i class="bi bi-check-circle-fill mr-2"></i>
-                    {{ session('success') }}
+                <div class="mb-8 bg-green-50 border-2 border-green-200 rounded-xl p-6">
+                    <div class="flex items-start gap-3">
+                        <i class="bi bi-check-circle-fill text-green-600 text-xl flex-shrink-0"></i>
+                        <div>
+                            <h3 class="font-bold text-green-900 mb-1">Berhasil!</h3>
+                            <p class="text-sm text-green-700">{{ session('success') }}</p>
+                        </div>
+                    </div>
                 </div>
                 @endif
 
-                {{-- ERROR --}}
+                {{-- Alert Error --}}
                 @if($errors->any())
-                <div class="mb-6 bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
-                    <ul class="list-disc ml-5">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                <div class="mb-8 bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                    <div class="flex items-start gap-3">
+                        <i class="bi bi-exclamation-triangle-fill text-red-600 text-xl flex-shrink-0"></i>
+                        <div>
+                            <h3 class="font-bold text-red-900 mb-2">Terdapat Kesalahan!</h3>
+                            <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
                 </div>
                 @endif
 
-                <form method="POST" action="{{ route('profile.admin.update') }}">
+                <form method="POST" action="{{ route('profile.admin2.update') }}">
                     @csrf
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                        {{-- NAMA --}}
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        {{-- Nama Lengkap --}}
                         <div>
-                            <label class="text-sm font-semibold">Nama</label>
-                            <input type="text" name="nama"
-                                   value="{{ old('nama', $admin->nama) }}"
-                                   class="w-full mt-2 rounded-xl border-gray-300 focus:ring-yellow-400 focus:border-yellow-400"
-                                   required>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Nama Lengkap <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-person text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="text" 
+                                       name="nama"
+                                       value="{{ old('nama', $admin->nama) }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('nama') border-red-300 @enderror" 
+                                       placeholder="Contoh: Ahmad Fauzi"
+                                       required>
+                            </div>
+                            @error('nama')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
-                        {{-- EMAIL --}}
+                        {{-- Email --}}
                         <div>
-                            <label class="text-sm font-semibold">Email</label>
-                            <input type="email" name="email"
-                                   value="{{ old('email', $admin->email) }}"
-                                   class="w-full mt-2 rounded-xl border-gray-300 focus:ring-yellow-400 focus:border-yellow-400"
-                                   required>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Alamat Email <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-envelope text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="email" 
+                                       name="email"
+                                       value="{{ old('email', $admin->email) }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('email') border-red-300 @enderror"
+                                       placeholder="email@example.com"
+                                       required>
+                            </div>
+                            @error('email')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
-                        {{-- PASSWORD --}}
+                        {{-- Password Baru --}}
                         <div>
-                            <label class="text-sm font-semibold">Password Baru</label>
-                            <input type="password" name="password"
-                                   class="w-full mt-2 rounded-xl border-gray-300 focus:ring-yellow-400 focus:border-yellow-400"
-                                   placeholder="Kosongkan jika tidak diubah">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Password Baru <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="password" 
+                                       name="password"
+                                       id="password"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('password') border-red-300 @enderror"
+                                       placeholder="Minimal 8 karakter"
+                                       minlength="8">
+                                <button type="button" 
+                                        onclick="togglePassword()"
+                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
+                                    <i class="bi bi-eye-fill" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            @error('password')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <i class="bi bi-info-circle"></i>
+                                Kosongkan jika tidak ingin mengubah password
+                            </p>
                         </div>
 
-                        {{-- CONFIRM --}}
+                        {{-- Konfirmasi Password --}}
                         <div>
-                            <label class="text-sm font-semibold">Konfirmasi Password</label>
-                            <input type="password" name="password_confirmation"
-                                   class="w-full mt-2 rounded-xl border-gray-300 focus:ring-yellow-400 focus:border-yellow-400">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Konfirmasi Password <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-shield-check text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="password" 
+                                       name="password_confirmation"
+                                       id="password_confirmation"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none"
+                                       placeholder="Ketik ulang password baru"
+                                       minlength="8">
+                                <button type="button" 
+                                        onclick="togglePasswordConfirm()"
+                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
+                                    <i class="bi bi-eye-fill" id="toggleIconConfirm"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <i class="bi bi-info-circle"></i>
+                                Pastikan password sama dengan yang di atas
+                            </p>
+                        </div>
+
+                        {{-- Info Terakhir Update --}}
+                        <div class="lg:col-span-2 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <i class="bi bi-clock-history text-gray-400 text-xl"></i>
+                                <div class="text-sm text-gray-600">
+                                    <p class="font-semibold text-gray-900">Terakhir Diupdate:</p>
+                                    <p>{{ $admin->updated_at->format('d M Y, H:i') }} WIB</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {{-- BUTTON --}}
-                    <div class="flex justify-end gap-4 mt-8">
+                    {{-- Card Footer / Buttons --}}
+                    <div class="flex items-center justify-between gap-4 mt-12 pt-10 border-t border-gray-200">
                         <a href="{{ url()->previous() }}"
-                           class="px-6 py-3 rounded-xl border border-gray-300 font-semibold">
-                            Batal
+                           class="px-8 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
+                            <i class="bi bi-x-circle"></i>
+                            <span>Batal</span>
                         </a>
-
                         <button type="submit"
-                                class="px-8 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 font-bold shadow">
-                            Simpan Perubahan
+                                class="px-10 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold transition inline-flex items-center gap-2 shadow-lg shadow-orange-200">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span>Simpan Perubahan</span>
                         </button>
                     </div>
                 </form>
             </div>
         </div>
+
+        {{-- Info Card --}}
+        <div class="mt-8 bg-amber-50 border-2 border-amber-200 rounded-xl p-6 flex items-start gap-4">
+            <i class="bi bi-info-circle-fill text-amber-600 text-xl flex-shrink-0 mt-1"></i>
+            <div class="text-sm text-amber-800">
+                <p class="font-semibold mb-2">Catatan Keamanan</p>
+                <p>Perubahan data profile akan langsung berlaku di sistem. Jika password diubah, gunakan password baru untuk login berikutnya. Pastikan menggunakan password yang kuat dengan kombinasi huruf, angka, dan simbol untuk keamanan akun.</p>
+            </div>
+        </div>
     </div>
 </div>
+
 @endsection
+
+@push('scripts')
+<script>
+// Toggle Password Visibility
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye-fill');
+        toggleIcon.classList.add('bi-eye-slash-fill');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash-fill');
+        toggleIcon.classList.add('bi-eye-fill');
+    }
+}
+
+// Toggle Password Confirmation Visibility
+function togglePasswordConfirm() {
+    const passwordInput = document.getElementById('password_confirmation');
+    const toggleIcon = document.getElementById('toggleIconConfirm');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye-fill');
+        toggleIcon.classList.add('bi-eye-slash-fill');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash-fill');
+        toggleIcon.classList.add('bi-eye-fill');
+    }
+}
+
+// Password Match Validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirmation').value;
+    
+    if (password && password !== passwordConfirm) {
+        e.preventDefault();
+        alert('Password dan Konfirmasi Password tidak sama!');
+        return false;
+    }
+    
+    const nama = document.querySelector('input[name="nama"]').value;
+    const confirm = window.confirm(`Yakin ingin mengupdate profile "${nama}"?`);
+    
+    if (!confirm) {
+        e.preventDefault();
+    }
+});
+</script>
+@endpush
