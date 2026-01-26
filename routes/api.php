@@ -19,6 +19,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/fcm-token/save', [FcmTokenController::class, 'saveToken']);
 
     Route::prefix('profile')->group(function () {
         Route::get('/{id}', [ProfilePelanggansController::class, 'show']);

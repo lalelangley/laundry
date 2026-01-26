@@ -103,6 +103,8 @@ class PesananOnlineController extends Controller
 // Di method index() - ADMIN
 public function indexKasir(Request $request)
 {
+    // Auto check dulu
+    $this->autoCheckTerlambat();
     $tab = $request->get('tab', 'pickup');
     $statusMap = $this->statusMap();
 
@@ -261,32 +263,129 @@ public function indexKasir(Request $request)
             ->with('success', 'Pesanan ditolak');
     }
     
-    public function prosesKasir($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'proses']);
+   public function prosesKasir($id)
+{
+    try {
+        DB::beginTransaction();
         
-        // ✅ AUTO DELIVERY JIKA TERLAMBAT
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        
         if ($this->isPesananTerlambat($pesanan)) {
             $pesanan->update(['status_transaksi' => 'siap_di_antar']);
             
+            $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'antar')
+                ->first();
+            
+            if (!$existingDelivery) {
+                Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => null,
+                    'jenis' => 'antar',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'pending',
+                    'waktu' => now(),
+                    'catatan' => 'Auto-generated: Pesanan melewati estimasi saat proses',
+                ]);
+            }
+            
+            DB::commit();
+            
             return redirect()
                 ->route('kasir.pesanan.online.list-driver', $id)
-                ->with('info', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk delivery.');
+                ->with('warning', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk delivery.');
         }
+        
+        $pesanan->update(['status_transaksi' => 'proses']);
+        
+        DB::commit();
         
         return redirect()->route('kasir.pesanan.online.index', ['tab' => 'proses'])
             ->with('success', 'Pesanan dalam proses');
+            
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Error prosesKasir: " . $e->getMessage());
+        
+        return redirect()->back()
+            ->with('error', 'Gagal memproses pesanan: ' . $e->getMessage());
+    }
+}
+
+     public function selesaiDiCuciKasir($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            $pesanan = Transaksi::with(['pelanggan'])
+                ->where('jenis_transaksi', 'online')
+                ->findOrFail($id);
+            
+            // ✅ CEK APAKAH PESANAN MELEWATI ESTIMASI
+            $statusBaru = 'selesai_dicuci';
+            $needDriverSelection = false;
+            
+            if ($this->isPesananTerlambat($pesanan)) {
+                $statusBaru = 'siap_di_antar';
+                $needDriverSelection = true;
+                
+                Log::info("⚠️ Pesanan {$pesanan->id_transaksi} melewati estimasi, otomatis set ke siap_di_antar");
+            }
+            
+            $pesanan->update(['status_transaksi' => $statusBaru]);
+            
+            // ✅ KIRIM FCM NOTIFICATION
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                
+                if ($tokens->isNotEmpty()) {
+                    $title = $needDriverSelection 
+                        ? '⚠️ Cucian Selesai - Akan Segera Diantar!'
+                        : '🎉 Cucian Selesai Dicuci!';
+                    
+                    $body = $needDriverSelection
+                        ? "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan akan segera diantar karena melewati waktu estimasi."
+                        : "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan siap untuk diproses lebih lanjut.";
+                    
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token,
+                            $title,
+                            $body,
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => $needDriverSelection ? 'siap_di_antar' : 'selesai_dicuci',
+                                'action' => 'open_detail',
+                            ]
+                        );
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            // ✅ REDIRECT KE PILIH DRIVER JIKA TERLAMBAT
+            if ($needDriverSelection) {
+                return redirect()
+                    ->route('kasir.pesanan.online.list-driver', $id)
+                    ->with('warning', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk pengiriman.');
+            }
+            
+            return redirect()->route('kasir.pesanan.online.index', ['tab' => 'selesai_dicuci'])
+                ->with('success', 'Pesanan selesai dicuci & notifikasi terkirim!');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error selesaiDiCuciKasir: " . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Gagal mengupdate status: ' . $e->getMessage());
+        }
     }
 
-    public function selesaiDiCuciKasir($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
-        
-        return redirect()->route('kasir.pesanan.online.index', ['tab' => 'selesai_dicuci'])
-            ->with('success', 'Pesanan selesai dicuci');
-    }
+
     
     public function siapDiAmbilKasir($id)
     {
@@ -328,9 +427,9 @@ public function indexKasir(Request $request)
     }
     
     // ==================== ADMIN ====================
-    // Di method index() - ADMIN
 public function index(Request $request)
-{
+{ 
+     $this->autoCheckTerlambat();
     $tab = $request->get('tab', 'pickup');
     $statusMap = $this->statusMap();
 
@@ -490,24 +589,56 @@ public function index(Request $request)
     }
     
     public function proses($id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'proses']);
+{
+    try {
+        DB::beginTransaction();
         
-        // ✅ AUTO DELIVERY JIKA TERLAMBAT
+        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+        
+        // ✅ CEK DULU sebelum update
         if ($this->isPesananTerlambat($pesanan)) {
             $pesanan->update(['status_transaksi' => 'siap_di_antar']);
             
+            // ✅ Buat delivery record otomatis
+            $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'antar')
+                ->first();
+            
+            if (!$existingDelivery) {
+                Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => null,
+                    'jenis' => 'antar',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'pending',
+                    'waktu' => now(),
+                    'catatan' => 'Auto-generated: Pesanan melewati estimasi saat proses',
+                ]);
+            }
+            
+            DB::commit();
+            
             return redirect()
                 ->route('pesanan.online.list-driver', $id)
-                ->with('info', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk delivery.');
+                ->with('warning', '⚠️ Pesanan melewati estimasi! Langsung masuk siap diantar. Silakan pilih driver.');
         }
+        
+        // ✅ Kalau tidak terlambat, baru update ke proses
+        $pesanan->update(['status_transaksi' => 'proses']);
+        
+        DB::commit();
         
         return redirect()->route('pesanan.online.index', ['tab' => 'proses'])
             ->with('success', 'Pesanan dalam proses');
+            
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("Error proses: " . $e->getMessage());
+        
+        return redirect()->back()
+            ->with('error', 'Gagal memproses pesanan: ' . $e->getMessage());
     }
-
-    // ==================== ADMIN ====================
+}
 public function selesaiDiCuci($id)
 {
     try {
@@ -517,39 +648,81 @@ public function selesaiDiCuci($id)
             ->where('jenis_transaksi', 'online')
             ->findOrFail($id);
         
+        // ✅ CEK APAKAH PESANAN MELEWATI ESTIMASI
+        $statusBaru = 'selesai_dicuci';
+        $needDriverSelection = false;
+        
+        if ($this->isPesananTerlambat($pesanan)) {
+            $statusBaru = 'siap_di_antar';
+            $needDriverSelection = true;
+            
+            Log::info("⚠️ Pesanan {$pesanan->id_transaksi} melewati estimasi, otomatis set ke siap_di_antar");
+        }
+        
         // Update status
-        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
+        $pesanan->update(['status_transaksi' => $statusBaru]);
         
         // ✅ KIRIM FCM NOTIFICATION
         $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
         
         if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+            // ✅ FIX: Ambil dari tabel fcm_tokens
+            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)
+                ->pluck('token')
+                ->filter(); // Remove null/empty tokens
+            
+            Log::info("📍 Found " . $tokens->count() . " FCM tokens for pelanggan {$idPelanggan}");
             
             if ($tokens->isNotEmpty()) {
-                $title = '🎉 Cucian Selesai Dicuci!';
-                $body = "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan siap untuk diproses lebih lanjut.";
+                $title = $needDriverSelection 
+                    ? '⚠️ Cucian Selesai - Akan Segera Diantar!'
+                    : '🎉 Cucian Selesai Dicuci!';
+                
+                $body = $needDriverSelection
+                    ? "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan akan segera diantar karena melewati waktu estimasi."
+                    : "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan siap untuk diproses lebih lanjut.";
                 
                 foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token,
-                        $title,
-                        $body,
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi,
-                            'type' => 'selesai_dicuci',
-                            'action' => 'open_detail',
-                        ]
-                    );
+                    try {
+                        // ✅ FIX: Gunakan 'transaksi_id' bukan 'order_id'
+                        $result = FcmService::send(
+                            $token,
+                            $title,
+                            $body,
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi, // ✅ FIX!
+                                'type' => $needDriverSelection ? 'siap_di_antar' : 'selesai_dicuci',
+                                'action' => 'open_detail', // ✅ TAMBAH INI
+                            ]
+                        );
+                        
+                        if ($result) {
+                            Log::info("✅ FCM sent successfully to token: " . substr($token, 0, 20) . "...");
+                        } else {
+                            Log::warning("⚠️ FCM returned false for token: " . substr($token, 0, 20) . "...");
+                        }
+                        
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM Send Error: " . $e->getMessage());
+                    }
                 }
                 
                 Log::info("✅ FCM sent: Selesai Dicuci - Order {$pesanan->id_transaksi}");
             } else {
-                Log::warning("⚠️ No FCM token for pelanggan ID: {$idPelanggan}");
+                Log::warning("⚠️ No FCM tokens found for pelanggan ID: {$idPelanggan}");
             }
+        } else {
+            Log::warning("⚠️ Pesanan {$pesanan->id_transaksi} tidak memiliki id_pelanggan");
         }
         
         DB::commit();
+        
+        // ✅ REDIRECT KE PILIH DRIVER JIKA TERLAMBAT
+        if ($needDriverSelection) {
+            return redirect()
+                ->route('pesanan.online.list-driver', $id)
+                ->with('warning', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk pengiriman.');
+        }
         
         return redirect()->route('pesanan.online.index', ['tab' => 'selesai_dicuci'])
             ->with('success', 'Pesanan selesai dicuci & notifikasi terkirim!');
@@ -562,6 +735,7 @@ public function selesaiDiCuci($id)
             ->with('error', 'Gagal mengupdate status: ' . $e->getMessage());
     }
 }
+
     
     public function siapDiAmbil($id)
     {
@@ -660,6 +834,7 @@ public function destroy($id)
     // Di method index() - ADMIN
 public function indexAdmin2(Request $request)
 {
+     $this->autoCheckTerlambat();
     $tab = $request->get('tab', 'pickup');
     $statusMap = $this->statusMap();
 
@@ -836,15 +1011,103 @@ public function indexAdmin2(Request $request)
             ->with('success', 'Pesanan dalam proses');
     }
 
-    public function selesaiDiCuciAdmin2($id)
+   public function selesaiDiCuciAdmin2($id)
     {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        $pesanan->update(['status_transaksi' => 'selesai_dicuci']);
-        
-        return redirect()->route('admin2.pesanan.online.index', ['tab' => 'selesai_dicuci'])
-            ->with('success', 'Pesanan selesai dicuci');
+        try {
+            DB::beginTransaction();
+            
+            $pesanan = Transaksi::with(['pelanggan'])
+                ->where('jenis_transaksi', 'online')
+                ->findOrFail($id);
+            
+            // ✅ CEK APAKAH PESANAN MELEWATI ESTIMASI
+            $statusBaru = 'selesai_dicuci';
+            $needDriverSelection = false;
+            
+            if ($this->isPesananTerlambat($pesanan)) {
+                $statusBaru = 'siap_di_antar';
+                $needDriverSelection = true;
+                
+                Log::info("⚠️ Pesanan {$pesanan->id_transaksi} melewati estimasi, otomatis set ke siap_di_antar");
+            }
+            
+            $pesanan->update(['status_transaksi' => $statusBaru]);
+            
+            // ✅ KIRIM FCM NOTIFICATION
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                
+                if ($tokens->isNotEmpty()) {
+                    $title = $needDriverSelection 
+                        ? '⚠️ Cucian Selesai - Akan Segera Diantar!'
+                        : '🎉 Cucian Selesai Dicuci!';
+                    
+                    $body = $needDriverSelection
+                        ? "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan akan segera diantar karena melewati waktu estimasi."
+                        : "Cucian Anda (ORDER/{$pesanan->id_transaksi}) sudah selesai dicuci dan siap untuk diproses lebih lanjut.";
+                    
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token,
+                            $title,
+                            $body,
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => $needDriverSelection ? 'siap_di_antar' : 'selesai_dicuci',
+                                'action' => 'open_detail',
+                            ]
+                        );
+                    }
+                }
+            }
+            
+            DB::commit();
+            
+            // ✅ REDIRECT KE PILIH DRIVER JIKA TERLAMBAT
+            if ($needDriverSelection) {
+                return redirect()
+                    ->route('admin2.pesanan.online.list-driver', $id)
+                    ->with('warning', '⚠️ Pesanan melewati estimasi! Silakan pilih driver untuk pengiriman.');
+            }
+            
+            return redirect()->route('admin2.pesanan.online.index', ['tab' => 'selesai_dicuci'])
+                ->with('success', 'Pesanan selesai dicuci & notifikasi terkirim!');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error selesaiDiCuciAdmin2: " . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'Gagal mengupdate status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Helper function untuk cek apakah pesanan terlambat
+     */
+        private function isPesananTerlambat($pesanan)
+{
+    if (!$pesanan->tgl_estimasi) {
+        return false;
     }
     
+    // Parse tanggal estimasi dan set ke akhir hari (23:59:59)
+    $estimasi = \Carbon\Carbon::parse($pesanan->tgl_estimasi)->endOfDay();
+    $now = \Carbon\Carbon::now();
+    
+    // Terlambat jika waktu sekarang sudah melewati akhir hari estimasi
+    $isTerlambat = $now->greaterThan($estimasi);
+    
+    // ✅ LOG untuk debugging
+    if ($isTerlambat) {
+        Log::info("⚠️ Pesanan {$pesanan->id_transaksi} TERLAMBAT - Estimasi: {$estimasi}, Sekarang: {$now}");
+    }
+    
+    return $isTerlambat;
+}
+
     public function siapDiAmbilAdmin2($id)
     {
         $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
@@ -1432,211 +1695,214 @@ public function indexAdmin2(Request $request)
             'ditolak'       => ['ditolak'],
         ];
     }
-    
-        public function updateData(Request $request, $id)
-    {
-        // ===============================
-        // ✅ VALIDASI
-        // ===============================
-        $request->validate([
-            'id_detail.*'        => 'required|exists:detail_transaksi,id_detail_transaksi',
-            'qty.*'              => 'required|numeric|min:0.01',
-            'diskon'             => 'nullable|numeric|min:0',
-            'tipe_diskon'        => 'nullable|in:nominal,percent',
-            'keterangan'         => 'nullable|string',
-            'foto_bukti'         => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
-            'tgl_estimasi'       => 'required|date|after_or_equal:today',
-            'id_biaya_tambahan'  => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
-            'ongkir_method'      => 'nullable|in:preset,manual',
-            'ongkir_manual'      => 'nullable|numeric|min:0',
+        
+            public function updateData(Request $request, $id)
+{
+    // ===============================
+    // ✅ VALIDASI
+    // ===============================
+    $request->validate([
+        'id_detail.*'        => 'required|exists:detail_transaksi,id_detail_transaksi',
+        'qty.*'              => 'required|numeric|min:0.01',
+        'diskon'             => 'nullable|numeric|min:0',
+        'tipe_diskon'        => 'nullable|in:nominal,percent',
+        'keterangan'         => 'nullable|string',
+        'foto_bukti'         => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
+        'tgl_estimasi'       => 'required|date|after_or_equal:today',
+        'id_biaya_tambahan'  => 'nullable|exists:biaya_tambahan,id_biaya_tambahan',
+        'ongkir_method'      => 'nullable|in:preset,manual',
+        'ongkir_manual'      => 'nullable|numeric|min:0',
+    ]);
+
+    // ===============================
+    // 🔍 AMBIL TRANSAKSI
+    // ===============================
+    $pesanan = Transaksi::with(['pelanggan'])
+        ->where('jenis_transaksi', 'online')
+        ->findOrFail($id);
+
+    // ===============================
+    // ✅ STEP 1: HITUNG SUBTOTAL ITEM
+    // ===============================
+    $subtotalItems = 0;
+
+    foreach ($request->id_detail as $index => $idDetail) {
+        $detail = DetailTransaksi::with('jenis')->findOrFail($idDetail);
+
+        $qty      = $request->qty[$index];
+        $harga    = $detail->jenis->harga;
+        $idSatuan = $detail->jenis->id_satuan;
+        $subtotal = $qty * $harga;
+
+        $subtotalItems += $subtotal;
+
+        $detail->update([
+            'qty'           => $qty,
+            'harga'         => $harga,
+            'id_satuan'     => $idSatuan,
+            'subtotal'      => $subtotal,
+            'tgl_estimasi'  => $request->tgl_estimasi,
         ]);
-
-        // ===============================
-        // 🔍 AMBIL TRANSAKSI
-        // ===============================
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')
-            ->findOrFail($id);
-
-        // ===============================
-        // ✅ STEP 1: HITUNG SUBTOTAL ITEM
-        // ===============================
-        $subtotalItems = 0;
-
-        foreach ($request->id_detail as $index => $idDetail) {
-            $detail = DetailTransaksi::with('jenis')->findOrFail($idDetail);
-
-            $qty      = $request->qty[$index];
-            $harga    = $detail->jenis->harga;
-            $idSatuan = $detail->jenis->id_satuan;
-            $subtotal = $qty * $harga;
-
-            $subtotalItems += $subtotal;
-
-            $detail->update([
-                'qty'           => $qty,
-                'harga'         => $harga,
-                'id_satuan'     => $idSatuan,
-                'subtotal'      => $subtotal,
-                'tgl_estimasi'  => $request->tgl_estimasi,
-            ]);
-        }
-
-        // ===============================
-        // ✅ STEP 2: ONGKIR
-        // ===============================
-        $biayaOngkir = 0;
-        $idBiayaTambahanFinal = null;
-
-        if ($request->filled('ongkir_method')) {
-            if ($request->ongkir_method === 'manual' && $request->ongkir_manual > 0) {
-
-                $biayaOngkir = $request->ongkir_manual;
-
-                $biayaTambahan = BiayaTambahan::firstOrCreate(
-                    ['nominal' => $biayaOngkir],
-                    ['nominal' => $biayaOngkir]
-                );
-
-                $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
-
-            } elseif ($request->ongkir_method === 'preset' && $request->filled('id_biaya_tambahan')) {
-
-                $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
-
-                if ($biayaTambahan) {
-                    $biayaOngkir = $biayaTambahan->nominal;
-                    $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
-                }
-            }
-        }
-
-        // ===============================
-        // ✅ STEP 3: DISKON
-        // ===============================
-        $diskon = $request->diskon ?? 0;
-        $tipeDiskon = $request->tipe_diskon ?? 'nominal';
-
-        if ($tipeDiskon === 'percent' && $diskon > 0) {
-            $diskon = ($subtotalItems * $diskon) / 100;
-        }
-
-        // ===============================
-        // ✅ STEP 4: TOTAL AKHIR
-        // ===============================
-        $totalAkhir = $subtotalItems + $biayaOngkir - $diskon;
-
-        // ===============================
-        // ✅ STEP 5: FOTO BUKTI
-        // ===============================
-        $fotoBuktiPath = $pesanan->foto_bukti;
-
-        if ($request->hasFile('foto_bukti')) {
-            if ($pesanan->foto_bukti && Storage::disk('public')->exists($pesanan->foto_bukti)) {
-                Storage::disk('public')->delete($pesanan->foto_bukti);
-            }
-
-            $file = $request->file('foto_bukti');
-            $filename = 'bukti_' . $pesanan->id_transaksi . '_' . time() . '.' . $file->getClientOriginalExtension();
-            $fotoBuktiPath = $file->storeAs('foto_bukti_cucian', $filename, 'public');
-        }
-
-        // ===============================
-        // ✅ STEP 6: CEK PICKUP
-        // ===============================
-        $deliveryPickup = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->where('status', 'arrived_at_laundry')
-            ->first();
-
-        $statusBaru = $pesanan->status_transaksi;
-
-        if ($pesanan->status_transaksi === 'pick_up' && $deliveryPickup) {
-            $statusBaru = 'antrian';
-        }
-
-        // ===============================
-        // ✅ STEP 7: UPDATE TRANSAKSI
-        // ===============================
-        $pesanan->update([
-            'total_harga'        => $totalAkhir,
-            'diskon'             => $diskon,
-            'tipe_diskon'        => $tipeDiskon,
-            'keterangan'         => $request->keterangan,
-            'status_transaksi'   => $statusBaru,
-            'foto_bukti'         => $fotoBuktiPath,
-            'tgl_estimasi'       => $request->tgl_estimasi,
-            'id_biaya_tambahan'  => $idBiayaTambahanFinal,
-        ]);
-
-        // ===============================
-        // 🔔 STEP 8: KIRIM FCM
-        // ===============================
-        // ===============================
-// 🔔 STEP 8: KIRIM FCM
-// ===============================
-
-// ✅ AMBIL ID PELANGGAN YANG BENAR
-$idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-
-if (!$idPelanggan) {
-    Log::warning("Pesanan {$pesanan->id_transaksi} tidak memiliki id_pelanggan");
-    return redirect()
-        ->route('pesanan.online.detail', $id)
-        ->with('success', 'Data pesanan berhasil diperbarui, tapi notifikasi gagal dikirim (pelanggan tidak ditemukan).');
-}
-
-// ✅ QUERY FCM TOKEN DENGAN LOGGING
-$tokens = FcmToken::where('pelanggan_id', $idPelanggan)
-    ->pluck('token');
-
-Log::info("🔍 FCM Token Check", [
-    'id_pelanggan' => $idPelanggan,
-    'tokens_found' => $tokens->count(),
-    'tokens' => $tokens->toArray(),
-]);
-
-if ($tokens->isEmpty()) {
-    Log::warning("Tidak ada FCM token untuk pelanggan ID: {$idPelanggan}");
-    return redirect()
-        ->route('pesanan.online.detail', $id)
-        ->with('success', 'Data pesanan berhasil diperbarui, tapi notifikasi gagal dikirim (token tidak ditemukan).');
-}
-
-$title = 'Pesanan Laundry';
-$body  = $statusBaru === 'antrian'
-    ? 'Pesanan kamu sudah masuk antrian'
-    : 'Pesanan kamu berhasil diperbarui';
-
-foreach ($tokens as $token) {
-    Log::info("📤 Sending FCM to token: " . substr($token, 0, 30) . "...");
-    
-    $result = FcmService::send(
-        $token,
-        $title,
-        $body,
-        [
-            'transaksi_id' => (string) $pesanan->id_transaksi,
-            'type' => 'invoice',
-        ]
-    );
-    
-    Log::info("📨 FCM Result", $result);
-}
-
-// ===============================
-// ✅ RESPONSE
-// ===============================
-return redirect()
-    ->route('pesanan.online.detail', $id)
-    ->with('success', 'Data pesanan berhasil diperbarui & notifikasi terkirim!');
-        // ===============================
-        // ✅ RESPONSE
-        // ===============================
-        return redirect()
-            ->route('pesanan.online.detail', $id)
-            ->with('success', 'Data pesanan berhasil diperbarui & notifikasi terkirim!');
     }
 
+    // ===============================
+    // ✅ STEP 2: ONGKIR
+    // ===============================
+    $biayaOngkir = 0;
+    $idBiayaTambahanFinal = null;
+
+    if ($request->filled('ongkir_method')) {
+        if ($request->ongkir_method === 'manual' && $request->ongkir_manual > 0) {
+            $biayaOngkir = $request->ongkir_manual;
+            $biayaTambahan = BiayaTambahan::firstOrCreate(
+                ['nominal' => $biayaOngkir],
+                ['nominal' => $biayaOngkir]
+            );
+            $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
+        } elseif ($request->ongkir_method === 'preset' && $request->filled('id_biaya_tambahan')) {
+            $biayaTambahan = BiayaTambahan::find($request->id_biaya_tambahan);
+            if ($biayaTambahan) {
+                $biayaOngkir = $biayaTambahan->nominal;
+                $idBiayaTambahanFinal = $biayaTambahan->id_biaya_tambahan;
+            }
+        }
+    }
+
+    // ===============================
+    // ✅ STEP 3: DISKON
+    // ===============================
+    $diskon = $request->diskon ?? 0;
+    $tipeDiskon = $request->tipe_diskon ?? 'nominal';
+
+    if ($tipeDiskon === 'percent' && $diskon > 0) {
+        $diskon = ($subtotalItems * $diskon) / 100;
+    }
+
+    // ===============================
+    // ✅ STEP 4: TOTAL AKHIR
+    // ===============================
+    $totalAkhir = $subtotalItems + $biayaOngkir - $diskon;
+
+    // ===============================
+    // ✅ STEP 5: FOTO BUKTI
+    // ===============================
+    $fotoBuktiPath = $pesanan->foto_bukti;
+
+    if ($request->hasFile('foto_bukti')) {
+        if ($pesanan->foto_bukti && Storage::disk('public')->exists($pesanan->foto_bukti)) {
+            Storage::disk('public')->delete($pesanan->foto_bukti);
+        }
+        $file = $request->file('foto_bukti');
+        $filename = 'bukti_' . $pesanan->id_transaksi . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $fotoBuktiPath = $file->storeAs('foto_bukti_cucian', $filename, 'public');
+    }
+
+    // ===============================
+    // ✅ STEP 6: CEK PICKUP
+    // ===============================
+    $deliveryPickup = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+        ->where('jenis', 'pickup')
+        ->where('status', 'arrived_at_laundry')
+        ->first();
+
+    $statusBaru = $pesanan->status_transaksi;
+
+    if ($pesanan->status_transaksi === 'pick_up' && $deliveryPickup) {
+        $statusBaru = 'antrian';
+    }
+
+    // ===============================
+    // ✅ STEP 7: UPDATE TRANSAKSI
+    // ===============================
+    $pesanan->update([
+        'total_harga'        => $totalAkhir,
+        'diskon'             => $diskon,
+        'tipe_diskon'        => $tipeDiskon,
+        'keterangan'         => $request->keterangan,
+        'status_transaksi'   => $statusBaru,
+        'foto_bukti'         => $fotoBuktiPath,
+        'tgl_estimasi'       => $request->tgl_estimasi,
+        'id_biaya_tambahan'  => $idBiayaTambahanFinal,
+    ]);
+
+    // ===============================
+    // 🔔 STEP 8: KIRIM FCM - INVOICE
+    // ===============================
+    $fcmSent = false;
+    $fcmMessage = '';
+    
+    $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+
+    Log::info("📍 updateData: Attempting FCM for order {$pesanan->id_transaksi}, pelanggan_id: {$idPelanggan}");
+
+    if ($idPelanggan) {
+        $tokens = FcmToken::where('pelanggan_id', $idPelanggan)
+            ->whereNotNull('token')
+            ->pluck('token')
+            ->toArray();
+        
+        Log::info("📍 updateData: Found " . count($tokens) . " FCM tokens for pelanggan {$idPelanggan}");
+        
+        if (!empty($tokens)) {
+            // ✅ TITLE & BODY UNTUK INVOICE
+            $title = '💰 Harga Pesanan Sudah Diisi!';
+            $body = "ORDER/{$pesanan->id_transaksi} - Total: Rp " . number_format($totalAkhir, 0, ',', '.') . ". Tap untuk lihat detail pembayaran.";
+
+            $fcmSentCount = 0;
+            $fcmFailedCount = 0;
+
+            foreach ($tokens as $token) {
+                try {
+                    // ✅ KIRIM DENGAN DATA INVOICE
+                    $result = FcmService::send(
+                        $token,
+                        $title,
+                        $body,
+                        [
+                            'transaksi_id' => (string) $pesanan->id_transaksi,
+                            'type' => 'invoice', // ✅ TYPE = INVOICE!
+                            'action' => 'open_invoice', // ✅ ACTION = OPEN_INVOICE!
+                            'total_harga' => (string) $totalAkhir,
+                            'status' => $statusBaru,
+                        ]
+                    );
+                    
+                    if ($result) {
+                        $fcmSentCount++;
+                        Log::info("✅ updateData: FCM INVOICE sent to token: " . substr($token, 0, 20) . "...");
+                    } else {
+                        $fcmFailedCount++;
+                        Log::warning("⚠️ updateData: FCM returned false for token: " . substr($token, 0, 20) . "...");
+                    }
+                    
+                    $fcmSent = true;
+                    
+                } catch (\Exception $e) {
+                    $fcmFailedCount++;
+                    Log::error("❌ updateData: FCM Send Error: " . $e->getMessage());
+                }
+            }
+            
+            Log::info("📊 updateData: FCM INVOICE Summary - Sent: {$fcmSentCount}, Failed: {$fcmFailedCount}");
+            
+        } else {
+            Log::warning("⚠️ updateData: No valid FCM tokens");
+            $fcmMessage = ' (Notifikasi tidak terkirim: token tidak ditemukan)';
+        }
+    } else {
+        Log::warning("⚠️ updateData: No pelanggan_id");
+        $fcmMessage = ' (Notifikasi tidak terkirim: pelanggan tidak ditemukan)';
+    }
+
+    // ===============================
+    // ✅ RESPONSE
+    // ===============================
+    $successMessage = 'Data pesanan berhasil diperbarui' . ($fcmSent ? ' & notifikasi invoice terkirim!' : $fcmMessage);
+    
+    return redirect()
+        ->route('pesanan.online.detail', $id)
+        ->with('success', $successMessage);
+}
 
 public function updateDataAdmin2(Request $request, $id)
 {
@@ -2075,38 +2341,78 @@ public function updateDataKasir(Request $request, $id)
     }
 
     public function simpanBuktiPembayaran(Request $request, $id)
-    {
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $metodeBayar = $pesanan->metodeBayar;
-        $isCash = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'cash') !== false || stripos($metodeBayar->nama_metode_bayar, 'tunai') !== false);
+{
+    $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
+    
+    $metodeBayar = $pesanan->metodeBayar;
+    $isCash = $metodeBayar && (stripos($metodeBayar->nama_metode_bayar, 'cash') !== false || stripos($metodeBayar->nama_metode_bayar, 'tunai') !== false);
 
-        if ($isCash) {
-            $request->validate([
-                'tipe_pembayaran' => 'required|in:lunas',
-                'keterangan_bayar' => 'nullable|string',
-            ]);
-            
-            $buktiBayarCustomer = Pembayaran::where('id_transaksi', $pesanan->id_transaksi)
-                ->where('tipe_pembayaran', 'lunas')
-                ->whereNotNull('foto_bukti')
-                ->latest()
-                ->first();
+    if ($isCash) {
+        // ✅ UNTUK CASH: HANYA KONFIRMASI LUNAS
+        $request->validate([
+            'tipe_pembayaran' => 'required|in:lunas',
+            'keterangan_bayar' => 'nullable|string',
+        ]);
+        
+        // ✅ CEK APAKAH SUDAH ADA BUKTI DARI CUSTOMER (FOTO SELFIE DGN CUCIAN)
+        $buktiBayarCustomer = Pembayaran::where('id_transaksi', $pesanan->id_transaksi)
+            ->where('tipe_pembayaran', 'lunas')
+            ->whereNotNull('foto_bukti')
+            ->latest()
+            ->first();
+        
+        // ✅ UNTUK CASH: Foto bukti bisa null (konfirmasi verbal)
+        // Tidak wajib ada foto dari customer
+        
+        $fotoBuktiPath = $buktiBayarCustomer ? $buktiBayarCustomer->foto_bukti : null;
+        $nominalBayar = $pesanan->total_harga; // Selalu full amount untuk cash
+        
+        // ✅ JIKA SUDAH ADA PEMBAYARAN DARI CUSTOMER, UPDATE
+        if ($buktiBayarCustomer) {
+            if ($request->keterangan_bayar) {
+                $keteranganBaru = $buktiBayarCustomer->keterangan 
+                    ? $buktiBayarCustomer->keterangan . ' | Admin: ' . $request->keterangan_bayar 
+                    : 'Admin: ' . $request->keterangan_bayar;
                 
-            if (!$buktiBayarCustomer || !$buktiBayarCustomer->foto_bukti) {
-                return redirect()
-                    ->back()
-                    ->with('error', 'Pelanggan belum upload bukti pembayaran!');
+                $buktiBayarCustomer->update([
+                    'keterangan' => $keteranganBaru,
+                    'updated_at' => now(),
+                ]);
             }
         } else {
-            $request->validate([
-                'tipe_pembayaran' => 'required|in:dp,lunas',
-                'nominal_bayar' => 'required_if:tipe_pembayaran,dp|nullable|numeric|min:1',
-                'foto_bukti_bayar' => 'required|image|mimes:jpeg,jpg,png|max:2048',
-                'keterangan_bayar' => 'nullable|string',
+            // ✅ BUAT PEMBAYARAN BARU UNTUK CASH (tanpa foto)
+            Pembayaran::create([
+                'id_transaksi' => $pesanan->id_transaksi,
+                'id_metode_bayar' => $pesanan->id_metode_bayar,
+                'tipe_pembayaran' => 'lunas',
+                'nominal' => $nominalBayar,
+                'foto_bukti' => null, // ✅ Null untuk cash (konfirmasi verbal)
+                'keterangan' => $request->keterangan_bayar ?? 'Pembayaran Cash dikonfirmasi oleh admin',
+                'tanggal_bayar' => now()->format('Y-m-d'),
             ]);
         }
-
+        
+        // ✅ UPDATE TRANSAKSI KE LUNAS
+        $pesanan->update([
+            'total_bayar' => $pesanan->total_harga,
+            'dp' => 0,
+            'status_bayar' => 'lunas',
+            'tgl_lunas' => now()->format('Y-m-d'),
+        ]);
+        
+        return redirect()
+            ->route('pesanan.online.detail', $id)
+            ->with('success', 'Pembayaran cash berhasil dikonfirmasi! Pesanan lunas.');
+            
+    } else {
+        // ✅ UNTUK TRANSFER/NON-CASH
+        $request->validate([
+            'tipe_pembayaran' => 'required|in:dp,lunas',
+            'nominal_bayar' => 'required_if:tipe_pembayaran,dp|nullable|numeric|min:1',
+            'foto_bukti_bayar' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'keterangan_bayar' => 'nullable|string',
+        ]);
+        
         if ($pesanan->status_bayar === 'lunas') {
             return redirect()
                 ->back()
@@ -2115,7 +2421,7 @@ public function updateDataKasir(Request $request, $id)
 
         $sisaPembayaran = $pesanan->total_harga - $pesanan->total_bayar;
         
-        if (!$isCash && $request->tipe_pembayaran === 'dp') {
+        if ($request->tipe_pembayaran === 'dp') {
             $nominalBayar = $request->nominal_bayar;
             
             if ($nominalBayar > $sisaPembayaran) {
@@ -2141,40 +2447,21 @@ public function updateDataKasir(Request $request, $id)
 
         $fotoBuktiPath = null;
         
-        if ($isCash) {
-            if (isset($buktiBayarCustomer)) {
-                if ($request->keterangan_bayar) {
-                    $keteranganBaru = $buktiBayarCustomer->keterangan 
-                        ? $buktiBayarCustomer->keterangan . ' | Admin: ' . $request->keterangan_bayar 
-                        : 'Admin: ' . $request->keterangan_bayar;
-                    
-                    $buktiBayarCustomer->update([
-                        'keterangan' => $keteranganBaru,
-                        'updated_at' => now(),
-                    ]);
-                }
-                
-                $fotoBuktiPath = $buktiBayarCustomer->foto_bukti;
-                $nominalBayar = $buktiBayarCustomer->nominal;
-            }
-        } else {
-            if ($request->hasFile('foto_bukti_bayar')) {
-                $file = $request->file('foto_bukti_bayar');
-                $filename = 'bayar_' . $pesanan->id_transaksi . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $fotoBuktiPath = $file->storeAs('foto_bukti_pembayaran', $filename, 'public');
-            }
-            
-            // ✅ FIX: TAMBAHKAN id_metode_bayar
-            Pembayaran::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_metode_bayar' => $pesanan->id_metode_bayar, // ✅ TAMBAH INI!
-                'tipe_pembayaran' => $request->tipe_pembayaran,
-                'nominal' => $nominalBayar,
-                'foto_bukti' => $fotoBuktiPath,
-                'keterangan' => $request->keterangan_bayar,
-                'tanggal_bayar' => now()->format('Y-m-d'),
-            ]);
+        if ($request->hasFile('foto_bukti_bayar')) {
+            $file = $request->file('foto_bukti_bayar');
+            $filename = 'bayar_' . $pesanan->id_transaksi . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $fotoBuktiPath = $file->storeAs('foto_bukti_pembayaran', $filename, 'public');
         }
+        
+        Pembayaran::create([
+            'id_transaksi' => $pesanan->id_transaksi,
+            'id_metode_bayar' => $pesanan->id_metode_bayar,
+            'tipe_pembayaran' => $request->tipe_pembayaran,
+            'nominal' => $nominalBayar,
+            'foto_bukti' => $fotoBuktiPath,
+            'keterangan' => $request->keterangan_bayar,
+            'tanggal_bayar' => now()->format('Y-m-d'),
+        ]);
 
         $pesanan->update([
             'total_bayar' => $totalBayarBaru,
@@ -2183,16 +2470,15 @@ public function updateDataKasir(Request $request, $id)
             'tgl_lunas' => $statusBayar === 'lunas' ? now()->format('Y-m-d') : null,
         ]);
 
-        $message = $isCash 
-            ? 'Pembayaran cash berhasil dikonfirmasi! Pesanan lunas.' 
-            : ($statusBayar === 'lunas' 
-                ? 'Pembayaran lunas berhasil disimpan!' 
-                : 'DP sebesar Rp ' . number_format($nominalBayar, 0, ',', '.') . ' berhasil disimpan!');
+        $message = $statusBayar === 'lunas' 
+            ? 'Pembayaran lunas berhasil disimpan!' 
+            : 'DP sebesar Rp ' . number_format($nominalBayar, 0, ',', '.') . ' berhasil disimpan!';
 
         return redirect()
             ->route('pesanan.online.detail', $id)
             ->with('success', $message);
     }
+}
 
     public function simpanBuktiPembayaranKasir(Request $request, $id)
     {
@@ -2433,18 +2719,6 @@ public function updateDataKasir(Request $request, $id)
             ->route('admin2.pesanan.online.detail', $id)
             ->with('success', $message);
     }
-        
-    private function isPesananTerlambat($pesanan)
-    {
-        if (!$pesanan->tgl_estimasi) {
-            return false;
-        }
-        
-        $estimasi = \Carbon\Carbon::parse($pesanan->tgl_estimasi);
-        $today = \Carbon\Carbon::today();
-        
-        return $today->greaterThan($estimasi);
-    }
     /**
  * ===============================================
  * KIRIM FCM NOTIFICATION - CUCIAN SELESAI DICUCI
@@ -2567,6 +2841,57 @@ public function sendFcmNotification(Request $request, $id)
             'success' => false,
             'message' => 'Gagal mengirim notifikasi: ' . $e->getMessage()
         ], 500);
+    }
+}
+public function autoCheckTerlambat()
+{
+    try {
+        $sekarang = now();
+        
+        $pesananTerlambat = Transaksi::with(['pelanggan'])
+            ->where('jenis_transaksi', 'online')
+            ->where('status_transaksi', 'selesai_dicuci')
+            ->where('tgl_estimasi', '<', $sekarang)
+            ->get();
+        
+        foreach ($pesananTerlambat as $pesanan) {
+            DB::beginTransaction();
+            
+            $pesanan->update(['status_transaksi' => 'siap_di_antar']);
+            
+            // Kirim notif
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)
+                    ->pluck('token')
+                    ->filter();
+                
+                if ($tokens->isNotEmpty()) {
+                    $title = '⚠️ Cucian Melewati Estimasi - Akan Diantar!';
+                    $body = "Cucian Anda (ORDER/{$pesanan->id_transaksi}) melewati waktu estimasi dan akan segera diantar.";
+                    
+                    foreach ($tokens as $token) {
+                        try {
+                            FcmService::send($token, $title, $body, [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => 'auto_siap_antar',
+                                'action' => 'open_detail',
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error("❌ FCM Error: " . $e->getMessage());
+                        }
+                    }
+                }
+            }
+            
+            DB::commit();
+            Log::info("✅ Auto-update pesanan {$pesanan->id_transaksi} ke siap_di_antar");
+        }
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("❌ Auto-update error: " . $e->getMessage());
     }
 }
     

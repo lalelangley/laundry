@@ -31,7 +31,6 @@ class Pelanggan extends Authenticatable
     protected $hidden = [
         'password',
         'email',
-        'jk',
     ];
 
     public function fcmTokens()

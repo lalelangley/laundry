@@ -206,15 +206,26 @@
                         </span>
                     </div>
 
+                    {{-- Di bagian Status --}}
                     <div>
                         <p class="text-gray-500">Pembayaran</p>
                         <span class="font-semibold">
                             @if($pesanan->status_bayar == 'lunas')
-                                <span class="text-green-600">Lunas</span>
+                                <span class="text-green-600 flex items-center gap-1">
+                                    <i class="bi bi-check-circle-fill"></i> Lunas
+                                </span>
                             @elseif($pesanan->status_bayar == 'DP')
-                                <span class="text-orange-600">DP</span>
+                                <span class="text-orange-600 flex items-center gap-1">
+                                    <i class="bi bi-hourglass-split"></i> DP
+                                </span>
+                            @elseif($pesanan->status_bayar == 'belum_lunas')
+                                <span class="text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle"></i> Belum Lunas
+                                </span>
                             @else
-                                <span class="text-red-600">Belum Bayar</span>
+                                <span class="text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-x-circle"></i> Belum Bayar
+                                </span>
                             @endif
                         </span>
                     </div>
@@ -620,109 +631,215 @@
         @endif
     @endif
 
-   {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
-    @php
-        // ✅ PERBAIKAN: Logika yang lebih sederhana dan jelas dengan pengecekan null yang lebih baik
-        $showBuktiPembayaran = false;
-        $labelButton = 'Input Bukti Pembayaran';
+{{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
+@php
+    $showBuktiPembayaran = false;
+    $labelButton = 'Input Bukti Pembayaran';
+    $showWarning = false;
+    
+    // ✅ CEK STATUS LUNAS DARI TABEL TRANSAKSI (bukan pembayaran)
+    $sudahLunas = in_array($pesanan->status_bayar, ['lunas', 'Lunas']);
+    $isBelumBayar = in_array($pesanan->status_bayar, ['belum_bayar', 'Belum Bayar']);
+    $isDP = in_array($pesanan->status_bayar, ['DP', 'dp']);
+    
+    // ✅ CEK METODE BAYAR
+    $hasMetodeBayar = $metodeBayar && isset($metodeBayar->nama_metode_bayar);
+    
+    if ($hasMetodeBayar) {
+        $namaMetode = strtolower($metodeBayar->nama_metode_bayar);
+        $isTransfer = (strpos($namaMetode, 'transfer') !== false || 
+                       strpos($namaMetode, 'qris') !== false || 
+                       strpos($namaMetode, 'e-wallet') !== false ||
+                       strpos($namaMetode, 'emoney') !== false ||
+                       strpos($namaMetode, 'gopay') !== false ||
+                       strpos($namaMetode, 'dana') !== false ||
+                       strpos($namaMetode, 'ovo') !== false);
         
-        // ✅ CEK METODE BAYAR - Jika null, tetap tampilkan tombol dengan pesan khusus
-        if ($metodeBayar) {
-            if ($isTransfer) {
-                // ✅ TRANSFER: Muncul mulai dari antrian sampai siap_di_ambil
-                $allowedStatusTransfer = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusTransfer);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
-                
-            } elseif ($isCash) {
-                // ✅ CASH: Muncul di siap_di_antar dan siap_di_ambil
-                $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
-            } else {
-                // ✅ METODE BAYAR LAIN: Tampilkan tombol di status yang sama dengan transfer
-                $allowedStatusOther = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusOther);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran' : 'Input Bukti Pembayaran';
-            }
-        } else {
-            // ✅ JIKA BELUM ADA METODE BAYAR: Tetap tampilkan tombol untuk setup pembayaran
-            $allowedStatusNoMethod = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusNoMethod);
-            $labelButton = 'Atur Metode Pembayaran';
+        $isCash = (strpos($namaMetode, 'cash') !== false || 
+                   strpos($namaMetode, 'tunai') !== false ||
+                   strpos($namaMetode, 'cod') !== false);
+        
+        if ($isTransfer) {
+            // ✅ TRANSFER: Muncul di antrian, proses, selesai_dicuci
+            $allowedStatus = ['antrian', 'proses', 'selesai_dicuci'];
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatus);
+            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
+            
+        } elseif ($isCash) {
+            // ✅ CASH: Muncul di siap_di_antar DAN siap_di_ambil jika belum lunas
+            $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash) && !$sudahLunas;
+            $labelButton = 'Konfirmasi Pembayaran Cash';
         }
-    @endphp
+    } else {
+        // ✅ Belum ada metode bayar - tampilkan warning
+        $allowedStatusForWarning = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
+        $showWarning = in_array($pesanan->status_transaksi, $allowedStatusForWarning);
+    }
+@endphp
 
-    @if($showBuktiPembayaran)
-        <hr class="my-3">
+{{-- ✅ WARNING JIKA BELUM ADA METODE BAYAR --}}
+@if($showWarning)
+    <hr class="my-3">
+    
+    <div class="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+            <div class="shrink-0">
+                <i class="bi bi-exclamation-triangle-fill text-orange-600 text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-orange-900 mb-2">Metode Pembayaran Belum Ditentukan</p>
+                <p class="text-sm text-orange-700 mb-3">
+                    Metode pembayaran (Transfer/Cash) belum tersedia untuk pesanan ini.
+                </p>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-700 flex items-start gap-2">
+                        <i class="bi bi-info-circle mt-0.5"></i>
+                        <span>
+                            <strong>Info:</strong> Metode pembayaran akan otomatis tersimpan saat pelanggan 
+                            melakukan pembayaran pertama dari aplikasi mobile.
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- ✅ TOMBOL BUKTI PEMBAYARAN --}}
+@if($showBuktiPembayaran)
+    <hr class="my-3">
+    
+    @if($isCash)
+        {{-- ✅ INFO CASH - BELUM LUNAS --}}
+        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-3">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shrink-0">
+                    <i class="bi bi-cash-coin text-white text-2xl"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-bold text-yellow-900 mb-2">Pembayaran Cash Belum Dikonfirmasi</p>
+                    <p class="text-sm text-yellow-700 mb-2">
+                        @if($pesanan->status_transaksi === 'siap_di_antar')
+                            Konfirmasi pembayaran cash setelah driver mengantar dan pelanggan melakukan pembayaran.
+                        @else
+                            Konfirmasi pembayaran cash setelah pelanggan mengambil cucian dan melakukan pembayaran.
+                        @endif
+                    </p>
+                    <div class="bg-yellow-100 rounded-lg p-3 mt-2">
+                        <p class="text-xs text-yellow-800">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            <strong>Catatan:</strong> Konfirmasi ini diperlukan untuk menandai pesanan sebagai lunas setelah pembayaran cash diterima.
+                        </p>
+                    </div>
+                    
+                    {{-- ✅ TAMPILKAN STATUS PEMBAYARAN --}}
+                    <div class="mt-3 p-2 bg-white border border-yellow-200 rounded-lg">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-600">Status Bayar:</span>
+                            <span class="font-bold {{ $sudahLunas ? 'text-green-600' : ($isDP ? 'text-blue-600' : 'text-red-600') }}">
+                                @if($sudahLunas)
+                                    ✅ Lunas
+                                @elseif($isDP)
+                                    📝 DP (Rp {{ number_format($pesanan->dp ?? 0, 0, ',', '.') }})
+                                @else
+                                    ❌ Belum Bayar
+                                @endif
+                            </span>
+                        </div>
+                        @if(!$sudahLunas)
+                        <div class="flex justify-between text-xs mt-1">
+                            <span class="text-gray-600">Sisa Bayar:</span>
+                            <span class="font-bold text-red-600">
+                                Rp {{ number_format(($pesanan->total_harga ?? 0) - ($pesanan->total_bayar ?? 0), 0, ',', '.') }}
+                            </span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        {{-- ✅ WARNING JIKA BELUM ADA METODE BAYAR --}}
-        @if(!$metodeBayar)
-        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+        <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 flex items-center justify-center gap-2 shadow-lg transition animate-pulse">
+            <i class="bi bi-check2-circle text-lg"></i>
+            <span>{{ $labelButton }}</span>
+        </a>
+        
+    @elseif($isTransfer)
+        {{-- ✅ INFO TRANSFER --}}
+        @if($sudahLunas)
+        <div class="bg-green-50 border-2 border-green-300 rounded-lg p-3 mb-3">
             <div class="flex items-start gap-2">
-                <i class="bi bi-exclamation-triangle-fill text-orange-600 mt-0.5"></i>
-                <div class="text-xs text-orange-700">
-                    <p class="font-semibold mb-1">Metode Pembayaran Belum Ditentukan</p>
-                    <p>Silakan tentukan metode pembayaran terlebih dahulu.</p>
+                <i class="bi bi-check-circle-fill text-green-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-green-700">
+                    <p class="font-semibold mb-1">✅ Pembayaran Transfer - Lunas</p>
+                    <p>Pembayaran telah dikonfirmasi dan lunas.</p>
+                    <div class="mt-2 text-xs bg-green-100 p-2 rounded">
+                        Total Bayar: <strong>Rp {{ number_format($pesanan->total_bayar ?? 0, 0, ',', '.') }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @elseif($isDP)
+        <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 mb-3">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-blue-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-blue-700">
+                    <p class="font-semibold mb-1">📝 Pembayaran DP</p>
+                    <p>DP telah dikonfirmasi, menunggu pelunasan.</p>
+                    <div class="mt-2 text-xs bg-blue-100 p-2 rounded space-y-1">
+                        <div class="flex justify-between">
+                            <span>DP Terbayar:</span>
+                            <strong>Rp {{ number_format($pesanan->total_bayar ?? 0, 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="flex justify-between border-t border-blue-200 pt-1">
+                            <span>Sisa:</span>
+                            <strong class="text-red-600">Rp {{ number_format(($pesanan->total_harga ?? 0) - ($pesanan->total_bayar ?? 0), 0, ',', '.') }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @else
+        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 mb-3">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-orange-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-yellow-700">
+                    <p class="font-semibold mb-1">⏳ Menunggu Pembayaran Transfer</p>
+                    <p>Tunggu bukti transfer dari pelanggan untuk konfirmasi pembayaran.</p>
+                    <div class="mt-2 text-xs bg-yellow-100 p-2 rounded">
+                        Total Tagihan: <strong>Rp {{ number_format($pesanan->total_harga ?? 0, 0, ',', '.') }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
         @endif
         
-        {{-- ✅ INFO BERBEDA UNTUK TRANSFER VS CASH --}}
-        @if($isTransfer)
-            @if($sudahLunas)
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Pembayaran Transfer - Lunas</p>
-                        <p>Pembayaran telah dikonfirmasi dan lunas.</p>
-                    </div>
-                </div>
-            </div>
-            @else
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-info-circle-fill text-orange-600 mt-0.5"></i>
-                    <div class="text-xs text-yellow-700">
-                        <p class="font-semibold mb-1">Metode Transfer</p>
-                        <p>Silakan tunggu bukti transfer dari pelanggan untuk konfirmasi pembayaran.</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-        @elseif($isCash)
-            @if($sudahLunas)
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Pembayaran Cash - Lunas</p>
-                        <p>Pembayaran cash telah dikonfirmasi dan lunas.</p>
-                    </div>
-                </div>
-            </div>
-            @else
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-cash-coin text-green-600 mt-0.5 text-lg"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Metode Cash/Tunai</p>
-                        <p>Konfirmasi pembayaran cash saat cucian diserahkan ke pelanggan.</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-        @endif
-        
-        {{-- ✅ TOMBOL BUKTI PEMBAYARAN --}}
         <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
-        class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
-            <i class="bi bi-receipt"></i>
+           class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
+            <i class="bi bi-receipt text-lg"></i>
             <span>{{ $labelButton }}</span>
         </a>
     @endif
+@endif
+
+{{-- ✅ DEBUG INFO (HAPUS DI PRODUCTION) --}}
+@if(config('app.debug'))
+<div class="mt-3 p-3 bg-gray-100 border border-gray-300 rounded text-xs">
+    <p class="font-bold mb-1">🔍 Debug Info:</p>
+    <ul class="space-y-0.5">
+        <li>Status Transaksi: <strong>{{ $pesanan->status_transaksi }}</strong></li>
+        <li>Status Bayar: <strong>{{ $pesanan->status_bayar ?? 'NULL' }}</strong></li>
+        <li>Metode Bayar: <strong>{{ $metodeBayar->nama_metode_bayar ?? 'NULL' }}</strong></li>
+        <li>Is Cash: <strong>{{ $isCash ? 'YES' : 'NO' }}</strong></li>
+        <li>Is Transfer: <strong>{{ $isTransfer ? 'YES' : 'NO' }}</strong></li>
+        <li>Show Button: <strong>{{ $showBuktiPembayaran ? 'YES' : 'NO' }}</strong></li>
+        <li>Sudah Lunas: <strong>{{ $sudahLunas ? 'YES' : 'NO' }}</strong></li>
+    </ul>
+</div>
+@endif
 
     {{-- CETAK NOTA --}}
     <button onclick="window.print()"

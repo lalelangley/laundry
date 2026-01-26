@@ -22,6 +22,7 @@ class DriverTaskController extends Controller
             'transaksi.detail.parfum:id_parfum,nama_parfum',
         ])
         ->where('id_driver', $driverId)
+        ->where('jenis', 'pickup')
         ->whereIn('status', [
             'pending',
             'accepted',
