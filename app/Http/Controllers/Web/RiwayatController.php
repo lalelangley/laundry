@@ -1284,4 +1284,29 @@ class RiwayatController extends Controller
             ->route('admin2.riwayat.index')
             ->with('success', 'Transaksi berhasil dihapus');
     }
+    private function validateDPBeforeStatusChange($transaksi, $newStatus)
+{
+    if ($newStatus === 'siap_di_ambil') {
+        
+        // ❌ Masih DP?
+        if ($transaksi->status_bayar === 'DP') {
+            return [
+                'valid' => false,
+                'message' => '⚠️ Pembayaran masih DP! Silakan lunasi pembayaran terlebih dahulu.',
+                'sisa_pembayaran' => $transaksi->total_harga - $transaksi->total_bayar,
+            ];
+        }
+        
+        // ❌ Belum bayar sama sekali?
+        if ($transaksi->status_bayar === 'belum_lunas') {
+            return [
+                'valid' => false,
+                'message' => '⚠️ Belum ada pembayaran! Silakan lakukan pembayaran terlebih dahulu.',
+                'sisa_pembayaran' => $transaksi->total_harga,
+            ];
+        }
+    }
+    
+    return ['valid' => true];
+}
 }

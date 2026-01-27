@@ -716,6 +716,9 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
 
     // ================= PESANAN ONLINE (With Permission) =================
     Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
+        Route::post('/{id}/check-terlambat-manual', [PesananOnlineController::class, 'manualCheckTerlambat'])
+        ->middleware('permission:edit')
+        ->name('check-terlambat-manual');
         // Index & Detail
         Route::get('/', [PesananOnlineController::class, 'index'])
             ->middleware('permission:view')
@@ -798,6 +801,8 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
             ->middleware('permission:edit')
             ->name('send-fcm-notification');
+
+
     });
 
     // ================= RIWAYAT (With Permission) =================
@@ -1514,6 +1519,8 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
             Route::get('/create', [UserManagerController::class, 'createKasirAdmin2'])->name('create');
             Route::post('/', [UserManagerController::class, 'storeKasirAdmin2'])->name('store');
             Route::get('/{id}/edit', [UserManagerController::class, 'editKasirAdmin2'])->name('edit');
+            // ✅ TAMBAHKAN ROUTE UPDATE INI
+            Route::put('/{id}', [UserManagerController::class, 'updateKasirAdmin2'])->name('update');
         });
         
         Route::prefix('driver')->name('driver.')->group(function () {

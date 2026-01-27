@@ -60,124 +60,123 @@
         </div>
 
         {{-- ========================================
-            STATUS TABS
-        ======================================== --}}
-        <div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
-            <div class="flex gap-2 justify-between">
-                @php
-                    $tabs = [
-                        'pickup' => ['label' => 'Pickup', 'icon' => 'truck', 'badge_color' => 'bg-yellow-500'],
-                        'antrian' => ['label' => 'Antrian', 'icon' => 'hourglass-split', 'badge_color' => 'bg-yellow-500'],
-                        'proses' => ['label' => 'Proses', 'icon' => 'arrow-repeat', 'badge_color' => 'bg-yellow-500'],
-                        'selesai_dicuci' => ['label' => 'Selesai Dicuci', 'icon' => 'check-circle-fill', 'badge_color' => 'bg-yellow-500'],
-                        'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle', 'badge_color' => 'bg-yellow-500'],
-                        'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'bicycle', 'badge_color' => 'bg-yellow-500'],
-                        'selesai' => ['label' => 'Selesai', 'icon' => 'check-all', 'badge_color' => 'bg-yellow-500'],
-                    ];
+     STATUS TABS - FIXED VERSION
+======================================== --}}
+<div class="mb-6 bg-white p-2 rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
+    <div class="flex gap-2 justify-between">
+        @php
+            $tabs = [
+                'pickup' => ['label' => 'Pickup', 'icon' => 'truck', 'badge_color' => 'bg-yellow-500'],
+                'antrian' => ['label' => 'Antrian', 'icon' => 'hourglass-split', 'badge_color' => 'bg-yellow-500'],
+                'proses' => ['label' => 'Proses', 'icon' => 'arrow-repeat', 'badge_color' => 'bg-yellow-500'],
+                'selesai_dicuci' => ['label' => 'Selesai Dicuci', 'icon' => 'check-circle-fill', 'badge_color' => 'bg-yellow-500'],
+                'siap_di_ambil' => ['label' => 'Siap Diambil', 'icon' => 'check-circle', 'badge_color' => 'bg-yellow-500'],
+                'siap_di_antar' => ['label' => 'Siap Diantar', 'icon' => 'bicycle', 'badge_color' => 'bg-yellow-500'],
+                'selesai' => ['label' => 'Selesai', 'icon' => 'check-all', 'badge_color' => 'bg-yellow-500'],
+            ];
 
-                    // Hitung jumlah pesanan untuk setiap status
-                    $countPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')->where('jenis_transaksi', 'online')->count();
-                    $countAntrian = \App\Models\Transaksi::where('status_transaksi', 'antrian')->where('jenis_transaksi', 'online')->count();
-                    $countProses = \App\Models\Transaksi::where('status_transaksi', 'proses')->where('jenis_transaksi', 'online')->count();
-                    $countSelesaiDicuci = \App\Models\Transaksi::where('status_transaksi', 'selesai_dicuci')->where('jenis_transaksi', 'online')->count();
-                    $countSiapDiambil = \App\Models\Transaksi::where('status_transaksi', 'siap_di_ambil')->where('jenis_transaksi', 'online')->count();
-                    $countSiapDiantar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')->where('jenis_transaksi', 'online')->count();
-                    $countSelesai = \App\Models\Transaksi::where('status_transaksi', 'selesai')->where('jenis_transaksi', 'online')->count();
+            // Hitung jumlah pesanan untuk setiap status
+            $countPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')->where('jenis_transaksi', 'online')->count();
+            $countAntrian = \App\Models\Transaksi::where('status_transaksi', 'antrian')->where('jenis_transaksi', 'online')->count();
+            $countProses = \App\Models\Transaksi::where('status_transaksi', 'proses')->where('jenis_transaksi', 'online')->count();
+            $countSelesaiDicuci = \App\Models\Transaksi::where('status_transaksi', 'selesai_dicuci')->where('jenis_transaksi', 'online')->count();
+            $countSiapDiambil = \App\Models\Transaksi::where('status_transaksi', 'siap_di_ambil')->where('jenis_transaksi', 'online')->count();
+            $countSiapDiantar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')->where('jenis_transaksi', 'online')->count();
+            $countSelesai = \App\Models\Transaksi::where('status_transaksi', 'selesai')->where('jenis_transaksi', 'online')->count();
 
-                    // Hitung alert dari SEMUA pesanan online
-                    $allPesananPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')
-                        ->where('jenis_transaksi', 'online')
-                        ->with('delivery')
-                        ->get();
-                    
-                    $pickupNeedDriver = 0;
-                    foreach($allPesananPickup as $p) {
-                        $hasDriver = false;
-                        
-                        if ($p->delivery && $p->delivery->count() > 0) {
-                            $deliveryPickup = $p->delivery->where('jenis', 'pickup')->first();
-                            if ($deliveryPickup && $deliveryPickup->id_driver) {
-                                $hasDriver = true;
-                            }
-                        }
-                        
-                        if (!$hasDriver) {
-                            $pickupNeedDriver++;
-                        }
+            // ✅ HITUNG ALERT: Pickup yang butuh driver
+            $allPesananPickup = \App\Models\Transaksi::where('status_transaksi', 'pick_up')
+                ->where('jenis_transaksi', 'online')
+                ->with('delivery')
+                ->get();
+            
+            $pickupNeedDriver = 0;
+            foreach($allPesananPickup as $p) {
+                $hasDriver = false;
+                
+                if ($p->delivery && $p->delivery->count() > 0) {
+                    $deliveryPickup = $p->delivery->where('jenis', 'pickup')->first();
+                    if ($deliveryPickup && $deliveryPickup->id_driver) {
+                        $hasDriver = true;
                     }
-                    
-                    $allPesananSiapAntar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')
-                        ->where('jenis_transaksi', 'online')
-                        ->with('delivery')
-                        ->get();
-                    
-                    $antarNeedDriver = 0;
-                    foreach($allPesananSiapAntar as $p) {
-                        $hasDriver = false;
-                        
-                        if ($p->delivery && $p->delivery->count() > 0) {
-                            $deliveryAntar = $p->delivery->where('jenis', 'antar')->first();
-                            if ($deliveryAntar && $deliveryAntar->id_driver) {
-                                $hasDriver = true;
-                            }
-                        }
-                        
-                        if (!$hasDriver) {
-                            $antarNeedDriver++;
-                        }
+                }
+                
+                if (!$hasDriver) {
+                    $pickupNeedDriver++;
+                }
+            }
+            
+            // ✅ HITUNG ALERT: Siap Diantar yang butuh driver
+            $allPesananSiapAntar = \App\Models\Transaksi::where('status_transaksi', 'siap_di_antar')
+                ->where('jenis_transaksi', 'online')
+                ->with('delivery')
+                ->get();
+            
+            $antarNeedDriver = 0;
+            foreach($allPesananSiapAntar as $p) {
+                $hasDriver = false;
+                
+                if ($p->delivery && $p->delivery->count() > 0) {
+                    $deliveryAntar = $p->delivery->where('jenis', 'antar')->first();
+                    if ($deliveryAntar && $deliveryAntar->id_driver) {
+                        $hasDriver = true;
                     }
-                @endphp
+                }
+                
+                if (!$hasDriver) {
+                    $antarNeedDriver++;
+                }
+            }
+        @endphp
 
-                @foreach ($tabs as $key => $data)
-                    @php
-                        // Tentukan jumlah pesanan berdasarkan tab
-                        $countPesanan = 0;
-                        switch($key) {
-                            case 'pickup': $countPesanan = $countPickup; break;
-                            case 'antrian': $countPesanan = $countAntrian; break;
-                            case 'proses': $countPesanan = $countProses; break;
-                            case 'selesai_dicuci': $countPesanan = $countSelesaiDicuci; break;
-                            case 'siap_di_ambil': $countPesanan = $countSiapDiambil; break;
-                            case 'siap_di_antar': $countPesanan = $countSiapDiantar; break;
-                            case 'selesai': $countPesanan = $countSelesai; break;
-                        }
-                    @endphp
+        @foreach ($tabs as $key => $data)
+            @php
+                // Tentukan jumlah pesanan berdasarkan tab
+                $countPesanan = 0;
+                switch($key) {
+                    case 'pickup': $countPesanan = $countPickup; break;
+                    case 'antrian': $countPesanan = $countAntrian; break;
+                    case 'proses': $countPesanan = $countProses; break;
+                    case 'selesai_dicuci': $countPesanan = $countSelesaiDicuci; break;
+                    case 'siap_di_ambil': $countPesanan = $countSiapDiambil; break;
+                    case 'siap_di_antar': $countPesanan = $countSiapDiantar; break;
+                    case 'selesai': $countPesanan = $countSelesai; break;
+                }
+            @endphp
 
-                    <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
-                    class="relative flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
-                            {{ $tab == $key ? 'bg-yellow-400 text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
-                        <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
-                        <span class="hidden sm:inline">{{ $data['label'] }}</span>
-                        
-                        {{-- Badge jumlah pesanan --}}
-                        @if($countPesanan > 0)
-                            <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 
-                                        {{ $data['badge_color'] }} text-white text-xs font-bold rounded-full shadow-md border-2 border-white">
-                                {{ $countPesanan }}
-                            </span>
-                        @endif
-                        
-                        {{-- Alert Badge untuk Pickup --}}
-                        @if($key == 'pickup' && $pickupNeedDriver > 0)
-                            <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
-                                        bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
-                                  style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
-                                <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
-                            </span>
-                        @endif
-                        
-                        {{-- Alert Badge untuk Siap Diantar --}}
-                        @if($key == 'siap_di_antar' && $antarNeedDriver > 0)
-                            <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
-                                        bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
-                                  style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
-                                <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
-                            </span>
-                        @endif
-                    </a>
-                @endforeach
-            </div>
-        </div>
+            <a href="{{ route('pesanan.online.index', ['tab' => $key]) }}"
+            class="relative flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
+                    {{ $tab == $key ? 'bg-yellow-400 text-gray-900 shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
+                <i class="bi bi-{{ $data['icon'] }} text-lg"></i>
+                <span class="hidden sm:inline">{{ $data['label'] }}</span>
+                
+                {{-- Badge jumlah pesanan --}}
+                @if($countPesanan > 0)
+                    <span class="absolute -top-1 -right-1 flex items-center justify-center min-w-[22px] h-[22px] px-1.5 
+                                {{ $data['badge_color'] }} text-white text-xs font-bold rounded-full shadow-md border-2 border-white">
+                        {{ $countPesanan }}
+                    </span>
+                @endif
+                
+                {{-- ✅ ALERT BADGE HANYA UNTUK PICKUP & SIAP DIANTAR --}}
+                @if($key == 'pickup' && $pickupNeedDriver > 0)
+                    <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
+                                bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
+                          style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
+                        <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
+                    </span>
+                @elseif($key == 'siap_di_antar' && $antarNeedDriver > 0)
+                    <span class="absolute -top-1 -left-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 
+                                bg-yellow-400 text-gray-900 text-xs font-bold rounded-full shadow-lg animate-pulse border-2 border-white"
+                          style="display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 999 !important;">
+                        <i class="bi bi-exclamation-triangle-fill text-[10px]"></i>
+                    </span>
+                @endif
+                {{-- ✅ TIDAK ADA ALERT UNTUK TAB LAINNYA (termasuk selesai_dicuci) --}}
+            </a>
+        @endforeach
+    </div>
+</div>
 
         {{-- ========================================
              PESANAN LIST

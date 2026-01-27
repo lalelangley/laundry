@@ -2,372 +2,254 @@
 @section('title', 'Edit Profile')
 @section('content')
 
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    
-    * {
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    
-    .header-gradient {
-        background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .header-gradient::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        opacity: 0.5;
-    }
-    
-    .profile-card {
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(20px);
-    }
-    
-    .profile-avatar {
-        background: linear-gradient(135deg, #FFD700 0%, #FFEB3B 100%);
-        box-shadow: 0 10px 40px rgba(255, 215, 0, 0.6);
-        animation: pulse 3s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { box-shadow: 0 10px 40px rgba(255, 215, 0, 0.6); }
-        50% { box-shadow: 0 15px 50px rgba(255, 215, 0, 0.8); }
-    }
-    
-    .role-badge {
-        background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-        border: 2px solid #FFD700;
-        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
-    }
-    
-    .input-modern {
-        transition: all 0.3s ease;
-        border: 2px solid #E5E7EB;
-        background: white;
-    }
-    
-    .input-modern:focus {
-        outline: none;
-        border-color: #FFD700;
-        box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.2);
-        background: #FFFEF0;
-    }
-    
-    .btn-primary {
-        background: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-        box-shadow: 0 6px 16px rgba(255, 215, 0, 0.5);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 2px solid #FFD700;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(255, 215, 0, 0.7);
-        background: linear-gradient(135deg, #FFEB3B 0%, #FFD700 100%);
-    }
-    
-    .btn-primary:active {
-        transform: translateY(0);
-    }
-    
-    .alert-success {
-        background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
-        border: 2px solid #6EE7B7;
-        animation: slideIn 0.4s ease;
-    }
-    
-    .alert-error {
-        background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
-        border: 2px solid #FCA5A5;
-        animation: slideIn 0.4s ease;
-    }
-    
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .profile-header-bg {
-        background: linear-gradient(135deg, #FFFEF0 0%, #FFFACD 50%, #FFE66D 100%);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .profile-header-bg::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
-        animation: shimmer 6s infinite;
-    }
-    
-    @keyframes shimmer {
-        0%, 100% { transform: translate(-20%, -20%) rotate(0deg); }
-        50% { transform: translate(20%, 20%) rotate(180deg); }
-    }
-    
-    .input-icon {
-        color: #9CA3AF;
-        transition: color 0.3s ease;
-    }
-    
-    .input-modern:focus ~ .input-icon {
-        color: #FFD700;
-    }
-    
-    .section-card {
-        background: white;
-        border: 3px solid #FFE66D;
-        transition: all 0.3s ease;
-    }
-    
-    .section-card:hover {
-        border-color: #FFD700;
-        box-shadow: 0 10px 30px rgba(255, 215, 0, 0.25);
-        transform: translateY(-2px);
-    }
-    
-    .icon-yellow {
-        background: linear-gradient(135deg, #FFD700 0%, #FFEB3B 100%);
-        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
-    }
-    
-    .tips-card {
-        border: 3px solid #FFE66D;
-        transition: all 0.3s ease;
-    }
-    
-    .tips-card:hover {
-        border-color: #FFD700;
-        box-shadow: 0 8px 24px rgba(255, 215, 0, 0.3);
-        transform: translateY(-3px);
-    }
-    
-    .info-box {
-        background: linear-gradient(135deg, #FFFEF0 0%, #FFFACD 100%);
-        border: 2px solid #FFD700;
-    }
-</style>
-
-<div class="min-h-screen bg-gradient-to-br from-yellow-50 via-white to-yellow-50">
+<div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
-    <div class="header-gradient px-6 py-6 shadow-2xl relative z-10">
-        <div class="max-w-7xl mx-auto flex items-center gap-4">
-            <a href="{{ route('kasir.dashboard') }}" 
-               class="w-11 h-11 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-white/40 transition-all active:scale-95 shadow-lg">
-                <i class="bi bi-arrow-left text-xl font-bold"></i>
-            </a>
-            <div class="flex-1">
-                <h1 class="text-2xl font-bold text-white tracking-tight drop-shadow-lg">Edit Profile</h1>
-                <p class="text-white/90 text-sm font-medium">Perbarui informasi akun Anda</p>
-            </div>
-        </div>
+    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
+        <a href="{{ route('kasir.dashboard') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <span class="text-2xl font-bold text-white">Edit Profile</span>
     </div>
 
-    <div class="px-6 py-8 max-w-7xl mx-auto">
-        {{-- MAIN CARD --}}
-        <div class="profile-card rounded-3xl shadow-2xl overflow-hidden">
-            
-            {{-- PROFILE HEADER - HORIZONTAL LAYOUT --}}
-            <div class="profile-header-bg px-8 py-6 relative">
-                <div class="relative z-10 flex items-center gap-6">
-                    <div class="profile-avatar w-20 h-20 rounded-2xl flex items-center justify-center transform hover:scale-110 transition-all flex-shrink-0">
-                        @if($kasir->gambar)
-                            <img src="{{ asset('storage/' . $kasir->gambar) }}" 
-                                 alt="Profile" 
-                                 class="w-full h-full object-cover rounded-2xl">
-                        @else
-                            <i class="bi bi-person-circle text-white text-4xl drop-shadow-lg"></i>
-                        @endif
-                    </div>
-                    
-                    <div class="flex-1">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-1">{{ $kasir->nama_kasir }}</h2>
-                        <div class="flex items-center gap-3">
-                            <div class="flex items-center gap-2 text-gray-700">
-                                <i class="bi bi-telephone-fill text-yellow-600 drop-shadow"></i>
-                                <span class="font-semibold text-sm">{{ $kasir->no_hp }}</span>
-                            </div>
-                            <div class="role-badge px-4 py-1.5 rounded-lg">
-                                <span class="text-xs font-black text-gray-800">
-                                    💼 KASIR
-                                </span>
-                            </div>
+    {{-- FORM SECTION --}}
+    <div class="px-12 py-10">
+        {{-- Card --}}
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {{-- Card Header --}}
+            <div class="bg-gradient-to-r from-yellow-50 to-white px-12 py-10 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                            @if($kasir->gambar)
+                                <img src="{{ asset('storage/' . $kasir->gambar) }}" 
+                                     alt="Profile" 
+                                     class="w-full h-full object-cover">
+                            @else
+                                <i class="bi bi-person-circle text-white text-2xl"></i>
+                            @endif
                         </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Edit Profile Kasir</h3>
+                            <p class="text-sm text-gray-600 mt-1">Update informasi akun: <strong>{{ $kasir->nama_kasir }}</strong></p>
+                        </div>
+                    </div>
+                    <div class="bg-orange-50 px-5 py-3 rounded-xl border border-orange-200">
+                        <p class="text-xs text-orange-600 font-medium">Role</p>
+                        <p class="text-xl font-bold text-orange-700">KASIR</p>
                     </div>
                 </div>
             </div>
 
-            {{-- FORM SECTION - WIDE LAYOUT --}}
-            <div class="p-8">
-                {{-- ALERTS --}}
+            {{-- Card Body --}}
+            <div class="px-12 py-12">
+                {{-- Alert Container --}}
                 <div id="alert-container"></div>
 
-                <form id="profileForm" enctype="multipart/form-data">
+                {{-- Alert Success (from session) --}}
+                @if(session('success'))
+                <div class="mb-8 bg-green-50 border-2 border-green-200 rounded-xl p-6">
+                    <div class="flex items-start gap-3">
+                        <i class="bi bi-check-circle-fill text-green-600 text-xl flex-shrink-0"></i>
+                        <div>
+                            <h3 class="font-bold text-green-900 mb-1">Berhasil!</h3>
+                            <p class="text-sm text-green-700">{{ session('success') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Alert Error --}}
+                @if($errors->any())
+                <div class="mb-8 bg-red-50 border-2 border-red-200 rounded-xl p-6">
+                    <div class="flex items-start gap-3">
+                        <i class="bi bi-exclamation-triangle-fill text-red-600 text-xl flex-shrink-0"></i>
+                        <div>
+                            <h3 class="font-bold text-red-900 mb-2">Terdapat Kesalahan!</h3>
+                            <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <form id="profileForm" method="POST" action="{{ route('profile.kasir.update') }}" enctype="multipart/form-data">
                     @csrf
-
-                    {{-- GRID LAYOUT 2 COLUMNS --}}
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
-                        {{-- LEFT COLUMN: INFORMASI DASAR --}}
-                        <div class="section-card rounded-2xl p-6">
-                            <div class="flex items-center gap-3 mb-6">
-                                <div class="icon-yellow w-12 h-12 rounded-xl flex items-center justify-center">
-                                    <i class="bi bi-person-badge text-white text-xl"></i>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        {{-- Foto Profil --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Foto Profil <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <div class="w-24 h-24 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                                    @if($kasir->gambar)
+                                        <img src="{{ asset('storage/' . $kasir->gambar) }}" 
+                                             alt="Current" 
+                                             id="preview-image"
+                                             class="w-full h-full object-cover">
+                                    @else
+                                        <i class="bi bi-person-circle text-gray-400 text-4xl" id="preview-icon"></i>
+                                    @endif
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Informasi Dasar</h3>
-                            </div>
-
-                            <div class="space-y-5">
-                                {{-- FOTO PROFIL --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                                        <i class="bi bi-image-fill text-yellow-600 mr-1"></i>
-                                        Foto Profil
-                                    </label>
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-20 h-20 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-                                            @if($kasir->gambar)
-                                                <img src="{{ asset('storage/' . $kasir->gambar) }}" 
-                                                     alt="Current" 
-                                                     id="currentPhoto"
-                                                     class="w-full h-full object-cover">
-                                            @else
-                                                <i class="bi bi-person-circle text-gray-400 text-3xl" id="currentPhoto"></i>
-                                            @endif
-                                        </div>
-                                        <div class="flex-1">
-                                            <input type="file" 
-                                                   name="gambar"
-                                                   id="photoInput"
-                                                   accept="image/*"
-                                                   class="hidden">
-                                            <button type="button"
-                                                    onclick="document.getElementById('photoInput').click()"
-                                                    class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg font-bold hover:bg-yellow-200 transition text-sm">
-                                                <i class="bi bi-upload mr-1"></i>
-                                                Pilih Foto
-                                            </button>
-                                            <p class="text-xs text-gray-500 mt-1">JPG, PNG (Max 2MB)</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- NAMA --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                                        <i class="bi bi-person-fill text-yellow-600 mr-1"></i>
-                                        Nama Lengkap
-                                    </label>
-                                    <div class="relative">
-                                        <i class="bi bi-person-fill absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                        <input type="text" 
-                                               name="nama_kasir"
-                                               value="{{ $kasir->nama_kasir }}"
-                                               class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl font-semibold"
-                                               placeholder="Masukkan nama lengkap"
-                                               required>
-                                    </div>
-                                </div>
-
-                                {{-- NO HP --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                                        <i class="bi bi-telephone-fill text-yellow-600 mr-1"></i>
-                                        Nomor HP
-                                    </label>
-                                    <div class="relative">
-                                        <i class="bi bi-telephone-fill absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                        <input type="text" 
-                                               name="no_hp"
-                                               value="{{ $kasir->no_hp }}"
-                                               class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl font-semibold"
-                                               placeholder="08xxxxxxxxxx"
-                                               required>
-                                    </div>
+                                <div class="flex-1">
+                                    <input type="file" 
+                                           name="gambar"
+                                           id="photoInput"
+                                           accept="image/jpeg,image/png,image/jpg"
+                                           class="hidden">
+                                    <button type="button"
+                                            onclick="document.getElementById('photoInput').click()"
+                                            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-semibold transition inline-flex items-center gap-2">
+                                        <i class="bi bi-upload"></i>
+                                        <span>Pilih Foto</span>
+                                    </button>
+                                    <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                        <i class="bi bi-info-circle"></i>
+                                        Format: JPG, PNG (Max 2MB)
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- RIGHT COLUMN: KEAMANAN --}}
-                        <div class="section-card rounded-2xl p-6">
-                            <div class="flex items-center gap-3 mb-6">
-                                <div class="icon-yellow w-12 h-12 rounded-xl flex items-center justify-center">
-                                    <i class="bi bi-shield-lock text-white text-xl"></i>
+                        {{-- Nama Kasir --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Nama Lengkap <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-person text-gray-400 text-lg"></i>
                                 </div>
-                                <h3 class="text-lg font-bold text-gray-800">Keamanan Akun</h3>
+                                <input type="text" 
+                                       name="nama_kasir"
+                                       value="{{ old('nama_kasir', $kasir->nama_kasir) }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('nama_kasir') border-red-300 @enderror" 
+                                       placeholder="Contoh: Siti Nurhaliza"
+                                       required>
                             </div>
+                            @error('nama_kasir')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
-                            <div class="info-box rounded-xl p-3 mb-5">
-                                <div class="flex gap-2 items-start">
-                                    <i class="bi bi-info-circle-fill text-yellow-600 flex-shrink-0 mt-0.5 text-lg"></i>
-                                    <p class="text-xs text-gray-800 font-bold">
-                                        Kosongkan field password jika tidak ingin mengubah
-                                    </p>
+                        {{-- No HP --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                No HP <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-telephone text-gray-400 text-lg"></i>
                                 </div>
+                                <input type="tel" 
+                                       name="no_hp"
+                                       value="{{ old('no_hp', $kasir->no_hp) }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('no_hp') border-red-300 @enderror"
+                                       placeholder="08123456789"
+                                       pattern="[0-9]+"
+                                       maxlength="15">
                             </div>
+                            @error('no_hp')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <i class="bi bi-info-circle"></i>
+                                Format: 08123456789
+                            </p>
+                        </div>
 
-                            <div class="space-y-5">
-                                {{-- PASSWORD --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                                        <i class="bi bi-key-fill text-yellow-600 mr-1"></i>
-                                        Password Baru
-                                    </label>
-                                    <div class="relative">
-                                        <i class="bi bi-lock-fill absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                        <input type="password" 
-                                               name="password"
-                                               class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl font-semibold"
-                                               placeholder="Minimal 6 karakter">
-                                    </div>
+                        {{-- Password --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Password Baru <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
                                 </div>
+                                <input type="password" 
+                                       name="password"
+                                       id="password"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('password') border-red-300 @enderror"
+                                       placeholder="Kosongkan jika tidak ingin mengubah"
+                                       minlength="6">
+                                <button type="button" 
+                                        onclick="togglePassword()"
+                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
+                                    <i class="bi bi-eye-fill" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            @error('password')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <i class="bi bi-info-circle"></i>
+                                Kosongkan jika tidak ingin mengubah password
+                            </p>
+                        </div>
 
-                                {{-- CONFIRM PASSWORD --}}
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">
-                                        <i class="bi bi-shield-check text-yellow-600 mr-1"></i>
-                                        Konfirmasi Password
-                                    </label>
-                                    <div class="relative">
-                                        <i class="bi bi-shield-check absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                        <input type="password" 
-                                               name="password_confirmation"
-                                               class="input-modern w-full pl-12 pr-4 py-3.5 rounded-xl font-semibold"
-                                               placeholder="Ketik ulang password">
-                                    </div>
+                        {{-- Confirm Password --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Konfirmasi Password <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-shield-check text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="password" 
+                                       name="password_confirmation"
+                                       id="password_confirmation"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none"
+                                       placeholder="Ketik ulang password baru"
+                                       minlength="6">
+                                <button type="button" 
+                                        onclick="togglePasswordConfirm()"
+                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
+                                    <i class="bi bi-eye-fill" id="toggleIconConfirm"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                <i class="bi bi-info-circle"></i>
+                                Pastikan password sama dengan yang di atas
+                            </p>
+                        </div>
+
+                        {{-- Info Terakhir Update --}}
+                        <div class="lg:col-span-2 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <i class="bi bi-clock-history text-gray-400 text-xl"></i>
+                                <div class="text-sm text-gray-600">
+                                    <p class="font-semibold text-gray-900">Terakhir Diupdate:</p>
+                                    <p>{{ $kasir->updated_at->format('d M Y, H:i') }} WIB</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- ACTIONS - FULL WIDTH --}}
-                    <div class="flex justify-end gap-3 mt-8 pt-6 border-t-2 border-gray-100">
+                    {{-- Card Footer / Buttons --}}
+                    <div class="flex items-center justify-between gap-4 mt-12 pt-10 border-t border-gray-200">
                         <a href="{{ route('kasir.dashboard') }}"
-                           class="px-8 py-3.5 rounded-xl border-2 border-gray-300 font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
-                            <i class="bi bi-x-circle mr-2"></i>
-                            Batal
+                           class="px-8 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
+                            <i class="bi bi-x-circle"></i>
+                            <span>Batal</span>
                         </a>
                         <button type="submit"
-                                class="btn-primary px-8 py-3.5 rounded-xl text-white font-bold active:scale-95 flex items-center gap-2">
-                            <i class="bi bi-save-fill text-lg"></i>
+                                class="px-10 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold transition inline-flex items-center gap-2 shadow-lg shadow-orange-200">
+                            <i class="bi bi-check-circle-fill"></i>
                             <span>Simpan Perubahan</span>
                         </button>
                     </div>
@@ -375,134 +257,108 @@
             </div>
         </div>
 
-        {{-- TIPS SECTION - HORIZONTAL --}}
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl p-5 shadow-lg tips-card">
-                <div class="flex items-center gap-4">
-                    <div class="icon-yellow w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-shield-check text-white text-2xl"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-sm mb-1">Password Kuat</h4>
-                        <p class="text-xs text-gray-600">Kombinasi huruf, angka & simbol</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-5 shadow-lg tips-card">
-                <div class="flex items-center gap-4">
-                    <div class="icon-yellow w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-telephone-fill text-white text-2xl"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-sm mb-1">Nomor Aktif</h4>
-                        <p class="text-xs text-gray-600">Untuk notifikasi penting</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-5 shadow-lg tips-card">
-                <div class="flex items-center gap-4">
-                    <div class="icon-yellow w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-person-check text-white text-2xl"></i>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-gray-800 text-sm mb-1">Data Akurat</h4>
-                        <p class="text-xs text-gray-600">Mudahkan verifikasi akun</p>
-                    </div>
-                </div>
+        {{-- Info Card --}}
+        <div class="mt-8 bg-amber-50 border-2 border-amber-200 rounded-xl p-6 flex items-start gap-4">
+            <i class="bi bi-info-circle-fill text-amber-600 text-xl flex-shrink-0 mt-1"></i>
+            <div class="text-sm text-amber-800">
+                <p class="font-semibold mb-2">Catatan Keamanan</p>
+                <p>Perubahan data profile akan langsung berlaku di sistem. Jika password diubah, gunakan password baru untuk login berikutnya. Pastikan menggunakan password yang kuat dengan kombinasi huruf, angka, dan simbol untuk keamanan akun.</p>
             </div>
         </div>
     </div>
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
 // Preview foto
 document.getElementById('photoInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Ukuran file maksimal 2MB!');
+            this.value = '';
+            return;
+        }
+        
+        // Validate file type
+        if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+            alert('Format file harus JPG atau PNG!');
+            this.value = '';
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = function(e) {
-            const currentPhoto = document.getElementById('currentPhoto');
-            if (currentPhoto.tagName === 'IMG') {
-                currentPhoto.src = e.target.result;
-            } else {
-                currentPhoto.outerHTML = `<img src="${e.target.result}" alt="Preview" id="currentPhoto" class="w-full h-full object-cover">`;
+            const previewImage = document.getElementById('preview-image');
+            const previewIcon = document.getElementById('preview-icon');
+            
+            if (previewImage) {
+                previewImage.src = e.target.result;
+            } else if (previewIcon) {
+                previewIcon.outerHTML = `<img src="${e.target.result}" alt="Preview" id="preview-image" class="w-full h-full object-cover">`;
             }
         }
         reader.readAsDataURL(file);
     }
 });
 
-// Submit form
-document.getElementById('profileForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+// Toggle Password Visibility
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
     
-    const formData = new FormData(this);
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    
-    // Disable button
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat animate-spin mr-2"></i>Menyimpan...';
-    
-    try {
-        const response = await fetch('{{ route("profile.kasir.update") }}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        });
-        
-        const data = await response.json();
-        
-        if (data.status) {
-            showAlert('success', data.message);
-            
-            // Reset password fields
-            this.querySelector('input[name="password"]').value = '';
-            this.querySelector('input[name="password_confirmation"]').value = '';
-            
-            // Redirect after 1.5 seconds
-            setTimeout(() => {
-                window.location.href = '{{ route("kasir.dashboard") }}';
-            }, 1500);
-        } else {
-            showAlert('error', data.message || 'Gagal menyimpan perubahan');
-        }
-    } catch (error) {
-        showAlert('error', 'Terjadi kesalahan pada server');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye-fill');
+        toggleIcon.classList.add('bi-eye-slash-fill');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash-fill');
+        toggleIcon.classList.add('bi-eye-fill');
     }
+}
+
+// Toggle Password Confirmation Visibility
+function togglePasswordConfirm() {
+    const passwordInput = document.getElementById('password_confirmation');
+    const toggleIcon = document.getElementById('toggleIconConfirm');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('bi-eye-fill');
+        toggleIcon.classList.add('bi-eye-slash-fill');
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash-fill');
+        toggleIcon.classList.add('bi-eye-fill');
+    }
+}
+
+// Format Phone Number (hanya angka)
+document.querySelector('input[name="no_hp"]').addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
 });
 
-function showAlert(type, message) {
-    const container = document.getElementById('alert-container');
-    const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
-    const iconClass = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
-    const bgClass = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-    const textClass = type === 'success' ? 'text-green-800' : 'text-red-800';
+// Password Match Validation
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirmation').value;
     
-    container.innerHTML = `
-        <div class="${alertClass} px-6 py-4 rounded-2xl mb-6 flex items-center gap-3">
-            <div class="w-10 h-10 ${bgClass} rounded-lg flex items-center justify-center flex-shrink-0">
-                <i class="bi ${iconClass} text-white text-xl"></i>
-            </div>
-            <div class="flex-1">
-                <p class="font-bold ${textClass}">${message}</p>
-            </div>
-        </div>
-    `;
+    if (password && password !== passwordConfirm) {
+        e.preventDefault();
+        alert('Password dan Konfirmasi Password tidak sama!');
+        return false;
+    }
     
-    // Auto hide after 5 seconds
-    setTimeout(() => {
-        container.innerHTML = '';
-    }, 5000);
-}
+    const nama = document.querySelector('input[name="nama_kasir"]').value;
+    const confirm = window.confirm(`Yakin ingin mengupdate profile "${nama}"?`);
+    
+    if (!confirm) {
+        e.preventDefault();
+    }
+});
 </script>
-
-@endsection
+@endpush

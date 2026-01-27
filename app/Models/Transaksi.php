@@ -17,7 +17,6 @@ class Transaksi extends Model
         'id_kasir',
         'id_driver',
         'id_metode_bayar',
-        'id_biaya_tambahan',  // ✅ Added missing field
         'nama_pelanggan',
         'no_hp',
         'total_harga',
@@ -80,13 +79,19 @@ class Transaksi extends Model
 
     public function biayaTambahan()
     {
-        return $this->belongsTo(BiayaTambahan::class, 'id_biaya_tambahan', 'id_biaya_tambahan');
+        return $this->hasMany(BiayaTambahan::class, 'id_transaksi', 'id_transaksi');
+    }
+
+    // Helper untuk total biaya tambahan
+    public function getTotalBiayaTambahanAttribute()
+    {
+        return $this->biayaTambahan()->sum('nominal');
     }
 
     public function delivery()
-    {
-        return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
-    }
+{
+    return $this->hasMany(Delivery::class, 'id_transaksi', 'id_transaksi');
+}
 
     public function pembayaran()
     {
