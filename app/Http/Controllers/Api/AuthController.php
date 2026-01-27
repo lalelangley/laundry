@@ -30,6 +30,7 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // ✅ Register tanpa jk, biarkan null (diisi saat edit profil)
         $pelanggan = Pelanggan::create([
             'nama_pelanggan' => $request->nama_pelanggan,
             'no_hp'          => $request->no_hp,
@@ -47,7 +48,14 @@ class AuthController extends Controller
             'message' => 'Registrasi berhasil',
             'role'    => 'pelanggan',
             'token'   => $token,
-            'data'    => $pelanggan,
+            'data'    => [
+                'id_pelanggan'   => $pelanggan->id_pelanggan,
+                'nama_pelanggan' => $pelanggan->nama_pelanggan,
+                'no_hp'          => $pelanggan->no_hp,
+                'alamat'         => $pelanggan->alamat,
+                'jk'             => $pelanggan->jk,
+                'gambar'         => $pelanggan->gambar,
+            ]
         ], 201);
     }
 
@@ -108,12 +116,33 @@ class AuthController extends Controller
         // ============================
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // ✅ Format response data sesuai role
+        $responseData = null;
+        if ($role === 'pelanggan') {
+            $responseData = [
+                'id_pelanggan'   => $user->id_pelanggan,
+                'nama_pelanggan' => $user->nama_pelanggan,
+                'no_hp'          => $user->no_hp,
+                'alamat'         => $user->alamat,
+                'jk'             => $user->jk,
+                'gambar'         => $user->gambar,
+            ];
+        } elseif ($role === 'driver') {
+            $responseData = [
+                'id_driver'   => $user->id_driver,
+                'nama_driver' => $user->nama_driver,
+                'no_telp'     => $user->no_telp,
+                'alamat'      => $user->alamat,
+                'gambar'      => $user->gambar,
+            ];
+        }
+
         return response()->json([
             'status'  => true,
             'message' => 'Login berhasil',
             'role'    => $role,
             'token'   => $token,
-            'data'    => $user,
+            'data'    => $responseData,
         ], 200);
     }
 

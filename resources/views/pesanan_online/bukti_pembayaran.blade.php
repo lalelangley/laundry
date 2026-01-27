@@ -494,6 +494,15 @@ document.addEventListener('keydown', function(e) {
 
 // Validation before submit
 document.getElementById('formBuktiPembayaran')?.addEventListener('submit', function(e) {
+    // ✅ CEK APAKAH INI PEMBAYARAN CASH (menggunakan hidden input)
+    const hiddenTipePembayaran = document.querySelector('input[name="tipe_pembayaran"][type="hidden"]');
+    
+    // Jika ada hidden input (berarti Cash), skip validasi radio button
+    if (hiddenTipePembayaran) {
+        return true; // Langsung submit untuk pembayaran Cash
+    }
+    
+    // ✅ UNTUK NON-CASH: validasi radio button
     const tipePembayaran = document.querySelector('input[name="tipe_pembayaran"]:checked');
     
     if (!tipePembayaran) {

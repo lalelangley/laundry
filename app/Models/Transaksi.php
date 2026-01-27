@@ -17,7 +17,6 @@ class Transaksi extends Model
         'id_kasir',
         'id_driver',
         'id_metode_bayar',
-        'id_biaya_tambahan',  // ✅ Added missing field
         'nama_pelanggan',
         'no_hp',
         'total_harga',
@@ -90,9 +89,9 @@ class Transaksi extends Model
     }
 
     public function delivery()
-    {
-        return $this->hasOne(Delivery::class, 'id_transaksi', 'id_transaksi');
-    }
+{
+    return $this->hasMany(Delivery::class, 'id_transaksi', 'id_transaksi');
+}
 
     public function pembayaran()
     {

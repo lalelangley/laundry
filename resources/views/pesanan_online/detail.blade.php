@@ -240,15 +240,26 @@
                         </span>
                     </div>
 
+                    {{-- Di bagian Status --}}
                     <div>
                         <p class="text-gray-500">Pembayaran</p>
                         <span class="font-semibold">
                             @if($pesanan->status_bayar == 'lunas')
-                                <span class="text-green-600">Lunas</span>
+                                <span class="text-green-600 flex items-center gap-1">
+                                    <i class="bi bi-check-circle-fill"></i> Lunas
+                                </span>
                             @elseif($pesanan->status_bayar == 'DP')
-                                <span class="text-orange-600">DP</span>
+                                <span class="text-orange-600 flex items-center gap-1">
+                                    <i class="bi bi-hourglass-split"></i> DP
+                                </span>
+                            @elseif($pesanan->status_bayar == 'belum_lunas')
+                                <span class="text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle"></i> Belum Lunas
+                                </span>
                             @else
-                                <span class="text-red-600">Belum Bayar</span>
+                                <span class="text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-x-circle"></i> Belum Bayar
+                                </span>
                             @endif
                         </span>
                     </div>
@@ -256,94 +267,107 @@
             </div>
 
            {{-- RINGKASAN --}}
-            <div class="bg-white rounded-xl shadow p-5">
-                <h2 class="font-bold mb-4">Ringkasan</h2>
+<div class="bg-white rounded-xl shadow p-5">
+    <h2 class="font-bold mb-4">Ringkasan</h2>
 
-                <div class="space-y-2 text-sm">
-                    @php
-                        $subtotalItems = 0;
-                        $totalQtyAll = 0;
-                        
-                        if($pesanan->detail_transaksi) {
-                            foreach($pesanan->detail_transaksi as $d) {
-                                $subtotalItems += ($d->harga * $d->qty);
-                                $totalQtyAll += $d->qty;
-                            }
-                        }
-                        
-                        $biayaOngkir = 0;
-                        if($pesanan->id_biaya_tambahan && $pesanan->biayaTambahan) {
-                            $biayaOngkir = $pesanan->biayaTambahan->nominal;
-                        }
-                        
-                        // ✅ HITUNG TOTAL DIBAYAR DARI TABEL PEMBAYARAN
-                        $totalDibayar = $pesanan->pembayaran()->sum('nominal');
-                        
-                        $totalBenar = $subtotalItems + $biayaOngkir - ($pesanan->diskon ?? 0);
-                        $sisa = $pesanan->total_harga - $totalDibayar;
-                    @endphp
-                    
-                    <div class="flex justify-between">
-                        <span>Subtotal</span>
-                        <b>Rp {{ number_format($subtotalItems,0,',','.') }}</b>
-                    </div>
-                    
-                    @if($biayaOngkir > 0)
-                    <div class="flex justify-between text-orange-600">
-                        <span>
-                            <i class="bi bi-truck text-xs"></i> Biaya Ongkir
-                        </span>
-                        <b>+ Rp {{ number_format($biayaOngkir,0,',','.') }}</b>
-                    </div>
-                    @endif
-                    
-                    @if($pesanan->diskon > 0)
-                    <div class="flex justify-between text-red-600">
-                        <span>Diskon</span>
-                        <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
-                    </div>
-                    @endif
-                    
-                    @if($totalQtyAll > 0)
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span>Total Item</span>
-                        <b>{{ $totalQtyAll }} item</b>
-                    </div>
-                    @endif
-                    
-                    <hr>
-                    <div class="flex justify-between text-lg font-bold text-yellow-600">
-                        <span>Total</span>
-                        <span>Rp {{ number_format($pesanan->total_harga,0,',','.') }}</span>
-                    </div>
+    <div class="space-y-2 text-sm">
+        @php
+            $subtotalItems = 0;
+            $totalQtyAll = 0;
+            
+            if($pesanan->detail_transaksi) {
+                foreach($pesanan->detail_transaksi as $d) {
+                    $subtotalItems += ($d->harga * $d->qty);
+                    $totalQtyAll += $d->qty;
+                }
+            }
+            
+            // ✅ HITUNG BIAYA TAMBAHAN
+            $totalBiayaTambahan = 0;
+            if($pesanan->biayaTambahan) {
+                $totalBiayaTambahan = $pesanan->biayaTambahan->sum('nominal');
+            }
+            
+            // ✅ HITUNG TOTAL DIBAYAR DARI TABEL PEMBAYARAN (bukan dari field dp)
+            $totalDibayar = $pesanan->pembayaran()->sum('nominal');
+            
+            // ✅ HITUNG SISA
+            $sisa = $pesanan->total_harga - $totalDibayar;
+        @endphp
+        
+        <div class="flex justify-between">
+            <span>Subtotal</span>
+            <b>Rp {{ number_format($subtotalItems,0,',','.') }}</b>
+        </div>
+        
+        @if($totalBiayaTambahan > 0)
+        <div class="flex justify-between text-orange-600">
+            <span>
+                <i class="bi bi-plus-circle text-xs"></i> Biaya Tambahan
+            </span>
+            <b>+ Rp {{ number_format($totalBiayaTambahan,0,',','.') }}</b>
+        </div>
+        @endif
+        
+        @if($pesanan->diskon > 0)
+        <div class="flex justify-between text-red-600">
+            <span>
+                <i class="bi bi-percent text-xs"></i> Diskon
+            </span>
+            <b>- Rp {{ number_format($pesanan->diskon,0,',','.') }}</b>
+        </div>
+        @endif
+        
+        @if($totalQtyAll > 0)
+        <div class="flex justify-between text-sm text-gray-600">
+            <span>Total Item</span>
+            <b>{{ $totalQtyAll }} item</b>
+        </div>
+        @endif
+        
+        <hr class="my-2">
+        
+        {{-- ✅ TOTAL HARGA --}}
+        <div class="flex justify-between text-lg font-bold text-yellow-600">
+            <span>Total Harga</span>
+            <span>Rp {{ number_format($pesanan->total_harga,0,',','.') }}</span>
+        </div>
 
-                    @if($pesanan->dp > 0)
-                    <div class="flex justify-between bg-yellow-50 -mx-2 px-2 py-2 rounded">
-                        <span class="text-orange-600">DP Dibayar</span>
-                        <b class="text-orange-600">Rp {{ number_format($pesanan->dp,0,',','.') }}</b>
-                    </div>
-                    @endif
+        {{-- ✅ TOTAL DIBAYAR (hanya 1x, dari tabel pembayaran) --}}
+        @if($totalDibayar > 0)
+        <div class="flex justify-between bg-green-50 -mx-2 px-2 py-2 rounded">
+            <span class="text-green-600 font-semibold">
+                <i class="bi bi-check-circle-fill"></i> Sudah Dibayar
+            </span>
+            <b class="text-green-600">Rp {{ number_format($totalDibayar,0,',','.') }}</b>
+        </div>
+        @endif
 
-                    @if($totalDibayar > 0)
-                    <div class="flex justify-between bg-green-50 -mx-2 px-2 py-2 rounded">
-                        <span class="text-green-600">Total Dibayar</span>
-                        <b class="text-green-600">Rp {{ number_format($totalDibayar,0,',','.') }}</b>
-                    </div>
-                    @endif
-
-                    @if($sisa > 0)
-                    <div class="flex justify-between bg-red-50 -mx-2 px-2 py-2 rounded">
-                        <span class="text-red-600 font-semibold">Sisa Pembayaran</span>
-                        <b class="text-red-600">Rp {{ number_format($sisa,0,',','.') }}</b>
-                    </div>
-                    @elseif($sisa < 0)
-                    <div class="flex justify-between bg-yellow-50 -mx-2 px-2 py-2 rounded">
-                        <span class="text-yellow-600 font-semibold">Kembalian</span>
-                        <b class="text-yellow-600">Rp {{ number_format(abs($sisa),0,',','.') }}</b>
-                    </div>
-                    @endif
-                </div>
-            </div>
+        {{-- ✅ SISA PEMBAYARAN atau KEMBALIAN --}}
+        @if($sisa > 0)
+        <div class="flex justify-between bg-red-50 -mx-2 px-2 py-2 rounded">
+            <span class="text-red-600 font-semibold">
+                <i class="bi bi-exclamation-circle"></i> Sisa Pembayaran
+            </span>
+            <b class="text-red-600">Rp {{ number_format($sisa,0,',','.') }}</b>
+        </div>
+        @elseif($sisa < 0)
+        <div class="flex justify-between bg-yellow-50 -mx-2 px-2 py-2 rounded">
+            <span class="text-yellow-600 font-semibold">
+                <i class="bi bi-cash-coin"></i> Kembalian
+            </span>
+            <b class="text-yellow-600">Rp {{ number_format(abs($sisa),0,',','.') }}</b>
+        </div>
+        @elseif($totalDibayar > 0 && $sisa == 0)
+        <div class="flex justify-between bg-green-50 -mx-2 px-2 py-2 rounded border-2 border-green-300">
+            <span class="text-green-700 font-bold text-base">
+                <i class="bi bi-check-circle-fill"></i> LUNAS
+            </span>
+            <b class="text-green-700 text-base">✓</b>
+        </div>
+        @endif
+    </div>
+</div>
 
         {{-- ✅ AKSI SECTION - CLEAN & FIXED --}}
 <div class="bg-white rounded-xl shadow p-5 space-y-3">
@@ -564,7 +588,6 @@
             </div>
             <p class="text-xs text-green-600 mt-1">Pilih metode pengiriman ke pelanggan</p>
         </div>
-
         {{-- Pilih: Antar atau Ambil Sendiri --}}
         <a href="{{ route('pesanan.online.siap_di_antar', $pesanan->id_transaksi) }}" 
            class="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold hover:from-orange-600 hover:to-red-600 transition shadow-lg flex items-center justify-center gap-2 mb-2">
@@ -657,103 +680,215 @@
         @endif
     @endif
 
-    {{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
-    @php
-        $showBuktiPembayaran = false;
-        $labelButton = 'Input Bukti Pembayaran';
+{{-- ========== TOMBOL BUKTI PEMBAYARAN ========== --}}
+@php
+    $showBuktiPembayaran = false;
+    $labelButton = 'Input Bukti Pembayaran';
+    $showWarning = false;
+    
+    // ✅ CEK STATUS LUNAS DARI TABEL TRANSAKSI (bukan pembayaran)
+    $sudahLunas = in_array($pesanan->status_bayar, ['lunas', 'Lunas']);
+    $isBelumBayar = in_array($pesanan->status_bayar, ['belum_bayar', 'Belum Bayar']);
+    $isDP = in_array($pesanan->status_bayar, ['DP', 'dp']);
+    
+    // ✅ CEK METODE BAYAR
+    $hasMetodeBayar = $metodeBayar && isset($metodeBayar->nama_metode_bayar);
+    
+    if ($hasMetodeBayar) {
+        $namaMetode = strtolower($metodeBayar->nama_metode_bayar);
+        $isTransfer = (strpos($namaMetode, 'transfer') !== false || 
+                       strpos($namaMetode, 'qris') !== false || 
+                       strpos($namaMetode, 'e-wallet') !== false ||
+                       strpos($namaMetode, 'emoney') !== false ||
+                       strpos($namaMetode, 'gopay') !== false ||
+                       strpos($namaMetode, 'dana') !== false ||
+                       strpos($namaMetode, 'ovo') !== false);
         
-        if ($metodeBayar) {
-            if ($isTransfer) {
-                $allowedStatusTransfer = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusTransfer);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
-                
-            } elseif ($isCash) {
-                $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Cash' : 'Konfirmasi Pembayaran Cash';
-            } else {
-                $allowedStatusOther = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-                $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusOther);
-                $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran' : 'Input Bukti Pembayaran';
-            }
-        } else {
-            $allowedStatusNoMethod = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
-            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusNoMethod);
-            $labelButton = 'Atur Metode Pembayaran';
+        $isCash = (strpos($namaMetode, 'cash') !== false || 
+                   strpos($namaMetode, 'tunai') !== false ||
+                   strpos($namaMetode, 'cod') !== false);
+        
+        if ($isTransfer) {
+            // ✅ TRANSFER: Muncul di antrian, proses, selesai_dicuci
+            $allowedStatus = ['antrian', 'proses', 'selesai_dicuci'];
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatus);
+            $labelButton = $sudahLunas ? 'Lihat Bukti Pembayaran Transfer' : 'Input Bukti Pembayaran Transfer';
+            
+        } elseif ($isCash) {
+            // ✅ CASH: Muncul di siap_di_antar DAN siap_di_ambil jika belum lunas
+            $allowedStatusCash = ['siap_di_antar', 'siap_di_ambil'];
+            $showBuktiPembayaran = in_array($pesanan->status_transaksi, $allowedStatusCash) && !$sudahLunas;
+            $labelButton = 'Konfirmasi Pembayaran Cash';
         }
-    @endphp
+    } else {
+        // ✅ Belum ada metode bayar - tampilkan warning
+        $allowedStatusForWarning = ['antrian', 'proses', 'selesai_dicuci', 'siap_di_antar', 'siap_di_ambil'];
+        $showWarning = in_array($pesanan->status_transaksi, $allowedStatusForWarning);
+    }
+@endphp
 
-    @if($showBuktiPembayaran)
-        <hr class="my-4">
+{{-- ✅ WARNING JIKA BELUM ADA METODE BAYAR --}}
+@if($showWarning)
+    <hr class="my-3">
+    
+    <div class="bg-orange-50 border-2 border-orange-300 rounded-xl p-4">
+        <div class="flex items-start gap-3">
+            <div class="shrink-0">
+                <i class="bi bi-exclamation-triangle-fill text-orange-600 text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-orange-900 mb-2">Metode Pembayaran Belum Ditentukan</p>
+                <p class="text-sm text-orange-700 mb-3">
+                    Metode pembayaran (Transfer/Cash) belum tersedia untuk pesanan ini.
+                </p>
+                
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-700 flex items-start gap-2">
+                        <i class="bi bi-info-circle mt-0.5"></i>
+                        <span>
+                            <strong>Info:</strong> Metode pembayaran akan otomatis tersimpan saat pelanggan 
+                            melakukan pembayaran pertama dari aplikasi mobile.
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- ✅ TOMBOL BUKTI PEMBAYARAN --}}
+@if($showBuktiPembayaran)
+    <hr class="my-3">
+    
+    @if($isCash)
+        {{-- ✅ INFO CASH - BELUM LUNAS --}}
+        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 mb-3">
+            <div class="flex items-start gap-3">
+                <div class="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shrink-0">
+                    <i class="bi bi-cash-coin text-white text-2xl"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-bold text-yellow-900 mb-2">Pembayaran Cash Belum Dikonfirmasi</p>
+                    <p class="text-sm text-yellow-700 mb-2">
+                        @if($pesanan->status_transaksi === 'siap_di_antar')
+                            Konfirmasi pembayaran cash setelah driver mengantar dan pelanggan melakukan pembayaran.
+                        @else
+                            Konfirmasi pembayaran cash setelah pelanggan mengambil cucian dan melakukan pembayaran.
+                        @endif
+                    </p>
+                    <div class="bg-yellow-100 rounded-lg p-3 mt-2">
+                        <p class="text-xs text-yellow-800">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            <strong>Catatan:</strong> Konfirmasi ini diperlukan untuk menandai pesanan sebagai lunas setelah pembayaran cash diterima.
+                        </p>
+                    </div>
+                    
+                    {{-- ✅ TAMPILKAN STATUS PEMBAYARAN --}}
+                    <div class="mt-3 p-2 bg-white border border-yellow-200 rounded-lg">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-gray-600">Status Bayar:</span>
+                            <span class="font-bold {{ $sudahLunas ? 'text-green-600' : ($isDP ? 'text-blue-600' : 'text-red-600') }}">
+                                @if($sudahLunas)
+                                    ✅ Lunas
+                                @elseif($isDP)
+                                    📝 DP (Rp {{ number_format($pesanan->dp ?? 0, 0, ',', '.') }})
+                                @else
+                                    ❌ Belum Bayar
+                                @endif
+                            </span>
+                        </div>
+                        @if(!$sudahLunas)
+                        <div class="flex justify-between text-xs mt-1">
+                            <span class="text-gray-600">Sisa Bayar:</span>
+                            <span class="font-bold text-red-600">
+                                Rp {{ number_format(($pesanan->total_harga ?? 0) - ($pesanan->total_bayar ?? 0), 0, ',', '.') }}
+                            </span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        {{-- Warning jika belum ada metode bayar --}}
-        @if(!$metodeBayar)
-        <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+        <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
+           class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 flex items-center justify-center gap-2 shadow-lg transition animate-pulse">
+            <i class="bi bi-check2-circle text-lg"></i>
+            <span>{{ $labelButton }}</span>
+        </a>
+        
+    @elseif($isTransfer)
+        {{-- ✅ INFO TRANSFER --}}
+        @if($sudahLunas)
+        <div class="bg-green-50 border-2 border-green-300 rounded-lg p-3 mb-3">
             <div class="flex items-start gap-2">
-                <i class="bi bi-exclamation-triangle-fill text-orange-600 mt-0.5"></i>
-                <div class="text-xs text-orange-700">
-                    <p class="font-semibold mb-1">Metode Pembayaran Belum Ditentukan</p>
-                    <p>Silakan tentukan metode pembayaran terlebih dahulu.</p>
+                <i class="bi bi-check-circle-fill text-green-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-green-700">
+                    <p class="font-semibold mb-1">✅ Pembayaran Transfer - Lunas</p>
+                    <p>Pembayaran telah dikonfirmasi dan lunas.</p>
+                    <div class="mt-2 text-xs bg-green-100 p-2 rounded">
+                        Total Bayar: <strong>Rp {{ number_format($pesanan->total_bayar ?? 0, 0, ',', '.') }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @elseif($isDP)
+        <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 mb-3">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-blue-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-blue-700">
+                    <p class="font-semibold mb-1">📝 Pembayaran DP</p>
+                    <p>DP telah dikonfirmasi, menunggu pelunasan.</p>
+                    <div class="mt-2 text-xs bg-blue-100 p-2 rounded space-y-1">
+                        <div class="flex justify-between">
+                            <span>DP Terbayar:</span>
+                            <strong>Rp {{ number_format($pesanan->total_bayar ?? 0, 0, ',', '.') }}</strong>
+                        </div>
+                        <div class="flex justify-between border-t border-blue-200 pt-1">
+                            <span>Sisa:</span>
+                            <strong class="text-red-600">Rp {{ number_format(($pesanan->total_harga ?? 0) - ($pesanan->total_bayar ?? 0), 0, ',', '.') }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @else
+        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-3 mb-3">
+            <div class="flex items-start gap-2">
+                <i class="bi bi-info-circle-fill text-orange-600 text-xl mt-0.5"></i>
+                <div class="text-sm text-yellow-700">
+                    <p class="font-semibold mb-1">⏳ Menunggu Pembayaran Transfer</p>
+                    <p>Tunggu bukti transfer dari pelanggan untuk konfirmasi pembayaran.</p>
+                    <div class="mt-2 text-xs bg-yellow-100 p-2 rounded">
+                        Total Tagihan: <strong>Rp {{ number_format($pesanan->total_harga ?? 0, 0, ',', '.') }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
         @endif
         
-        {{-- Info metode pembayaran --}}
-        @if($isTransfer)
-            @if($sudahLunas)
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Pembayaran Transfer - Lunas</p>
-                        <p>Pembayaran telah dikonfirmasi dan lunas.</p>
-                    </div>
-                </div>
-            </div>
-            @else
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-info-circle-fill text-orange-600 mt-0.5"></i>
-                    <div class="text-xs text-yellow-700">
-                        <p class="font-semibold mb-1">Metode Transfer</p>
-                        <p>Silakan tunggu bukti transfer dari pelanggan untuk konfirmasi pembayaran.</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-        @elseif($isCash)
-            @if($sudahLunas)
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Pembayaran Cash - Lunas</p>
-                        <p>Pembayaran cash telah dikonfirmasi dan lunas.</p>
-                    </div>
-                </div>
-            </div>
-            @else
-            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                <div class="flex items-start gap-2">
-                    <i class="bi bi-cash-coin text-green-600 mt-0.5 text-lg"></i>
-                    <div class="text-xs text-green-700">
-                        <p class="font-semibold mb-1">Metode Cash/Tunai</p>
-                        <p>Konfirmasi pembayaran cash saat cucian diserahkan ke pelanggan.</p>
-                    </div>
-                </div>
-            </div>
-            @endif
-        @endif
-        
-        {{-- Tombol Bukti Pembayaran --}}
         <a href="{{ route('pesanan.online.bukti-pembayaran', $pesanan->id_transaksi) }}" 
            class="w-full py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold hover:from-yellow-600 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg transition">
             <i class="bi bi-receipt text-lg"></i>
             <span>{{ $labelButton }}</span>
         </a>
     @endif
+@endif
+
+{{-- ✅ DEBUG INFO (HAPUS DI PRODUCTION) --}}
+@if(config('app.debug'))
+<div class="mt-3 p-3 bg-gray-100 border border-gray-300 rounded text-xs">
+    <p class="font-bold mb-1">🔍 Debug Info:</p>
+    <ul class="space-y-0.5">
+        <li>Status Transaksi: <strong>{{ $pesanan->status_transaksi }}</strong></li>
+        <li>Status Bayar: <strong>{{ $pesanan->status_bayar ?? 'NULL' }}</strong></li>
+        <li>Metode Bayar: <strong>{{ $metodeBayar->nama_metode_bayar ?? 'NULL' }}</strong></li>
+        <li>Is Cash: <strong>{{ $isCash ? 'YES' : 'NO' }}</strong></li>
+        <li>Is Transfer: <strong>{{ $isTransfer ? 'YES' : 'NO' }}</strong></li>
+        <li>Show Button: <strong>{{ $showBuktiPembayaran ? 'YES' : 'NO' }}</strong></li>
+        <li>Sudah Lunas: <strong>{{ $sudahLunas ? 'YES' : 'NO' }}</strong></li>
+    </ul>
+</div>
+@endif
 
     {{-- ========== TOMBOL CETAK NOTA ========== --}}
     <hr class="my-4">
@@ -800,50 +935,91 @@
             <input type="hidden" name="from_tab" value="{{ request()->get('from_tab', 'pickup') }}">
 
                 <div class="space-y-5">
-                    {{-- ITEMS SECTION --}}
-                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-yellow-700 mb-4 flex items-center gap-2">
-                            <i class="bi bi-basket2"></i> Item Pesanan
-                        </h4>
+                  {{-- ITEMS SECTION --}}
+<div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-xl p-5">
+    <h4 class="font-bold text-lg text-yellow-700 mb-4 flex items-center gap-2">
+        <i class="bi bi-basket2"></i> Item Pesanan
+    </h4>
 
-                        <div class="space-y-3">
-                            @foreach($pesanan->detail_transaksi as $i => $d)
-                            @php
-                                $subtotal = $d->harga * $d->qty;
-                            @endphp
-                            <div class="bg-white border-2 border-yellow-200 rounded-xl p-4 hover:border-orange-300 transition">
-                                <div class="flex items-start gap-4">
-                                    <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center font-bold text-white shadow-md shrink-0">
-                                        {{ $i+1 }}
-                                    </div>
+    <div class="space-y-3">
+        @foreach($pesanan->detail_transaksi as $i => $d)
+        @php
+            // Ambil harga dari field, bukan relasi
+            $harga = $d->harga;
+            
+            // Fallback ke relasi jika harga 0
+            if ($harga <= 0) {
+                if ($d->jenis) {
+                    $harga = $d->jenis->harga;
+                } elseif ($d->layanan) {
+                    $harga = $d->layanan->harga ?? 0;
+                }
+            }
+            
+            $subtotal = $harga * $d->qty;
+            $satuan = $d->jenis->satuan->nama_satuan ?? ($d->layanan->satuan->nama_satuan ?? 'unit');
+        @endphp
+        <div class="bg-white border-2 border-yellow-200 rounded-xl p-4 hover:border-orange-300 transition">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center font-bold text-white shadow-md shrink-0">
+                    {{ $i+1 }}
+                </div>
 
-                                    <div class="flex-1">
-                                        <p class="font-bold text-gray-800 mb-1">{{ $d->layanan->nama_layanan ?? '-' }}</p>
-                                        <p class="text-sm text-gray-600 mb-2">
-                                            {{ $d->jenis->nama_jenis ?? 'Regular' }}
-                                        </p>
-                                        @if($d->jenis)
-                                        <div class="bg-gray-50 rounded-lg p-2 mb-3 text-xs text-gray-600">
-                                            <span class="font-semibold">Harga:</span> Rp {{ number_format($d->jenis->harga, 0, ',', '.') }} / {{ $d->jenis->satuan->nama_satuan ?? '' }}
-                                        </div>
-                                        @endif
-                                        
-                                        <div>
-                                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                                <i class="bi bi-calculator text-yellow-600"></i> Jumlah (Qty) <span class="text-red-500">*</span>
-                                            </label>
-                                            <input type="number" name="qty[]" step="0.01" min="0.01" value="{{ $d->qty }}"
-                                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" 
-                                                   placeholder="0.00"
-                                                   required>
-                                        </div>
-                                        <input type="hidden" name="id_detail[]" value="{{ $d->id_detail_transaksi }}">
-                                    </div>
-                                </div>
-                            </div>
-                            @endforeach
+                <div class="flex-1">
+                    <p class="font-bold text-gray-800 mb-1">{{ $d->layanan->nama_layanan ?? '-' }}</p>
+                    <p class="text-sm text-gray-600 mb-2">
+                        {{ $d->jenis->nama_jenis ?? 'Regular' }}
+                    </p>
+                    
+                    {{-- HARGA INFO - SEKARANG TAMPIL --}}
+                    <div class="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-gray-700">💰 Harga:</span>
+                            <span class="text-base font-bold text-orange-600">
+                                Rp {{ number_format($harga, 0, ',', '.') }} / {{ $satuan }}
+                            </span>
                         </div>
                     </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">
+                            <i class="bi bi-calculator text-yellow-600"></i> Jumlah ({{ $satuan }}) <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" 
+                                   name="qty[]" 
+                                   step="0.01" 
+                                   min="0.01" 
+                                   value="{{ $d->qty }}"
+                                   class="w-full px-4 py-3 text-lg font-semibold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" 
+                                   placeholder="Contoh: 2.2"
+                                   required
+                                   oninput="updateSubtotal(this, {{ $harga }}, {{ $i }})">
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
+                                {{ $satuan }}
+                            </div>
+                        </div>
+                        
+                        {{-- SUBTOTAL REALTIME --}}
+                        <div class="mt-2 bg-gray-50 rounded-lg p-2 flex items-center justify-between">
+                            <span class="text-xs text-gray-600">Subtotal:</span>
+                            <span class="text-sm font-bold text-gray-800" id="subtotal-{{ $i }}">
+                                Rp {{ number_format($subtotal, 0, ',', '.') }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <i class="bi bi-info-circle"></i>
+                            Bisa desimal (contoh: 0.5, 2.2, 3.75)
+                        </p>
+                    </div>
+                    <input type="hidden" name="id_detail[]" value="{{ $d->id_detail_transaksi }}">
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
 
                    {{-- BIAYA TAMBAHAN SECTION (SIMPLE INPUT) --}}
 <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
@@ -959,51 +1135,55 @@
 </div>
 
                     {{-- TANGGAL ESTIMASI SELESAI --}}
-                    <div class="bg-gradient-to-r from-yellow-50 to-cyan-50 border-2 border-yellow-200 rounded-xl p-5">
-                        <h4 class="font-bold text-lg text-yellow-600 mb-4 flex items-center gap-2">
-                            <i class="bi bi-calendar-check"></i> Estimasi Selesai
-                        </h4>
+<div class="bg-gradient-to-r from-yellow-50 to-cyan-50 border-2 border-yellow-200 rounded-xl p-5">
+    <h4 class="font-bold text-lg text-yellow-600 mb-4 flex items-center gap-2">
+        <i class="bi bi-calendar-check"></i> Estimasi Selesai
+        <span class="text-sm text-gray-600 font-normal">(Opsional)</span>
+    </h4>
 
-                        <div class="mb-4">
-                            <label class="block text-sm font-bold text-gray-700 mb-2">
-                                <i class="bi bi-calendar-event text-yellow-600"></i> Tanggal Estimasi <span class="text-red-500">*</span>
-                            </label>
-                            <input type="date" 
-                                   name="tgl_estimasi" 
-                                   id="tgl_estimasi"
-                                   value="{{ $pesanan->tgl_estimasi ?? date('Y-m-d', strtotime('+3 days')) }}"
-                                   min="{{ date('Y-m-d') }}"
-                                   class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition"
-                                   required>
-                        </div>
+    <div class="mb-4">
+        <label class="block text-sm font-bold text-gray-700 mb-2">
+            <i class="bi bi-calendar-event text-yellow-600"></i> Tanggal Estimasi
+        </label>
+        <input type="date" 
+               name="tgl_estimasi" 
+               id="tgl_estimasi"
+               value="{{ old('tgl_estimasi', $pesanan->tgl_estimasi ?? date('Y-m-d', strtotime('+3 days'))) }}"
+               min="{{ date('Y-m-d') }}"
+               class="w-full px-4 py-3 text-base border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition">
+        <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+            <i class="bi bi-info-circle"></i>
+            <span>Kosongkan jika tidak ingin mengubah estimasi</span>
+        </p>
+    </div>
 
-                        {{-- Quick Select Buttons --}}
-                        <div>
-                            <p class="text-sm font-bold text-gray-700 mb-3">Quick Select:</p>
-                            <div class="grid grid-cols-4 gap-2">
-                                <button type="button" 
-                                        onclick="setEstimasiDate(1)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
-                                    <i class="bi bi-lightning-fill text-yellow-600"></i><br>1 Hari
-                                </button>
-                                <button type="button" 
-                                        onclick="setEstimasiDate(2)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
-                                    <i class="bi bi-clock text-yellow-600"></i><br>2 Hari
-                                </button>
-                                <button type="button" 
-                                        onclick="setEstimasiDate(3)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
-                                    <i class="bi bi-calendar text-yellow-600"></i><br>3 Hari
-                                </button>
-                                <button type="button" 
-                                        onclick="setEstimasiDate(7)"
-                                        class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
-                                    <i class="bi bi-calendar-week text-yellow-600"></i><br>1 Minggu
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+    {{-- Quick Select Buttons --}}
+    <div>
+        <p class="text-sm font-bold text-gray-700 mb-3">Quick Select:</p>
+        <div class="grid grid-cols-4 gap-2">
+            <button type="button" 
+                    onclick="setEstimasiDate(1)"
+                    class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                <i class="bi bi-lightning-fill text-yellow-600"></i><br>1 Hari
+            </button>
+            <button type="button" 
+                    onclick="setEstimasiDate(2)"
+                    class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                <i class="bi bi-clock text-yellow-600"></i><br>2 Hari
+            </button>
+            <button type="button" 
+                    onclick="setEstimasiDate(3)"
+                    class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                <i class="bi bi-calendar text-yellow-600"></i><br>3 Hari
+            </button>
+            <button type="button" 
+                    onclick="setEstimasiDate(7)"
+                    class="px-3 py-3 text-sm bg-white border-2 border-yellow-300 rounded-xl hover:bg-yellow-50 hover:border-yellow-400 transition font-semibold">
+                <i class="bi bi-calendar-week text-yellow-600"></i><br>1 Minggu
+            </button>
+        </div>
+    </div>
+</div>
 
                     {{-- UPLOAD FOTO BUKTI CUCIAN --}}
                     <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 rounded-xl p-5">
@@ -1522,6 +1702,17 @@ document.getElementById('inputNominalBiaya')?.addEventListener('keypress', funct
         addBiayaTambahan();
     }
 });
+</script>
+<script>
+function updateSubtotal(input, harga, index) {
+    const qty = parseFloat(input.value) || 0;
+    const subtotal = qty * harga;
+    
+    const subtotalEl = document.getElementById('subtotal-' + index);
+    if (subtotalEl) {
+        subtotalEl.textContent = 'Rp ' + subtotal.toLocaleString('id-ID');
+    }
+}
 </script>
 
 @endsection

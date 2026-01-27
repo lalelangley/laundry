@@ -716,6 +716,9 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
 
     // ================= PESANAN ONLINE (With Permission) =================
     Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
+        Route::post('/{id}/check-terlambat-manual', [PesananOnlineController::class, 'manualCheckTerlambat'])
+        ->middleware('permission:edit')
+        ->name('check-terlambat-manual');
         // Index & Detail
         Route::get('/', [PesananOnlineController::class, 'index'])
             ->middleware('permission:view')
@@ -798,6 +801,8 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
             ->middleware('permission:edit')
             ->name('send-fcm-notification');
+
+
     });
 
     // ================= RIWAYAT (With Permission) =================

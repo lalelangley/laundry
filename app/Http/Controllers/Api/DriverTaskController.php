@@ -22,13 +22,13 @@ class DriverTaskController extends Controller
             'transaksi.detail.parfum:id_parfum,nama_parfum',
         ])
         ->where('id_driver', $driverId)
+        ->where('jenis', 'pickup')
         ->whereIn('status', [
             'pending',
             'accepted',
             'on_the_way_to_pickup',
             'picked_up',
             'on_the_way_to_laundry',
-            'on_the_way_to_customer',
         ])
         ->get();
 
@@ -117,8 +117,10 @@ public function getAntarTasks($driverId)
         'transaksi.detail.parfum:id_parfum,nama_parfum',
     ])
     ->where('id_driver', $driverId)
-    ->where('jenis', 'antar')        // 🔥 KHUSUS ANTAR
-    ->where('status', 'accepted')    // 🔥 SIAP DIANTAR
+    ->where('jenis', 'antar')
+    // ✅ PERBAIKAN: Tampilkan accepted DAN on_the_way_to_customer
+    ->whereIn('status', ['accepted', 'on_the_way_to_customer'])
+    ->orderBy('created_at', 'desc')  // Optional: urutkan dari terbaru
     ->get();
 
     return response()->json([
@@ -138,7 +140,10 @@ public function startAntar(Request $request)
 
     $delivery = Delivery::where('id_delivery', $request->id_delivery)
         ->where('id_driver', $request->id_driver)
-        ->where('jenis', 'antar')
+        ->where(function($q) {
+            $q->whereNull('jenis')
+              ->orWhere('jenis', 'antar');  // ✅ Terima juga jika jenis NULL
+        })
         ->where('status', 'accepted')
         ->first();
 
@@ -146,7 +151,7 @@ public function startAntar(Request $request)
         return response()->json([
             'success' => false,
             'message' => 'Task not found or invalid status'
-        ]);
+        ], 404);
     }
 
     $delivery->status = 'on_the_way_to_customer';
@@ -169,7 +174,6 @@ public function completeAntar(Request $request)
 
     $delivery = Delivery::where('id_delivery', $request->id_delivery)
         ->where('id_driver', $request->id_driver)
-        ->where('jenis', 'antar')
         ->where('status', 'on_the_way_to_customer')
         ->first();
 
@@ -177,7 +181,7 @@ public function completeAntar(Request $request)
         return response()->json([
             'success' => false,
             'message' => 'Task not found or invalid status'
-        ]);
+        ], 404);
     }
 
     $delivery->status = 'delivered';
@@ -185,7 +189,7 @@ public function completeAntar(Request $request)
 
     return response()->json([
         'success' => true,
-        'message' => 'Delivery completed'
+        'message' => 'Pengantaran selesai!'
     ]);
 }
 
