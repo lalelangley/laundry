@@ -1,6 +1,9 @@
 @extends('layouts.master')
+
 @section('title', 'Checkout')
+
 @section('content')
+
 {{-- HEADER --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('kasir.transaksi.create') }}" class="text-black text-3xl font-bold">
@@ -10,6 +13,7 @@
 </div>
 
 <div class="p-4 space-y-6 pb-40">
+
     {{-- CARD PELANGGAN --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
         <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -37,7 +41,6 @@
             <i class="bi bi-basket-fill text-3xl text-red-500"></i>
             <span class="text-xl font-semibold">Detail Order</span>
         </div>
-
         @foreach ($detail as $d)
         <div class="bg-gray-100 rounded-2xl p-4 flex gap-4 mb-4">
             <div class="w-20 h-20 bg-white rounded-2xl flex justify-center items-center border overflow-hidden">
@@ -46,11 +49,13 @@
                         ? 'storage/' . $d['gambar'] 
                         : 'images/default.png';
                 @endphp
+                
                 <img src="{{ asset($imagePath) }}" 
                      alt="{{ $d['nama_layanan'] ?? 'Layanan' }}"
                      class="w-full h-full object-cover"
                      onerror="this.onerror=null; this.src='{{ asset('images/default.png') }}';">
             </div>
+            
             <div class="flex-1">
                 <p class="font-bold text-lg leading-tight">
                     {{ $d['nama_layanan'] }}{{ isset($d['jenis']) ? ' ('.$d['jenis'].')' : '' }}
@@ -90,7 +95,7 @@
         </p>
         <div class="flex items-center gap-3">
             <input type="datetime-local" id="tgl_estimasi" 
-                   class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all outline-none">
+                class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all outline-none">
             <button type="button" id="btnSetEstimasi" 
                     class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-md transition-all whitespace-nowrap">
                 <i class="bi bi-check-circle-fill"></i>
@@ -122,7 +127,7 @@
         </select>
 
         <div class="flex gap-2 mt-3">
-            <input id="inputDiskon" type="number" 
+            <input id="inputDiskon" type="text" inputmode="decimal"
                    class="flex-1 p-3 rounded-2xl border bg-gray-100" 
                    placeholder="Diskon / Rupiah">
             <div class="flex flex-col rounded-2xl overflow-hidden">
@@ -170,7 +175,6 @@
             <span class="font-bold text-lg">Konfirmasi Pembelian!</span>
             <button id="closePopup" class="absolute right-3 top-3 text-xl font-bold text-white">✕</button>
         </div>
-
         <p class="font-semibold text-lg">Nama Pelanggan: <span id="popupNama"></span></p>
         <p class="font-semibold text-lg mb-3">Total Harga: <span id="popupTotal"></span></p>
 
@@ -183,7 +187,7 @@
                        placeholder="Kosongkan jika belum bayar">
             </div>
         </div>
-        <p id="infoDpMessage" class="text-xs text-gray-500">
+        <p id="infoDpMessage" class="text-xs text-gray-500 hidden">
             <i class="bi bi-info-circle-fill text-blue-500"></i>
             Kosongkan jika belum bayar, atau isi dengan jumlah DP
         </p>
@@ -201,7 +205,6 @@
         <div class="w-36 h-36 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
             <i class="bi bi-check2 text-white text-7xl"></i>
         </div>
-
         <p class="font-semibold text-lg">Nama: <span id="succNama"></span></p>
         <p class="font-semibold text-lg">No HP: <span id="succHp"></span></p>
         <h1 class="text-2xl font-bold mb-1">Transaksi Berhasil Disimpan!!</h1>
@@ -230,20 +233,24 @@
         </a>
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
     // ===== CUSTOM ALERT FUNCTION =====
     const showAlert = (message) => {
         const customAlert = document.getElementById('customAlert');
         const alertMessage = document.getElementById('alertMessage');
         const btnCloseAlert = document.getElementById('btnCloseAlert');
-
+        
         alertMessage.textContent = message;
         customAlert.classList.remove('hidden');
+        
         btnCloseAlert.onclick = () => customAlert.classList.add('hidden');
+        
         customAlert.onclick = (e) => {
             if (e.target === customAlert) {
                 customAlert.classList.add('hidden');
@@ -260,6 +267,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalAwal = {{ $totalHarga }};
     let mode = "rupiah";
     let estimasiValid = false;
+
+    // ===== VALIDASI INPUT DISKON =====
+    // Hanya izinkan angka, titik, dan koma
+    inputDiskon.addEventListener('input', function(e) {
+        let value = e.target.value;
+        
+        // Izinkan angka, titik, dan koma
+        value = value.replace(/[^0-9.,]/g, '');
+        
+        // Ganti koma dengan titik untuk konsistensi
+        value = value.replace(',', '.');
+        
+        // Hanya izinkan satu titik desimal
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        e.target.value = value;
+        hitungDiskon();
+    });
 
     // ===== ESTIMASI SELESAI =====
     const tglEstimasi = document.getElementById('tgl_estimasi');
@@ -294,11 +322,13 @@ document.addEventListener("DOMContentLoaded", () => {
             btnSetEstimasi.classList.add('bg-green-600', 'hover:bg-green-700');
             tglEstimasi.disabled = false;
             tglEstimasi.focus();
-
+            
             const successMsg = document.getElementById('successMsgEstimasi');
             if (successMsg) successMsg.remove();
+            
         } else {
             estimasiValid = true;
+            
             containerEstimasi.classList.add('border-2', 'border-green-500', 'bg-green-50');
             btnSetEstimasi.innerHTML = '<i class="bi bi-pencil-fill"></i> Edit Estimasi';
             btnSetEstimasi.classList.remove('bg-green-600', 'hover:bg-green-700');
@@ -313,26 +343,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ===== HITUNG DISKON =====
-    const hitungDiskon = () => {
-        let value = parseFloat(inputDiskon.value) || 0;
-        let potongan = mode === "persen" ? totalAwal * Math.min(value, 100) / 100 : value;
-        potongan = Math.min(Math.max(potongan, 0), totalAwal);
-        let totalAkhir = totalAwal - potongan;
+   // ===== HITUNG DISKON =====
+const hitungDiskon = () => {
+    let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
+    let potongan = 0;
+    
+    if (mode === "persen") {
+        // Batasi persen maksimal 100%
+        value = Math.min(value, 100);
+        potongan = totalAwal * value / 100;
+    } else {
+        potongan = value;
+    }
+    
+    potongan = Math.min(Math.max(potongan, 0), totalAwal);
+    let totalAkhir = totalAwal - potongan;
 
-        if (value > 0) {
-            infoDiskon.style.display = "block";
-            infoDiskon.innerHTML = `
-                <span class="font-semibold">Diskon:</span> Rp${potongan.toLocaleString('id-ID')}<br>
-                <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
-            `;
+    if (value > 0) {
+        infoDiskon.style.display = "block";
+        
+        // ✅ PERBAIKAN: Tampilkan angka tanpa trailing zero
+        let displayValue;
+        if (mode === "persen") {
+            // Jika angka bulat (misal 1.00), tampilkan tanpa desimal
+            // Jika ada desimal (misal 10.5), tampilkan dengan desimal
+            displayValue = value % 1 === 0 ? `${value}%` : `${value}%`;
         } else {
-            infoDiskon.style.display = "none";
+            displayValue = `Rp${value.toLocaleString('id-ID')}`;
         }
+        
+        infoDiskon.innerHTML = `
+            <span class="font-semibold">Diskon (${displayValue}):</span> Rp${potongan.toLocaleString('id-ID')}<br>
+            <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
+        `;
+    } else {
+        infoDiskon.style.display = "none";
+    }
 
-        totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
-        return totalAkhir;
-    };
+    totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
+    return totalAkhir;
+};
 
     // ===== TOGGLE DISKON MODE =====
     btnRupiah.addEventListener('click', () => {
@@ -347,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
         mode = "persen";
         btnPersen.classList.add('bg-yellow-400');
         btnRupiah.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder = "Diskon / Persen %";
+        inputDiskon.placeholder = "Diskon / Persen % (Contoh: 10.5)";
         hitungDiskon();
     });
 
@@ -362,7 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (hiddenBayar.value === "1") {
             hiddenBayar.value = "0";
             statusBayar.textContent = "Tidak";
-            toggleBayar.textContent = "✖ Tidak Bayar";
+            toggleBayar.textContent = "✖ Belum Bayar";
             toggleBayar.classList.replace("bg-yellow-400", "bg-red-400");
         } else {
             hiddenBayar.value = "1";
@@ -428,12 +478,23 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const totalAkhir = hitungDiskon();
             const bayar = parseFloat(inputBayar.value) || 0;
-            const diskonValue = parseFloat(inputDiskon.value) || 0;
+            const diskonValue = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
             const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
             const keterangan = document.getElementById("keteranganTransaksi").value || null;
             const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
             const tgl_estimasi_value = document.getElementById("tgl_estimasi").value || null;
             const langsung = parseInt(hiddenBayar.value);
+
+            console.log("📤 SENDING DATA:", {
+                dp: bayar,
+                langsung_bayar: langsung,
+                diskon: diskonValue,
+                tipe_diskon: tipe_diskon,
+                keterangan: keterangan,
+                id_metode_bayar: id_metode_bayar,
+                tgl_estimasi: tgl_estimasi_value,
+                totalAkhir: totalAkhir
+            });
 
             // ✅ VALIDASI
             if (langsung === 1) {
@@ -455,6 +516,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // ✅ KIRIM DATA KE SERVER
+            console.log("🌐 Fetching to:", "{{ route('kasir.transaksi.bayar') }}");
+            
             const res = await fetch("{{ route('kasir.transaksi.bayar') }}", {
                 method: "POST",
                 headers: {
@@ -472,30 +535,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
+            console.log("📡 RESPONSE STATUS:", res.status, res.statusText);
+            console.log("📡 RESPONSE HEADERS:", res.headers);
+
             if (!res.ok) {
-                const errorData = await res.json();
-                showAlert(errorData.message || "Gagal menyimpan transaksi. Silakan coba lagi!");
+                const errorText = await res.text();
+                console.error("❌ ERROR RESPONSE TEXT:", errorText);
+                
+                try {
+                    const errorData = JSON.parse(errorText);
+                    showAlert(errorData.message || "Gagal menyimpan transaksi!");
+                } catch (e) {
+                    showAlert(`Server error (${res.status}): ${errorText.substring(0, 100)}`);
+                }
                 return;
             }
 
             const data = await res.json();
+            console.log("✅ SUCCESS RESPONSE:", data);
+            
             popupBayar.classList.add("hidden");
 
-            // ✅ UPDATE POPUP SUCCESS
+            // UPDATE POPUP SUCCESS
             succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
             succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
             succNama.textContent = data.nama;
             succHp.textContent = data.hp;
             succBayar.textContent = "Rp " + parseInt(data.total_bayar ?? 0).toLocaleString("id-ID");
 
-            // Hapus label status lama
             document.getElementById("labelStatusBayar")?.remove();
 
-            // Tambah label status
             const label = document.createElement("p");
             label.id = "labelStatusBayar";
             label.classList.add("font-bold", "mt-2");
-
+            
             if (data.status_bayar === "lunas") {
                 label.classList.add("text-green-500");
                 label.textContent = "Status: LUNAS";
@@ -506,13 +579,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 label.classList.add("text-red-500");
                 label.textContent = "Status: BELUM LUNAS";
             }
-
+            
             popupSuccess.querySelector(".bg-white")?.appendChild(label);
             popupSuccess.classList.remove("hidden");
 
         } catch (err) {
-            console.error(err);
-            showAlert("Terjadi kesalahan pada sistem. Silakan coba lagi!");
+            console.error('❌ FULL ERROR:', err);
+            console.error('❌ ERROR NAME:', err.name);
+            console.error('❌ ERROR MESSAGE:', err.message);
+            console.error('❌ ERROR STACK:', err.stack);
+            
+            showAlert(`Terjadi kesalahan: ${err.message}\n\n${err.name}`);
         }
     });
 
@@ -529,9 +606,11 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Fitur share tidak tersedia di browser ini");
         }
     });
+
 });
 </script>
 
 {{-- ✅ Tambahkan Animate.css untuk animasi shake --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
 @endsection

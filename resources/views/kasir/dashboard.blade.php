@@ -122,7 +122,7 @@
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-gray-900">Riwayat Transaksi</h2>
-                    <p class="text-sm text-gray-500">Daftar transaksi terbaru</p>
+                    <p class="text-sm text-gray-500">Menampilkan {{ $orders->count() }} dari {{ $orders->count() }} transaksi</p>
                 </div>
             </div>
 
@@ -143,35 +143,112 @@
                         <th class="px-4 py-3 text-left">No</th>
                         <th class="px-4 py-3 text-left">No Order</th>
                         <th class="px-4 py-3 text-left">Pelanggan</th>
-                        <th class="px-4 py-3 text-center">Status</th>
+                        <th class="px-4 py-3 text-left">Kasir</th>
+                        <th class="px-4 py-3 text-center">Jenis</th>
+                        <th class="px-4 py-3 text-center">Status Bayar</th>
+                        <th class="px-4 py-3 text-center">Status Transaksi</th>
+                        <th class="px-4 py-3 text-right">Total Bayar</th>
+                        <th class="px-4 py-3 text-center">Tgl Transaksi</th>
                         <th class="px-4 py-3 text-center">Deadline</th>
                         <th class="px-4 py-3 text-center">Action</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    @foreach($orders as $i => $o)
+                    @forelse($orders as $i => $o)
                     <tr class="border-b hover:bg-yellow-50 transition">
                         <td class="px-4 py-3">{{ $i+1 }}</td>
 
-                        <td class="px-4 py-3 font-bold">
-                            {{ $o->id_transaksi }}
+                        <td class="px-4 py-3">
+                            <span class="font-bold text-gray-900">{{ $o->id_transaksi }}</span>
                         </td>
 
                         <td class="px-4 py-3">
-                            {{ $o->nama_pelanggan ?? '-' }}
+                            <div>
+                                <div class="font-semibold text-gray-900">{{ $o->nama_pelanggan ?? '-' }}</div>
+                                @if($o->no_hp)
+                                    <div class="text-xs text-gray-500">{{ $o->no_hp }}</div>
+                                @endif
+                            </div>
                         </td>
 
-                        {{-- ✅ FIX: Ganti $o->status jadi $o->status_transaksi --}}
+                        <td class="px-4 py-3">
+                            @if($o->id_kasir)
+                                @php
+                                    try {
+                                        $kasir = DB::table('akun_kasir')->where('id_kasir', $o->id_kasir)->first();
+                                        if (!$kasir) {
+                                            $kasir = DB::table('kasir')->where('id_kasir', $o->id_kasir)->first();
+                                        }
+                                    } catch (\Exception $e) {
+                                        $kasir = null;
+                                    }
+                                @endphp
+                                <div class="text-xs">
+                                    @if($kasir)
+                                        <div class="font-semibold text-gray-900">{{ $kasir->nama_kasir ?? $kasir->username ?? $kasir->name ?? 'Kasir' }}</div>
+                                    @else
+                                        <div class="font-semibold text-gray-900">Kasir</div>
+                                    @endif
+                                    <div class="text-gray-500">ID: {{ $o->id_kasir }}</div>
+                                </div>
+                            @else
+                                <span class="text-xs text-gray-400">-</span>
+                            @endif
+                        </td>
+
                         <td class="px-4 py-3 text-center">
-                            <span class="px-3 py-1 rounded-xl text-xs font-bold
-                                @if($o->status_transaksi == 'selesai') bg-green-100 text-green-700
-                                @elseif($o->status_transaksi == 'proses') bg-blue-100 text-blue-700
-                                @elseif($o->status_transaksi == 'antrian') bg-yellow-100 text-yellow-700
-                                @elseif($o->status_transaksi == 'siap_di_ambil') bg-purple-100 text-purple-700
-                                @else bg-red-100 text-red-700 @endif">
-                                {{ ucwords(str_replace('_', ' ', $o->status_transaksi)) }}
+                            @if($o->jenis_transaksi == 'online')
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    <i class="bi bi-globe mr-1"></i> Online
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    <i class="bi bi-shop mr-1"></i> Offline
+                                </span>
+                            @endif
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            @if($o->status_bayar)
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap
+                                    {{ $o->status_bayar == 'lunas' ? 'bg-green-100 text-green-800' : ($o->status_bayar == 'DP' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
+                                    {{ $o->status_bayar == 'belum_lunas' ? 'Belum Lunas' : ucfirst($o->status_bayar) }}
+                                </span>
+                            @else
+                                <span class="text-xs text-gray-400">-</span>
+                            @endif
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            @php
+                                $statusConfig = [
+                                    'antrian' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Antrian'],
+                                    'proses' => ['bg' => 'bg-blue-100', 'text' => 'text-blue-800', 'label' => 'Proses'],
+                                    'selesai_dicuci' => ['bg' => 'bg-cyan-100', 'text' => 'text-cyan-800', 'label' => 'Selesai Dicuci'],
+                                    'siap_di_ambil' => ['bg' => 'bg-purple-100', 'text' => 'text-purple-800', 'label' => 'Siap Ambil'],
+                                    'siap_di_antar' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800', 'label' => 'Siap Antar'],
+                                    'pick_up' => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-800', 'label' => 'Pick Up'],
+                                    'selesai' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Selesai'],
+                                    'batal' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Batal'],
+                                ];
+                                
+                                $status = $statusConfig[$o->status_transaksi] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => ucfirst(str_replace('_', ' ', $o->status_transaksi))];
+                            @endphp
+                            
+                            <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full {{ $status['bg'] }} {{ $status['text'] }} whitespace-nowrap">
+                                {{ $status['label'] }}
                             </span>
+                        </td>
+
+                        <td class="px-4 py-3 text-right">
+                            <div class="font-bold text-green-600 whitespace-nowrap">
+                                Rp {{ number_format($o->total_bayar ?? 0, 0, ',', '.') }}
+                            </div>
+                        </td>
+
+                        <td class="px-4 py-3 text-center text-gray-600 whitespace-nowrap">
+                            {{ $o->tgl_transaksi ? \Carbon\Carbon::parse($o->tgl_transaksi)->format('d/m/Y') : '-' }}
                         </td>
 
                         {{-- ✅ DEADLINE DENGAN STYLING --}}
@@ -179,20 +256,20 @@
                             @if(isset($o->deadline_status))
                                 @if($o->deadline_status === 'terlambat')
                                     <div class="flex items-center justify-center gap-1">
-                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-red-100 text-red-700 inline-flex items-center gap-1">
+                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-red-100 text-red-700 inline-flex items-center gap-1 whitespace-nowrap">
                                             <i class="bi bi-exclamation-triangle-fill"></i>
                                             {{ $o->deadline }}
                                         </span>
                                     </div>
                                 @elseif($o->deadline_status === 'mendesak')
                                     <div class="flex items-center justify-center gap-1">
-                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-orange-100 text-orange-700 inline-flex items-center gap-1">
+                                        <span class="px-3 py-1 rounded-xl text-xs font-bold bg-orange-100 text-orange-700 inline-flex items-center gap-1 whitespace-nowrap">
                                             <i class="bi bi-clock-fill"></i>
                                             {{ $o->deadline }}
                                         </span>
                                     </div>
                                 @elseif($o->deadline_status === 'normal')
-                                    <span class="px-3 py-1 rounded-xl text-xs font-bold bg-green-100 text-green-700">
+                                    <span class="px-3 py-1 rounded-xl text-xs font-bold bg-green-100 text-green-700 whitespace-nowrap">
                                         {{ $o->deadline }}
                                     </span>
                                 @else
@@ -205,13 +282,22 @@
 
                         <td class="px-4 py-3 text-center">
                             <a href="{{ route('kasir.riwayat.detail', $o->id_transaksi) }}"
-                               class="bg-yellow-400 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500 transition inline-flex items-center gap-2 justify-center">
+                               class="bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-2 rounded-xl text-gray-900 font-bold hover:from-yellow-500 hover:to-amber-600 transition-all hover:shadow-lg inline-flex items-center gap-2 justify-center whitespace-nowrap">
                                 <i class="bi bi-eye-fill"></i>
                                 Detail
                             </a>
                         </td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="11" class="py-10 text-center">
+                            <div class="text-gray-400">
+                                <i class="bi bi-inbox text-5xl mb-3 block"></i>
+                                <p class="font-semibold">Belum ada transaksi</p>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -227,15 +313,15 @@
 
 <script>
 $(document).ready(function () {
-    $('#kasirTable').DataTable({
-        pageLength: 10,
+    let table = $('#kasirTable').DataTable({
+        pageLength: 25,
         lengthChange: true,
-        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Semua"]],
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Semua"]],
         ordering: true,
         searching: true,
         language: {
             search: "Cari:",
-            lengthMenu: "Tampilkan _MENU_ data per halaman",
+            lengthMenu: "Tampilkan _MENU_ data",
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ transaksi",
             infoEmpty: "Tidak ada data",
             infoFiltered: "(difilter dari _MAX_ total transaksi)",
@@ -247,9 +333,40 @@ $(document).ready(function () {
                 previous: "Sebelumnya"
             }
         },
-        // ✅ Urutkan berdasarkan kolom Deadline (index 4) secara ascending
-        order: [[4, 'asc']]
+        // ✅ Urutkan berdasarkan No Order (kolom 1) descending - transaksi terbaru duluan
+        order: [[1, 'desc']],
+        
+        initComplete: function () {
+            // Style search box
+            $('div.dataTables_filter input')
+                .addClass("border-2 border-gray-300 rounded-xl px-4 py-3 ml-2 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition");
+
+            // Style length select
+            $('div.dataTables_length select')
+                .addClass("border-2 border-gray-300 rounded-xl px-4 py-2.5 mr-2 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition");
+
+            // Style pagination
+            setTimeout(() => {
+                $('.dataTables_paginate a')
+                    .addClass("px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white hover:bg-yellow-50 hover:border-yellow-400 transition text-sm font-semibold mx-1");
+
+                $('.dataTables_paginate .current')
+                    .addClass("bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 border-yellow-500 font-bold shadow-md");
+            }, 100);
+        },
+        
+        drawCallback: function() {
+            // Re-apply styling after page change
+            $('.dataTables_paginate a')
+                .addClass("px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white hover:bg-yellow-50 hover:border-yellow-400 transition text-sm font-semibold mx-1");
+
+            $('.dataTables_paginate .current')
+                .addClass("bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 border-yellow-500 font-bold shadow-md");
+        }
     });
+    
+    // Log untuk debugging
+    console.log('Total transaksi dimuat:', table.data().length);
 });
 </script>
 @endpush

@@ -20,6 +20,10 @@
     } else {
         $statusBayar = 'belum bayar';
     }
+
+    // Cek apakah boleh bayar DP atau harus pelunasan
+    $bolehDP = in_array($transaksi->status_transaksi, ['antrian', 'proses']);
+    $harusPelunasan = in_array($transaksi->status_transaksi, ['siap_di_ambil', 'selesai']);
 @endphp
 
 <div class="min-h-screen bg-gray-50">
@@ -251,12 +255,8 @@
                         <i class="bi bi-cash-stack text-xl"></i> Bayar Sekarang
                     </button>
 
-                    {{-- Batalkan --}}
-                    @if(
-                        $transaksi->status_transaksi !== 'batal' &&
-                        $transaksi->status_transaksi !== 'selesai' &&
-                        $statusBayar !== 'lunas'
-                    )
+                    {{-- Batalkan - Hanya di status Antrian --}}
+                    @if($transaksi->status_transaksi == 'antrian')
                     <form id="formBatal" action="{{ route('kasir.riwayat.batal', $transaksi->id_transaksi) }}" method="POST">
                         @csrf
                         @method('PATCH')
@@ -290,11 +290,16 @@
                 <div class="w-10 h-10 bg-white/30 rounded-lg flex items-center justify-center">
                     <i class="bi bi-cash-stack text-gray-900 text-xl"></i>
                 </div>
-                Pelunasan Pembayaran
+                <span id="modalTitle">Pelunasan Pembayaran</span>
             </h2>
         </div>
 
         <div class="p-6 space-y-4">
+            {{-- Informasi Status Pembayaran --}}
+            <div id="infoModePembayaran" class="p-4 rounded-xl border-2">
+                <!-- Akan diisi via JavaScript -->
+            </div>
+
             <div class="space-y-3 text-gray-700">
                 <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <span class="font-medium">SubTotal:</span>
@@ -317,7 +322,7 @@
             <form id="formBayar" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="font-bold text-gray-700 block mb-2">Masukkan Nominal Pelunasan</label>
+                    <label class="font-bold text-gray-700 block mb-2" id="labelNominal">Masukkan Nominal Pembayaran</label>
                     <div class="relative">
                         <span class="absolute left-4 top-1/2 transform -translate-y-1/2 font-bold text-gray-500">Rp</span>
                         <input
@@ -326,14 +331,13 @@
                             id="jumlahBayarDisplay"
                             inputmode="numeric"
                             class="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all"
-                            placeholder="0 (Kosongkan untuk belum bayar)"
+                            placeholder="0"
                             value="{{ $sisaBayar > 0 ? number_format($sisaBayar, 0, ',', '.') : '' }}"
                         >
                         <input type="hidden" name="jumlah_bayar" id="jumlahBayar" value="{{ $sisaBayar }}">
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">
-                        <i class="bi bi-info-circle-fill text-yellow-500"></i>
-                        Kosongkan atau isi 0 untuk status "Belum Bayar"
+                    <p class="text-xs text-gray-500 mt-2" id="infoPembayaran">
+                        <!-- Akan diisi via JavaScript -->
                     </p>
                 </div>
 
@@ -361,6 +365,9 @@ const totalTagihan = {{ $totalTagihan }};
 let dpTerbayar = {{ $dp }};
 let sisaBayar = {{ $sisaBayar }};
 let currentStatusBayar = '{{ $statusBayar }}';
+let currentStatusTransaksi = '{{ $transaksi->status_transaksi }}';
+const bolehDP = {{ $bolehDP ? 'true' : 'false' }};
+const harusPelunasan = {{ $harusPelunasan ? 'true' : 'false' }};
 
 // Format angka ke Rupiah
 function formatRupiah(angka) {
@@ -382,6 +389,59 @@ document.getElementById('jumlahBayarDisplay').addEventListener('input', function
 });
 
 function openModalBayar() {
+    // Update informasi modal berdasarkan status transaksi
+    const infoModePembayaran = document.getElementById('infoModePembayaran');
+    const modalTitle = document.getElementById('modalTitle');
+    const labelNominal = document.getElementById('labelNominal');
+    const infoPembayaran = document.getElementById('infoPembayaran');
+    
+    if (harusPelunasan) {
+        // Status: Siap Diambil / Selesai - Harus Pelunasan
+        modalTitle.textContent = 'Pelunasan Pembayaran';
+        labelNominal.textContent = 'Nominal Pelunasan (Wajib Lunas)';
+        
+        infoModePembayaran.className = 'p-4 rounded-xl border-2 bg-orange-50 border-orange-400';
+        infoModePembayaran.innerHTML = `
+            <div class="flex items-start gap-3">
+                <i class="bi bi-exclamation-triangle-fill text-orange-600 text-xl mt-1"></i>
+                <div>
+                    <p class="font-bold text-orange-800">Pelunasan Wajib</p>
+                    <p class="text-sm text-orange-700 mt-1">Pesanan sudah siap diambil. Pembayaran harus lunas sesuai total tagihan.</p>
+                </div>
+            </div>
+        `;
+        
+        infoPembayaran.innerHTML = `
+            <i class="bi bi-info-circle-fill text-orange-500"></i>
+            Masukkan nominal sesuai sisa bayar untuk melunasi transaksi
+        `;
+        
+        // Set nilai default ke sisa bayar
+        document.getElementById('jumlahBayarDisplay').value = formatRupiah(sisaBayar);
+        document.getElementById('jumlahBayar').value = sisaBayar;
+        
+    } else if (bolehDP) {
+        // Status: Antrian / Proses - Boleh DP
+        modalTitle.textContent = 'Pembayaran (DP/Lunas)';
+        labelNominal.textContent = 'Masukkan Nominal Pembayaran';
+        
+        infoModePembayaran.className = 'p-4 rounded-xl border-2 bg-blue-50 border-blue-400';
+        infoModePembayaran.innerHTML = `
+            <div class="flex items-start gap-3">
+                <i class="bi bi-info-circle-fill text-blue-600 text-xl mt-1"></i>
+                <div>
+                    <p class="font-bold text-blue-800">DP atau Lunas</p>
+                    <p class="text-sm text-blue-700 mt-1">Anda dapat membayar DP atau langsung melunasi. Kosongkan untuk "Belum Bayar".</p>
+                </div>
+            </div>
+        `;
+        
+        infoPembayaran.innerHTML = `
+            <i class="bi bi-info-circle-fill text-yellow-500"></i>
+            Masukkan nominal DP atau lunas. Kosongkan untuk status "Belum Bayar"
+        `;
+    }
+    
     document.getElementById('modalBayar').classList.remove('hidden');
 }
 
@@ -395,6 +455,7 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
     
     const jumlahBayar = parseInt(document.getElementById('jumlahBayar').value) || 0;
     
+    // Validasi nominal negatif
     if (jumlahBayar < 0) {
         Swal.fire({
             icon: 'error',
@@ -409,6 +470,7 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
         return;
     }
     
+    // Validasi melebihi sisa bayar
     if (jumlahBayar > sisaBayar) {
         Swal.fire({
             icon: 'warning',
@@ -423,10 +485,32 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
         return;
     }
     
-    if (jumlahBayar === 0) {
+    // Validasi khusus untuk status "Siap Diambil" / "Selesai"
+    if (harusPelunasan && jumlahBayar < sisaBayar) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Pelunasan Wajib',
+            html: `
+                <div class="text-gray-600">
+                    <p class="mb-2">Pesanan sudah <strong class="text-orange-600">siap diambil</strong>.</p>
+                    <p>Pembayaran harus <strong class="text-orange-600">lunas</strong> sesuai total tagihan:</p>
+                    <p class="text-xl font-bold text-orange-600 mt-3">Rp ${formatRupiah(sisaBayar)}</p>
+                </div>
+            `,
+            confirmButtonColor: '#f59e0b',
+            customClass: {
+                popup: 'rounded-2xl',
+                confirmButton: 'rounded-xl px-6 py-3 font-bold'
+            }
+        });
+        return;
+    }
+    
+    // Konfirmasi jika nominal = 0 dan boleh DP
+    if (jumlahBayar === 0 && bolehDP) {
         Swal.fire({
             title: 'Konfirmasi',
-            html: '<div class="text-gray-600">Anda tidak memasukkan DP.<br>Status pembayaran akan tetap <strong class="text-red-600">BELUM BAYAR</strong>.<br><br>Lanjutkan?</div>',
+            html: '<div class="text-gray-600">Anda tidak memasukkan pembayaran.<br>Status pembayaran akan tetap <strong class="text-red-600">BELUM BAYAR</strong>.<br><br>Lanjutkan?</div>',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#f59e0b',

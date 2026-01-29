@@ -87,17 +87,29 @@ class AuthWebController extends Controller
 
         $totalPelanggan  = Pelanggan::count();
         $totalKasir      = Kasir::count();
+        
+        // ✅ PERBAIKAN: Hitung SEMUA transaksi offline (tidak pakai filter status)
         $totalTransaksi  = Transaksi::where('jenis_transaksi', 'offline')->count();
+        
+        // Omzet hari ini (ini tetap pakai filter)
         $totalOmzet      = Transaksi::where('jenis_transaksi', 'offline')
             ->whereDate('tgl_transaksi', today())
             ->where('status_bayar', 'lunas')
             ->sum('total_bayar');
 
+        // ✅ PERBAIKAN UTAMA: Ambil SEMUA transaksi tanpa filter status dan tanpa limit
         $orders = Transaksi::query()
-            ->where('jenis_transaksi', 'offline')
-            ->whereIn('status_transaksi', ['antrian', 'proses', 'siap_di_ambil', 'pick_up'])
-            ->orderBy('tgl_transaksi', 'DESC')
-            ->limit(10)
+            // Jika ingin tampilkan online + offline, hapus baris ini:
+            // ->where('jenis_transaksi', 'offline')
+            
+            // ❌ HAPUS filter status ini untuk tampilkan semua:
+            // ->whereIn('status_transaksi', ['antrian', 'proses', 'siap_di_ambil', 'pick_up'])
+            
+            ->orderBy('id_transaksi', 'DESC')  // Urutkan dari ID terbaru
+            
+            // ❌ HAPUS limit ini untuk tampilkan semua:
+            // ->limit(10)
+            
             ->get()
             ->map(function($o) {
                 $o->deadline = $o->tgl_estimasi 
@@ -162,11 +174,9 @@ class AuthWebController extends Controller
             ->where('jenis_transaksi', 'offline')
             ->count();
 
+        // ✅ PERBAIKAN: Ambil SEMUA transaksi
         $orders = Transaksi::query()
-            ->where('jenis_transaksi', 'offline')
-            ->whereIn('status_transaksi', ['antrian', 'proses'])
-            ->orderBy('tgl_transaksi', 'DESC')
-            ->limit(10)
+            ->orderBy('id_transaksi', 'DESC')
             ->get()
             ->map(function($o) {
                 $o->deadline = $o->tgl_estimasi 
@@ -231,11 +241,9 @@ class AuthWebController extends Controller
             ->where('jenis_transaksi', 'offline')
             ->count();
 
+        // ✅ PERBAIKAN: Ambil SEMUA transaksi
         $orders = Transaksi::query()
-            ->where('jenis_transaksi', 'offline')
-            ->whereIn('status_transaksi', ['antrian', 'proses'])
-            ->orderBy('tgl_transaksi', 'DESC')
-            ->limit(10)
+            ->orderBy('id_transaksi', 'DESC')
             ->get()
             ->map(function($o) {
                 $o->deadline = $o->tgl_estimasi 
