@@ -820,8 +820,6 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
             ->middleware('permission:edit')
             ->name('send-fcm-notification');
-
-
     });
 
     // ================= RIWAYAT (With Permission) =================

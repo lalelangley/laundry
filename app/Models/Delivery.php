@@ -18,6 +18,7 @@ class Delivery extends Model
         'jenis',
         'alamat_tujuan',
         'status',
+        'catatan',
         'waktu',
     ];
 
