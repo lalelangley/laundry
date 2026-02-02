@@ -21,7 +21,6 @@ class ProfilePelanggansController extends Controller
             ], 404);
         }
 
-        // Generate full URL untuk gambar
         $pelanggan->gambar_url = $pelanggan->gambar
             ? url("storage/" . $pelanggan->gambar)
             : null;
@@ -84,7 +83,7 @@ class ProfilePelanggansController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'gambar' => 'required|image|mimes:jpeg,png,jpg|max:2048' // max 2MB
+            'gambar' => 'required|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
         if ($validator->fails()) {
@@ -96,12 +95,10 @@ class ProfilePelanggansController extends Controller
         }
 
         if ($request->hasFile('gambar')) {
-            // Hapus gambar lama jika ada
             if ($pelanggan->gambar && Storage::disk('public')->exists($pelanggan->gambar)) {
                 Storage::disk('public')->delete($pelanggan->gambar);
             }
 
-            // Simpan gambar baru dengan nama unik
             $file = $request->file('gambar');
             $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('pelanggan', $filename, 'public');

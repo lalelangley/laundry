@@ -11,9 +11,6 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // =========================
-    // REGISTER (khusus pelanggan)
-    // =========================
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -30,7 +27,6 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // ✅ Register tanpa jk, biarkan null (diisi saat edit profil)
         $pelanggan = Pelanggan::create([
             'nama_pelanggan' => $request->nama_pelanggan,
             'no_hp'          => $request->no_hp,
@@ -40,7 +36,7 @@ class AuthController extends Controller
             'gambar'         => null,
         ]);
 
-        // Generate token Sanctum
+        
         $token = $pelanggan->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -60,9 +56,7 @@ class AuthController extends Controller
     }
 
 
-    // =========================
-    // LOGIN
-    // =========================
+   
     public function login(Request $request)
     {
         $request->validate([
@@ -73,17 +67,12 @@ class AuthController extends Controller
         $role = null;
         $user = null;
 
-        // ============================
-        // CEK PELANGGAN
-        // ============================
+      
         $user = Pelanggan::where('no_hp', $request->no_telp)->first();
         if ($user) {
             $role = 'pelanggan';
         }
 
-        // ============================
-        // JIKA TIDAK ADA → CEK DRIVER
-        // ============================
         if (!$user) {
             $user = Driver::where('no_telp', $request->no_telp)->first();
             if ($user) {
@@ -91,9 +80,7 @@ class AuthController extends Controller
             }
         }
 
-        // ============================
-        // NO TELP TIDAK DITEMUKAN
-        // ============================
+       
         if (!$user) {
             return response()->json([
                 'status' => false,
@@ -101,9 +88,7 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // ============================
-        // CEK PASSWORD
-        // ============================
+      
         if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => false,
@@ -111,12 +96,10 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // ============================
-        // LOGIN BERHASIL → BUAT TOKEN
-        // ============================
+    
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // ✅ Format response data sesuai role
+       
         $responseData = null;
         if ($role === 'pelanggan') {
             $responseData = [
@@ -147,9 +130,7 @@ class AuthController extends Controller
     }
 
 
-    // =========================
-    // LOGOUT
-    // =========================
+   
     public function logout(Request $request)
     {
         // Hapus token aktif
