@@ -67,9 +67,9 @@
                     placeholder="Email pelanggan...">
             </div>
 
-            {{-- Gender --}}
+            {{-- jk --}}
             <div>
-                <label class="font-semibold text-gray-700">Gender</label>
+                <label class="font-semibold text-gray-700">jk</label>
                 <div class="flex items-center gap-8 mt-2">
                     <label class="flex items-center gap-2">
                     <input type="radio" name="jk" value="L" class="accent-yellow-500" checked>

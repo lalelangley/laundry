@@ -127,7 +127,7 @@
         </select>
 
         <div class="flex gap-2 mt-3">
-            <input id="inputDiskon" type="number" 
+            <input id="inputDiskon" type="text" inputmode="decimal"
                    class="flex-1 p-3 rounded-2xl border bg-gray-100" 
                    placeholder="Diskon / Rupiah">
             <div class="flex flex-col rounded-2xl overflow-hidden">
@@ -268,6 +268,27 @@ document.addEventListener("DOMContentLoaded", () => {
     let mode = "rupiah";
     let estimasiValid = false;
 
+    // ===== VALIDASI INPUT DISKON =====
+    // Hanya izinkan angka, titik, dan koma
+    inputDiskon.addEventListener('input', function(e) {
+        let value = e.target.value;
+        
+        // Izinkan angka, titik, dan koma
+        value = value.replace(/[^0-9.,]/g, '');
+        
+        // Ganti koma dengan titik untuk konsistensi
+        value = value.replace(',', '.');
+        
+        // Hanya izinkan satu titik desimal
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        e.target.value = value;
+        hitungDiskon();
+    });
+
     // ===== ESTIMASI SELESAI =====
     const tglEstimasi = document.getElementById('tgl_estimasi');
     const btnSetEstimasi = document.getElementById('btnSetEstimasi');
@@ -322,26 +343,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ===== HITUNG DISKON =====
-    const hitungDiskon = () => {
-        let value = parseFloat(inputDiskon.value) || 0;
-        let potongan = mode === "persen" ? totalAwal * Math.min(value, 100) / 100 : value;
-        potongan = Math.min(Math.max(potongan, 0), totalAwal);
-        let totalAkhir = totalAwal - potongan;
+   // ===== HITUNG DISKON =====
+const hitungDiskon = () => {
+    let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
+    let potongan = 0;
+    
+    if (mode === "persen") {
+        // Batasi persen maksimal 100%
+        value = Math.min(value, 100);
+        potongan = totalAwal * value / 100;
+    } else {
+        potongan = value;
+    }
+    
+    potongan = Math.min(Math.max(potongan, 0), totalAwal);
+    let totalAkhir = totalAwal - potongan;
 
-        if (value > 0) {
-            infoDiskon.style.display = "block";
-            infoDiskon.innerHTML = `
-                <span class="font-semibold">Diskon:</span> Rp${potongan.toLocaleString('id-ID')}<br>
-                <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
-            `;
+    if (value > 0) {
+        infoDiskon.style.display = "block";
+        
+        // ✅ PERBAIKAN: Tampilkan angka tanpa trailing zero
+        let displayValue;
+        if (mode === "persen") {
+            // Jika angka bulat (misal 1.00), tampilkan tanpa desimal
+            // Jika ada desimal (misal 10.5), tampilkan dengan desimal
+            displayValue = value % 1 === 0 ? `${value}%` : `${value}%`;
         } else {
-            infoDiskon.style.display = "none";
+            displayValue = `Rp${value.toLocaleString('id-ID')}`;
         }
+        
+        infoDiskon.innerHTML = `
+            <span class="font-semibold">Diskon (${displayValue}):</span> Rp${potongan.toLocaleString('id-ID')}<br>
+            <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
+        `;
+    } else {
+        infoDiskon.style.display = "none";
+    }
 
-        totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
-        return totalAkhir;
-    };
+    totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
+    return totalAkhir;
+};
 
     // ===== TOGGLE DISKON MODE =====
     btnRupiah.addEventListener('click', () => {
@@ -356,7 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
         mode = "persen";
         btnPersen.classList.add('bg-yellow-400');
         btnRupiah.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder = "Diskon / Persen %";
+        inputDiskon.placeholder = "Diskon / Persen % (Contoh: 10.5)";
         hitungDiskon();
     });
 
@@ -371,7 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (hiddenBayar.value === "1") {
             hiddenBayar.value = "0";
             statusBayar.textContent = "Tidak";
-            toggleBayar.textContent = "✖ Tidak Bayar";
+            toggleBayar.textContent = "✖ Belum Bayar";
             toggleBayar.classList.replace("bg-yellow-400", "bg-red-400");
         } else {
             hiddenBayar.value = "1";
@@ -437,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const totalAkhir = hitungDiskon();
             const bayar = parseFloat(inputBayar.value) || 0;
-            const diskonValue = parseFloat(inputDiskon.value) || 0;
+            const diskonValue = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
             const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
             const keterangan = document.getElementById("keteranganTransaksi").value || null;
             const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;

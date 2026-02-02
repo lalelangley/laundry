@@ -5,56 +5,58 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('kasir.laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Laporan Driver</h1>
-                <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="{{ route('kasir.laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Laporan Driver</h1>
+                    <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
+                </div>
             </div>
+            
+            {{-- Export Button --}}
+            <a href="{{ route('kasir.laporan.driver.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
+               class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-3 rounded-full transition-all shadow">
+                <i class="bi bi-file-earmark-spreadsheet text-xl"></i>
+                Export Excel
+            </a>
         </div>
     </div>
 
-   <form method="GET" action="{{ route('kasir.laporan.transaksi.index') }}" class="px-8 mt-6 space-y-4">
+    <form method="GET" action="{{ route('kasir.laporan.driver.index') }}" id="filterForm" class="px-8 mt-6 space-y-4">
 
-    {{-- FILTER TANGGAL --}}
-    <div class="flex items-center gap-4">
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="dari" value="{{ request('dari', $tglAwal) }}"
-                   class="bg-transparent outline-none w-full">
+        {{-- FILTER TANGGAL --}}
+        <div class="flex items-center gap-4">
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" 
+                       name="dari" 
+                       id="dari"
+                       value="{{ $tglAwal }}"
+                       class="bg-transparent outline-none w-full font-semibold cursor-pointer">
+            </div>
+
+            <span class="font-bold text-gray-700">s/d</span>
+
+            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+                <i class="bi bi-calendar-event"></i>
+                <input type="date" 
+                       name="sampai" 
+                       id="sampai"
+                       value="{{ $tglAkhir }}"
+                       class="bg-transparent outline-none w-full font-semibold cursor-pointer">
+            </div>
+            
+            <a href="{{ route('kasir.laporan.driver.index') }}" 
+               class="bg-gray-200 hover:bg-gray-300 px-4 py-4 rounded-full transition-all"
+               title="Reset Filter">
+                <i class="bi bi-arrow-clockwise font-bold"></i>
+            </a>
         </div>
 
-        <span class="font-bold">&gt;</span>
-
-        <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
-            <i class="bi bi-calendar-event"></i>
-            <input type="date" name="sampai" value="{{ request('sampai', $tglAkhir) }}"
-                   class="bg-transparent outline-none w-full">
-        </div>
-    </div>
-
-    {{-- SEARCH --}}
-    <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
-        <i class="bi bi-search text-xl text-gray-400"></i>
-
-        <input
-            type="text"
-            name="q"
-            value="{{ request('q') }}"
-            placeholder="Cari nama pelanggan / no HP..."
-            class="flex-1 outline-none bg-transparent font-semibold text-gray-700"
-        >
-
-        <button type="submit"
-                class="bg-yellow-400 px-6 py-2 rounded-full font-bold">
-            Cari
-        </button>
-    </div>
-
-    {{-- STATISTICS CARDS --}}
-    <div class="px-8 pb-6">
+        {{-- STATISTICS CARDS --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {{-- Total Driver Aktif --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow">
@@ -110,28 +112,25 @@
             </div>
 
             {{-- Gagal & Dalam Proses --}}
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-red-500 hover:shadow-xl transition-shadow">
+            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-shadow">
                 <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <p class="text-sm text-gray-500 font-semibold mb-2">Proses</p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl text-gray-300 font-bold">/</span>
+                    <div class="flex-3">
+                        <p class="text-sm text-gray-500 font-bold mb-2">Status</p>
                             <div class="text-center">
-                                <h3 class="text-2xl font-bold text-orange-500">{{ $stats['total_proses'] }}</h3>
-                                <p class="text-xs text-gray-500">Proses</p>
+                                <h3 class="text-3xl font-bold text-orange-500">{{ $stats['total_proses'] }}</h3>
+                                <p class="text-sm font-bold text-gray-700">Proses</p>
                             </div>
-                        </div>
                     </div>
-                    <div class="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-exclamation-triangle text-3xl text-red-600"></i>
+                    <div class="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="bi bi-hourglass-split text-3xl text-orange-600"></i>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 
     {{-- TABLE --}}
-    <div class="px-8 pb-10">
+    <div class="px-8 pb-10 mt-6">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             {{-- Table Header --}}
             <div class="px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
@@ -197,7 +196,12 @@
                         @forelse($data as $index => $driver)
                             <tr class="hover:bg-yellow-50 transition-colors">
                                 <td class="px-6 py-5 text-gray-900 font-bold text-center">
-                                    <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full text-sm">
+                                    <span class="inline-flex items-center justify-center w-8 h-8 
+                                        {{ $index == 0 ? 'bg-yellow-400 text-white' : '' }}
+                                        {{ $index == 1 ? 'bg-gray-300 text-white' : '' }}
+                                        {{ $index == 2 ? 'bg-orange-300 text-white' : '' }}
+                                        {{ $index > 2 ? 'bg-gray-100 text-gray-600' : '' }}
+                                        rounded-full text-sm font-bold">
                                         {{ $index + 1 }}
                                     </span>
                                 </td>
@@ -279,3 +283,41 @@
 @endif
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const dariInput = document.getElementById('dari');
+    const sampaiInput = document.getElementById('sampai');
+
+    // Auto submit when date changes
+    dariInput.addEventListener('change', function() {
+        if (this.value && sampaiInput.value) {
+            filterForm.submit();
+        }
+    });
+
+    sampaiInput.addEventListener('change', function() {
+        if (this.value && dariInput.value) {
+            filterForm.submit();
+        }
+    });
+
+    // Validate date range
+    dariInput.addEventListener('change', function() {
+        if (sampaiInput.value && this.value > sampaiInput.value) {
+            alert('Tanggal mulai tidak boleh lebih besar dari tanggal akhir');
+            this.value = '';
+        }
+    });
+
+    sampaiInput.addEventListener('change', function() {
+        if (dariInput.value && this.value < dariInput.value) {
+            alert('Tanggal akhir tidak boleh lebih kecil dari tanggal mulai');
+            this.value = '';
+        }
+    });
+});
+</script>
+@endpush

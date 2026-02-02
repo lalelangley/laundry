@@ -11,6 +11,15 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TransaksiExport; 
 use Illuminate\Support\Facades\Auth;
 
+// ✅ TAMBAHKAN INI untuk export pengeluaran
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+
 class LaporanController extends Controller
 {
     // =========================================
@@ -290,11 +299,7 @@ class LaporanController extends Controller
     // =========================================
     // LAPORAN TRANSAKSI
     // =========================================
-    // =========================================
-// LAPORAN TRANSAKSI - UPDATE UNTUK 3 ROLE
-// =========================================
-
-// ADMIN
+/// ADMIN
 public function transaksiIndex(Request $request)
 {
     // ✅ CHECK PERMISSION VIEW
@@ -309,6 +314,7 @@ public function transaksiIndex(Request $request)
             $tglAkhir.' 23:59:59'
         ]);
 
+    // Filter Search
     if ($request->filled('q')) {
         $q = $request->q;
         $query->where(function ($sub) use ($q) {
@@ -318,12 +324,42 @@ public function transaksiIndex(Request $request)
         });
     }
 
+    // ✅ Filter Status Transaksi
+    if ($request->filled('status')) {
+        $query->whereIn('status_transaksi', $request->status);
+    }
+
+    // ✅ Filter Status Pembayaran
+    if ($request->filled('bayar')) {
+        $query->whereIn('status_bayar', $request->bayar);
+    }
+
+    // ✅ Filter Jenis Transaksi
+    if ($request->filled('jenis')) {
+        $query->whereIn('jenis_transaksi', $request->jenis);
+    }
+
+    // ✅ Sorting
+    $sortBy = $request->sort ?? 'terbaru';
+    switch($sortBy) {
+        case 'terlama':
+            $query->orderBy('tgl_transaksi', 'ASC');
+            break;
+        case 'nominal_tertinggi':
+            $query->orderBy('total_bayar', 'DESC');
+            break;
+        case 'nominal_terendah':
+            $query->orderBy('total_bayar', 'ASC');
+            break;
+        case 'terbaru':
+        default:
+            $query->orderBy('tgl_transaksi', 'DESC');
+    }
+
     // Pagination (10 per halaman)
-    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
-                       ->paginate(10)
-                       ->withQueryString();
+    $transaksi = $query->paginate(10)->withQueryString();
     
-    // Hitung total omzet dan jumlah dari semua data (bukan hanya halaman saat ini)
+    // Hitung total omzet dan jumlah dari semua data (dengan filter yang sama)
     $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
             $tglAwal.' 00:00:00',
             $tglAkhir.' 23:59:59'
@@ -336,6 +372,18 @@ public function transaksiIndex(Request $request)
                 ->orWhere('no_hp', 'like', "%$q%")
                 ->orWhere('id_transaksi', 'like', "%$q%");
         });
+    }
+
+    if ($request->filled('status')) {
+        $queryTotal->whereIn('status_transaksi', $request->status);
+    }
+
+    if ($request->filled('bayar')) {
+        $queryTotal->whereIn('status_bayar', $request->bayar);
+    }
+
+    if ($request->filled('jenis')) {
+        $queryTotal->whereIn('jenis_transaksi', $request->jenis);
     }
 
     return view('laporan.transaksi.index', [
@@ -362,6 +410,7 @@ public function transaksiIndexKasir(Request $request)
             $tglAkhir.' 23:59:59'
         ]);
 
+    // Filter Search
     if ($request->filled('q')) {
         $q = $request->q;
         $query->where(function ($sub) use ($q) {
@@ -371,12 +420,42 @@ public function transaksiIndexKasir(Request $request)
         });
     }
 
+    // ✅ Filter Status Transaksi
+    if ($request->filled('status')) {
+        $query->whereIn('status_transaksi', $request->status);
+    }
+
+    // ✅ Filter Status Pembayaran
+    if ($request->filled('bayar')) {
+        $query->whereIn('status_bayar', $request->bayar);
+    }
+
+    // ✅ Filter Jenis Transaksi
+    if ($request->filled('jenis')) {
+        $query->whereIn('jenis_transaksi', $request->jenis);
+    }
+
+    // ✅ Sorting
+    $sortBy = $request->sort ?? 'terbaru';
+    switch($sortBy) {
+        case 'terlama':
+            $query->orderBy('tgl_transaksi', 'ASC');
+            break;
+        case 'nominal_tertinggi':
+            $query->orderBy('total_bayar', 'DESC');
+            break;
+        case 'nominal_terendah':
+            $query->orderBy('total_bayar', 'ASC');
+            break;
+        case 'terbaru':
+        default:
+            $query->orderBy('tgl_transaksi', 'DESC');
+    }
+
     // Pagination (10 per halaman)
-    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
-                       ->paginate(10)
-                       ->withQueryString();
+    $transaksi = $query->paginate(10)->withQueryString();
     
-    // Hitung total omzet dan jumlah dari semua data
+    // Hitung total omzet dan jumlah dari semua data (dengan filter yang sama)
     $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
             $tglAwal.' 00:00:00',
             $tglAkhir.' 23:59:59'
@@ -389,6 +468,18 @@ public function transaksiIndexKasir(Request $request)
                 ->orWhere('no_hp', 'like', "%$q%")
                 ->orWhere('id_transaksi', 'like', "%$q%");
         });
+    }
+
+    if ($request->filled('status')) {
+        $queryTotal->whereIn('status_transaksi', $request->status);
+    }
+
+    if ($request->filled('bayar')) {
+        $queryTotal->whereIn('status_bayar', $request->bayar);
+    }
+
+    if ($request->filled('jenis')) {
+        $queryTotal->whereIn('jenis_transaksi', $request->jenis);
     }
 
     return view('kasir.laporan.transaksi.index', [
@@ -415,6 +506,7 @@ public function transaksiIndexAdmin2(Request $request)
             $tglAkhir.' 23:59:59'
         ]);
 
+    // Filter Search
     if ($request->filled('q')) {
         $q = $request->q;
         $query->where(function ($sub) use ($q) {
@@ -424,12 +516,42 @@ public function transaksiIndexAdmin2(Request $request)
         });
     }
 
+    // ✅ Filter Status Transaksi
+    if ($request->filled('status')) {
+        $query->whereIn('status_transaksi', $request->status);
+    }
+
+    // ✅ Filter Status Pembayaran
+    if ($request->filled('bayar')) {
+        $query->whereIn('status_bayar', $request->bayar);
+    }
+
+    // ✅ Filter Jenis Transaksi
+    if ($request->filled('jenis')) {
+        $query->whereIn('jenis_transaksi', $request->jenis);
+    }
+
+    // ✅ Sorting
+    $sortBy = $request->sort ?? 'terbaru';
+    switch($sortBy) {
+        case 'terlama':
+            $query->orderBy('tgl_transaksi', 'ASC');
+            break;
+        case 'nominal_tertinggi':
+            $query->orderBy('total_bayar', 'DESC');
+            break;
+        case 'nominal_terendah':
+            $query->orderBy('total_bayar', 'ASC');
+            break;
+        case 'terbaru':
+        default:
+            $query->orderBy('tgl_transaksi', 'DESC');
+    }
+
     // Pagination (10 per halaman)
-    $transaksi = $query->orderBy('tgl_transaksi', 'DESC')
-                       ->paginate(10)
-                       ->withQueryString();
+    $transaksi = $query->paginate(10)->withQueryString();
     
-    // Hitung total omzet dan jumlah dari semua data
+    // Hitung total omzet dan jumlah dari semua data (dengan filter yang sama)
     $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
             $tglAwal.' 00:00:00',
             $tglAkhir.' 23:59:59'
@@ -442,6 +564,18 @@ public function transaksiIndexAdmin2(Request $request)
                 ->orWhere('no_hp', 'like', "%$q%")
                 ->orWhere('id_transaksi', 'like', "%$q%");
         });
+    }
+
+    if ($request->filled('status')) {
+        $queryTotal->whereIn('status_transaksi', $request->status);
+    }
+
+    if ($request->filled('bayar')) {
+        $queryTotal->whereIn('status_bayar', $request->bayar);
+    }
+
+    if ($request->filled('jenis')) {
+        $queryTotal->whereIn('jenis_transaksi', $request->jenis);
     }
 
     return view('admin2.laporan.transaksi.index', [
@@ -696,67 +830,164 @@ public function transaksiIndexAdmin2(Request $request)
     // =========================================
     // LAPORAN PELANGGAN
     // =========================================
+// ADMIN
+public function pelangganIndex(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
     
-    public function pelangganIndex()
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $data = Transaksi::selectRaw('
-                id_pelanggan,
-                nama_pelanggan,
-                no_hp,
-                COUNT(*) as total_transaksi,
-                SUM(total_bayar) as total_belanja
-        ')
-            ->whereNotNull('id_pelanggan')
-            ->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp')
-            ->orderByDesc('total_belanja')
-            ->get();
+    $query = Transaksi::selectRaw('
+            id_pelanggan,
+            nama_pelanggan,
+            no_hp,
+            COUNT(*) as total_transaksi,
+            SUM(total_bayar) as total_belanja
+    ')->whereNotNull('id_pelanggan');
 
-        return view('laporan.pelanggan.index', compact('data'));
+    // Filter tanggal
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tgl_transaksi', [
+            $request->dari . ' 00:00:00',
+            $request->sampai . ' 23:59:59'
+        ]);
     }
 
-    public function pelangganIndexKasir()
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $data = Transaksi::selectRaw('
-                id_pelanggan,
-                nama_pelanggan,
-                no_hp,
-                COUNT(*) as total_transaksi,
-                SUM(total_bayar) as total_belanja
-        ')
-            ->whereNotNull('id_pelanggan')
-            ->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp')
-            ->orderByDesc('total_belanja')
-            ->get();
-
-        return view('kasir.laporan.pelanggan.index', compact('data'));
+    // Search
+    if ($request->q) {
+        $query->where(function($q) use ($request) {
+            $q->where('nama_pelanggan', 'like', '%' . $request->q . '%')
+              ->orWhere('no_hp', 'like', '%' . $request->q . '%');
+        });
     }
 
-    public function pelangganIndexAdmin2()
-    {
-        // ✅ CHECK PERMISSION VIEW
-        requirePermission('laporan', 'view');
-        
-        $data = Transaksi::selectRaw('
-                id_pelanggan,
-                nama_pelanggan,
-                no_hp,
-                COUNT(*) as total_transaksi,
-                SUM(total_bayar) as total_belanja
-        ')
-            ->whereNotNull('id_pelanggan')
-            ->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp')
-            ->orderByDesc('total_belanja')
-            ->get();
+    $query->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp');
 
-        return view('admin2.laporan.pelanggan.index', compact('data'));
+    // Sorting
+    switch($request->sort) {
+        case 'belanja_terendah':
+            $query->orderBy('total_belanja', 'asc');
+            break;
+        case 'transaksi_terbanyak':
+            $query->orderByDesc('total_transaksi');
+            break;
+        case 'nama_az':
+            $query->orderBy('nama_pelanggan', 'asc');
+            break;
+        case 'belanja_tertinggi':
+        default:
+            $query->orderByDesc('total_belanja');
     }
 
+    $data = $query->get();
+
+    return view('laporan.pelanggan.index', compact('data'));
+}
+
+// KASIR
+public function pelangganIndexKasir(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $query = Transaksi::selectRaw('
+            id_pelanggan,
+            nama_pelanggan,
+            no_hp,
+            COUNT(*) as total_transaksi,
+            SUM(total_bayar) as total_belanja
+    ')->whereNotNull('id_pelanggan');
+
+    // Filter tanggal
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tgl_transaksi', [
+            $request->dari . ' 00:00:00',
+            $request->sampai . ' 23:59:59'
+        ]);
+    }
+
+    // Search
+    if ($request->q) {
+        $query->where(function($q) use ($request) {
+            $q->where('nama_pelanggan', 'like', '%' . $request->q . '%')
+              ->orWhere('no_hp', 'like', '%' . $request->q . '%');
+        });
+    }
+
+    $query->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp');
+
+    // Sorting
+    switch($request->sort) {
+        case 'belanja_terendah':
+            $query->orderBy('total_belanja', 'asc');
+            break;
+        case 'transaksi_terbanyak':
+            $query->orderByDesc('total_transaksi');
+            break;
+        case 'nama_az':
+            $query->orderBy('nama_pelanggan', 'asc');
+            break;
+        case 'belanja_tertinggi':
+        default:
+            $query->orderByDesc('total_belanja');
+    }
+
+    $data = $query->get();
+
+    return view('kasir.laporan.pelanggan.index', compact('data'));
+}
+
+// ADMIN2
+public function pelangganIndexAdmin2(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $query = Transaksi::selectRaw('
+            id_pelanggan,
+            nama_pelanggan,
+            no_hp,
+            COUNT(*) as total_transaksi,
+            SUM(total_bayar) as total_belanja
+    ')->whereNotNull('id_pelanggan');
+
+    // Filter tanggal
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tgl_transaksi', [
+            $request->dari . ' 00:00:00',
+            $request->sampai . ' 23:59:59'
+        ]);
+    }
+
+    // Search
+    if ($request->q) {
+        $query->where(function($q) use ($request) {
+            $q->where('nama_pelanggan', 'like', '%' . $request->q . '%')
+              ->orWhere('no_hp', 'like', '%' . $request->q . '%');
+        });
+    }
+
+    $query->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp');
+
+    // Sorting
+    switch($request->sort) {
+        case 'belanja_terendah':
+            $query->orderBy('total_belanja', 'asc');
+            break;
+        case 'transaksi_terbanyak':
+            $query->orderByDesc('total_transaksi');
+            break;
+        case 'nama_az':
+            $query->orderBy('nama_pelanggan', 'asc');
+            break;
+        case 'belanja_tertinggi':
+        default:
+            $query->orderByDesc('total_belanja');
+    }
+
+    $data = $query->get();
+
+    return view('admin2.laporan.pelanggan.index', compact('data'));
+}
     // =========================================
     // LAPORAN SATUAN
     // =========================================
@@ -1053,4 +1284,1045 @@ public function transaksiIndexAdmin2(Request $request)
             $namaFile
         );
     }
+public function exportPengeluaran(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+
+    // Build query
+    $query = Pengeluaran::query();
+
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tanggal_pengeluaran', [$request->dari, $request->sampai]);
+    }
+
+    if ($request->q) {
+        $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+    }
+
+    $query->orderBy('tanggal_pengeluaran', 'desc');
+    $pengeluaran = $query->get();
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPengeluaranPdf($pengeluaran, $request);
+        case 'csv':
+            return $this->exportPengeluaranCsv($pengeluaran, $request);
+        case 'excel':
+        default:
+            return $this->exportPengeluaranExcel($pengeluaran, $request);
+    }
+}
+
+/**
+ * Export Pengeluaran untuk KASIR
+ */
+public function exportPengeluaranKasir(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+
+    // Build query
+    $query = Pengeluaran::query();
+
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tanggal_pengeluaran', [$request->dari, $request->sampai]);
+    }
+
+    if ($request->q) {
+        $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+    }
+
+    $query->orderBy('tanggal_pengeluaran', 'desc');
+    $pengeluaran = $query->get();
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPengeluaranPdf($pengeluaran, $request);
+        case 'csv':
+            return $this->exportPengeluaranCsv($pengeluaran, $request);
+        case 'excel':
+        default:
+            return $this->exportPengeluaranExcel($pengeluaran, $request);
+    }
+}
+
+/**
+ * Export Pengeluaran untuk ADMIN2
+ */
+public function exportPengeluaranAdmin2(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+
+    // Build query
+    $query = Pengeluaran::query();
+
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tanggal_pengeluaran', [$request->dari, $request->sampai]);
+    }
+
+    if ($request->q) {
+        $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+    }
+
+    $query->orderBy('tanggal_pengeluaran', 'desc');
+    $pengeluaran = $query->get();
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPengeluaranPdf($pengeluaran, $request);
+        case 'csv':
+            return $this->exportPengeluaranCsv($pengeluaran, $request);
+        case 'excel':
+        default:
+            return $this->exportPengeluaranExcel($pengeluaran, $request);
+    }
+}
+
+// =========================================
+// PRIVATE METHODS - Export Helper Functions
+// =========================================
+
+private function exportPengeluaranExcel($pengeluaran, $request)
+{
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set document properties
+    $spreadsheet->getProperties()
+        ->setCreator('Laundry System')
+        ->setTitle('Laporan Pengeluaran')
+        ->setSubject('Laporan Pengeluaran')
+        ->setDescription('Laporan data pengeluaran');
+
+    // Header Info
+    $sheet->setCellValue('A1', 'LAPORAN PENGELUARAN');
+    $sheet->mergeCells('A1:D1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Date range info
+    $dateRange = 'Periode: ';
+    if ($request->dari && $request->sampai) {
+        $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+    } else {
+        $dateRange .= 'Semua Data';
+    }
+    $sheet->setCellValue('A2', $dateRange);
+    $sheet->mergeCells('A2:D2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Print date
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:D3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Table headers
+    $row = 5;
+    $headers = ['No', 'Tanggal', 'Nama Pengeluaran', 'Nominal'];
+    $column = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($column . $row, $header);
+        $sheet->getStyle($column . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FCD34D'); // Yellow-400
+        $sheet->getStyle($column . $row)->getFont()->setBold(true);
+        $sheet->getStyle($column . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $column++;
+    }
+
+    // Data rows
+    $row = 6;
+    $no = 1;
+    $totalNominal = 0;
+
+    foreach ($pengeluaran as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, \Carbon\Carbon::parse($item->tanggal_pengeluaran)->format('d/m/Y'));
+        $sheet->setCellValue('C' . $row, $item->nama_pengeluaran);
+        $sheet->setCellValue('D' . $row, $item->nominal);
+        
+        // Format currency
+        $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        
+        // Center align number column
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        $totalNominal += $item->nominal;
+        $row++;
+    }
+
+    // Total row
+    $sheet->setCellValue('C' . $row, 'TOTAL');
+    $sheet->setCellValue('D' . $row, $totalNominal);
+    $sheet->getStyle('C' . $row . ':D' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('C' . $row . ':D' . $row)->getFill()
+        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+        ->getStartColor()->setRGB('FED7AA'); // Orange-200
+    $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+    // Apply borders
+    $sheet->getStyle('A5:D' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    // Auto-size columns
+    foreach (range('A', 'D') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    // Generate file
+    $fileName = 'Laporan_Pengeluaran_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+private function exportPengeluaranPdf($pengeluaran, $request)
+{
+    $data = [
+        'pengeluaran' => $pengeluaran,
+        'total' => $pengeluaran->sum('nominal'),
+        'dari' => $request->dari,
+        'sampai' => $request->sampai,
+        'tanggal_cetak' => \Carbon\Carbon::now()->format('d/m/Y H:i:s'),
+    ];
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('laporan.pengeluaran.pdf', $data);
+    $pdf->setPaper('a4', 'portrait');
+    
+    $fileName = 'Laporan_Pengeluaran_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.pdf';
+    
+    return $pdf->download($fileName);
+}
+
+private function exportPengeluaranCsv($pengeluaran, $request)
+{
+    $fileName = 'Laporan_Pengeluaran_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.csv';
+
+    $headers = [
+        'Content-Type' => 'text/csv; charset=utf-8',
+        'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        'Pragma' => 'no-cache',
+        'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+        'Expires' => '0'
+    ];
+
+    $callback = function() use ($pengeluaran, $request) {
+        $file = fopen('php://output', 'w');
+        
+        // UTF-8 BOM for Excel compatibility
+        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        // Header info
+        fputcsv($file, ['LAPORAN PENGELUARAN']);
+        
+        $dateRange = 'Periode: ';
+        if ($request->dari && $request->sampai) {
+            $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+        } else {
+            $dateRange .= 'Semua Data';
+        }
+        fputcsv($file, [$dateRange]);
+        fputcsv($file, ['Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s')]);
+        fputcsv($file, []); // Empty row
+
+        // Column headers
+        fputcsv($file, ['No', 'Tanggal', 'Nama Pengeluaran', 'Nominal']);
+
+        // Data rows
+        $no = 1;
+        $total = 0;
+        foreach ($pengeluaran as $item) {
+            fputcsv($file, [
+                $no++,
+                \Carbon\Carbon::parse($item->tanggal_pengeluaran)->format('d/m/Y'),
+                $item->nama_pengeluaran,
+                $item->nominal
+            ]);
+            $total += $item->nominal;
+        }
+
+        // Total row
+        fputcsv($file, ['', '', 'TOTAL', $total]);
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
+// =========================================
+// EXPORT PELANGGAN - Tambahkan method ini ke LaporanController.php
+// =========================================
+
+/**
+ * Export Pelanggan untuk ADMIN
+ */
+public function exportPelanggan(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+    
+    // Get data pelanggan
+    $data = $this->getPelangganData($request);
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPelangganPdf($data, $request);
+        case 'csv':
+            return $this->exportPelangganCsv($data, $request);
+        case 'excel':
+        default:
+            return $this->exportPelangganExcel($data, $request);
+    }
+}
+
+/**
+ * Export Pelanggan untuk KASIR
+ */
+public function exportPelangganKasir(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+    
+    // Get data pelanggan
+    $data = $this->getPelangganData($request);
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPelangganPdf($data, $request);
+        case 'csv':
+            return $this->exportPelangganCsv($data, $request);
+        case 'excel':
+        default:
+            return $this->exportPelangganExcel($data, $request);
+    }
+}
+
+/**
+ * Export Pelanggan untuk ADMIN2
+ */
+public function exportPelangganAdmin2(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $format = $request->format ?? 'excel';
+    
+    // Get data pelanggan
+    $data = $this->getPelangganData($request);
+
+    switch ($format) {
+        case 'pdf':
+            return $this->exportPelangganPdf($data, $request);
+        case 'csv':
+            return $this->exportPelangganCsv($data, $request);
+        case 'excel':
+        default:
+            return $this->exportPelangganExcel($data, $request);
+    }
+}
+
+// =========================================
+// PRIVATE METHODS - Export Helper Functions
+// =========================================
+
+private function getPelangganData($request)
+{
+    $query = Transaksi::selectRaw('
+            id_pelanggan,
+            nama_pelanggan,
+            no_hp,
+            COUNT(*) as total_transaksi,
+            SUM(total_bayar) as total_belanja
+    ')->whereNotNull('id_pelanggan');
+
+    // Filter tanggal
+    if ($request->dari && $request->sampai) {
+        $query->whereBetween('tgl_transaksi', [
+            $request->dari . ' 00:00:00',
+            $request->sampai . ' 23:59:59'
+        ]);
+    }
+
+    // Search
+    if ($request->q) {
+        $query->where(function($q) use ($request) {
+            $q->where('nama_pelanggan', 'like', '%' . $request->q . '%')
+              ->orWhere('no_hp', 'like', '%' . $request->q . '%');
+        });
+    }
+
+    $query->groupBy('id_pelanggan', 'nama_pelanggan', 'no_hp');
+
+    // Sorting
+    switch($request->sort) {
+        case 'belanja_terendah':
+            $query->orderBy('total_belanja', 'asc');
+            break;
+        case 'transaksi_terbanyak':
+            $query->orderByDesc('total_transaksi');
+            break;
+        case 'nama_az':
+            $query->orderBy('nama_pelanggan', 'asc');
+            break;
+        case 'belanja_tertinggi':
+        default:
+            $query->orderByDesc('total_belanja');
+    }
+
+    return $query->get();
+}
+
+private function exportPelangganExcel($data, $request)
+{
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set document properties
+    $spreadsheet->getProperties()
+        ->setCreator('Laundry System')
+        ->setTitle('Laporan Pelanggan')
+        ->setSubject('Laporan Pelanggan')
+        ->setDescription('Laporan data pelanggan');
+
+    // Header Info
+    $sheet->setCellValue('A1', 'LAPORAN PELANGGAN');
+    $sheet->mergeCells('A1:E1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Date range info
+    $dateRange = 'Periode: ';
+    if ($request->dari && $request->sampai) {
+        $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+    } else {
+        $dateRange .= 'Semua Data';
+    }
+    $sheet->setCellValue('A2', $dateRange);
+    $sheet->mergeCells('A2:E2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Print date
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:E3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Table headers
+    $row = 5;
+    $headers = ['No', 'Nama Pelanggan', 'No HP', 'Total Transaksi', 'Total Belanja'];
+    $column = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($column . $row, $header);
+        $sheet->getStyle($column . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FCD34D'); // Yellow-400
+        $sheet->getStyle($column . $row)->getFont()->setBold(true);
+        $sheet->getStyle($column . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $column++;
+    }
+
+    // Data rows
+    $row = 6;
+    $no = 1;
+    $totalTransaksi = 0;
+    $totalBelanja = 0;
+
+    foreach ($data as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, $item->nama_pelanggan);
+        $sheet->setCellValue('C' . $row, $item->no_hp);
+        $sheet->setCellValue('D' . $row, $item->total_transaksi);
+        $sheet->setCellValue('E' . $row, $item->total_belanja);
+        
+        // Format currency
+        $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        
+        // Center align
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        $totalTransaksi += $item->total_transaksi;
+        $totalBelanja += $item->total_belanja;
+        $row++;
+    }
+
+    // Total row
+    $sheet->setCellValue('D' . $row, 'TOTAL');
+    $sheet->setCellValue('E' . $row, $totalBelanja);
+    $sheet->getStyle('D' . $row . ':E' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('D' . $row . ':E' . $row)->getFill()
+        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+        ->getStartColor()->setRGB('FED7AA'); // Orange-200
+    $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+    $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Apply borders
+    $sheet->getStyle('A5:E' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    // Auto-size columns
+    foreach (range('A', 'E') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    // Generate file
+    $fileName = 'Laporan_Pelanggan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+private function exportPelangganPdf($data, $request)
+{
+    $pdfData = [
+        'data' => $data,
+        'totalPelanggan' => $data->count(),
+        'totalTransaksi' => $data->sum('total_transaksi'),
+        'totalBelanja' => $data->sum('total_belanja'),
+        'dari' => $request->dari,
+        'sampai' => $request->sampai,
+        'tanggal_cetak' => \Carbon\Carbon::now()->format('d/m/Y H:i:s'),
+    ];
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('laporan.pelanggan.pdf', $pdfData);
+    $pdf->setPaper('a4', 'portrait');
+    
+    $fileName = 'Laporan_Pelanggan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.pdf';
+    
+    return $pdf->download($fileName);
+}
+
+private function exportPelangganCsv($data, $request)
+{
+    $fileName = 'Laporan_Pelanggan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.csv';
+
+    $headers = [
+        'Content-Type' => 'text/csv; charset=utf-8',
+        'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        'Pragma' => 'no-cache',
+        'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+        'Expires' => '0'
+    ];
+
+    $callback = function() use ($data, $request) {
+        $file = fopen('php://output', 'w');
+        
+        // UTF-8 BOM for Excel compatibility
+        fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        // Header info
+        fputcsv($file, ['LAPORAN PELANGGAN']);
+        
+        $dateRange = 'Periode: ';
+        if ($request->dari && $request->sampai) {
+            $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+        } else {
+            $dateRange .= 'Semua Data';
+        }
+        fputcsv($file, [$dateRange]);
+        fputcsv($file, ['Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s')]);
+        fputcsv($file, []); // Empty row
+
+        // Column headers
+        fputcsv($file, ['No', 'Nama Pelanggan', 'No HP', 'Total Transaksi', 'Total Belanja']);
+
+        // Data rows
+        $no = 1;
+        $totalTransaksi = 0;
+        $totalBelanja = 0;
+        
+        foreach ($data as $item) {
+            fputcsv($file, [
+                $no++,
+                $item->nama_pelanggan,
+                $item->no_hp,
+                $item->total_transaksi,
+                $item->total_belanja
+            ]);
+            $totalTransaksi += $item->total_transaksi;
+            $totalBelanja += $item->total_belanja;
+        }
+
+        // Total row
+        fputcsv($file, ['', '', '', 'TOTAL', $totalBelanja]);
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+// =========================================
+// EXPORT KASIR (EXCEL ONLY)
+// Tambahkan method ini ke LaporanController.php
+// =========================================
+
+/**
+ * Export Kasir Excel - ADMIN
+ */
+public function exportKasir(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
+
+    $kasirList = DB::table('kasir')
+        ->where('status', 'aktif')
+        ->select('id_kasir', 'nama_kasir', 'no_hp', 'gambar')
+        ->get();
+
+    $data = $kasirList->map(function($kasir) use ($tglAwal, $tglAkhir) {
+        $transaksi = DB::table('transaksi')
+            ->where('id_kasir', $kasir->id_kasir)
+            ->whereBetween('tgl_transaksi', [
+                $tglAwal . ' 00:00:00',
+                $tglAkhir . ' 23:59:59'
+            ])
+            ->get();
+
+        $kasir->antrian = $transaksi->where('status_transaksi', 'antrian')->count();
+        $kasir->proses = $transaksi->where('status_transaksi', 'proses')->count();
+        $kasir->siap_ambil = $transaksi->where('status_transaksi', 'siap_di_ambil')->count();
+        $kasir->selesai = $transaksi->where('status_transaksi', 'selesai')->count();
+        $kasir->batal = $transaksi->whereIn('status_transaksi', ['batal', 'ditolak'])->count();
+
+        $kasir->total_pendapatan = $transaksi
+            ->where('status_transaksi', 'selesai')
+            ->sum('total_bayar');
+
+        $kasir->total_transaksi = $transaksi->count();
+
+        return $kasir;
+    });
+
+    $data = $data->sortByDesc('total_pendapatan')->values();
+
+    // Buat Excel
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Header
+    $sheet->setCellValue('A1', 'LAPORAN KINERJA KASIR');
+    $sheet->mergeCells('A1:J1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Periode
+    $periode = 'Periode: ' . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+    $sheet->setCellValue('A2', $periode);
+    $sheet->mergeCells('A2:J2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Tanggal cetak
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:J3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Header tabel
+    $row = 5;
+    $headers = ['No', 'Nama Kasir', 'No HP', 'Antrian', 'Proses', 'Siap Ambil', 'Selesai', 'Batal', 'Total Transaksi', 'Total Pendapatan'];
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FCD34D');
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+
+    // Data
+    $row = 6;
+    $no = 1;
+    $totalPendapatan = 0;
+    $totalTransaksi = 0;
+
+    foreach ($data as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, $item->nama_kasir);
+        $sheet->setCellValue('C' . $row, $item->no_hp);
+        $sheet->setCellValue('D' . $row, $item->antrian);
+        $sheet->setCellValue('E' . $row, $item->proses);
+        $sheet->setCellValue('F' . $row, $item->siap_ambil);
+        $sheet->setCellValue('G' . $row, $item->selesai);
+        $sheet->setCellValue('H' . $row, $item->batal);
+        $sheet->setCellValue('I' . $row, $item->total_transaksi);
+        $sheet->setCellValue('J' . $row, $item->total_pendapatan);
+        
+        // Format currency
+        $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        
+        // Center align
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        $totalPendapatan += $item->total_pendapatan;
+        $totalTransaksi += $item->total_transaksi;
+        $row++;
+    }
+
+    // Total
+    $sheet->setCellValue('I' . $row, 'TOTAL');
+    $sheet->setCellValue('J' . $row, $totalPendapatan);
+    $sheet->getStyle('I' . $row . ':J' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('I' . $row . ':J' . $row)->getFill()
+        ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+        ->getStartColor()->setRGB('FED7AA');
+    $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+    $sheet->getStyle('I' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    // Border
+    $sheet->getStyle('A5:J' . $row)->getBorders()->getAllBorders()
+        ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    // Auto width
+    foreach (range('A', 'J') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    // Download
+    $fileName = 'Laporan_Kasir_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+/**
+ * Export Kasir Excel - ADMIN2
+ */
+public function exportKasirAdmin2(Request $request)
+{
+    // ✅ CHECK PERMISSION VIEW
+    requirePermission('laporan', 'view');
+    
+    // Panggil method yang sama
+    return $this->exportKasir($request);
+}
+
+// =========================================
+// TAMBAHKAN METHOD EXPORT YANG BELUM ADA
+// Copy-paste method ini ke LaporanController.php (sebelum closing brace })
+// =========================================
+
+// ========== EXPORT METODE BAYAR ==========
+public function exportBayar(Request $request)
+{
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
+
+    $data = DB::table('metode_bayar')
+        ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
+            $join->on('metode_bayar.id_metode_bayar', '=', 'transaksi.id_metode_bayar')
+                ->where('transaksi.status_transaksi', 'selesai')
+                ->whereBetween('transaksi.tgl_transaksi', [$tglAwal.' 00:00:00', $tglAkhir.' 23:59:59']);
+        })
+        ->select(
+            'metode_bayar.id_metode_bayar',
+            'metode_bayar.nama_metode_bayar',
+            DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan')
+        )
+        ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
+        ->orderBy('metode_bayar.id_metode_bayar')
+        ->get();
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    $sheet->setCellValue('A1', 'LAPORAN METODE PEMBAYARAN');
+    $sheet->mergeCells('A1:C1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $periode = 'Periode: ' . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+    $sheet->setCellValue('A2', $periode);
+    $sheet->mergeCells('A2:C2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:C3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $row = 5;
+    $headers = ['No', 'Metode Pembayaran', 'Total Penggunaan'];
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FCD34D');
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+
+    $row = 6;
+    $no = 1;
+    $totalPenggunaan = 0;
+
+    foreach ($data as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, $item->nama_metode_bayar);
+        $sheet->setCellValue('C' . $row, $item->total_penggunaan);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $totalPenggunaan += $item->total_penggunaan;
+        $row++;
+    }
+
+    $sheet->setCellValue('B' . $row, 'TOTAL');
+    $sheet->setCellValue('C' . $row, $totalPenggunaan);
+    $sheet->getStyle('B' . $row . ':C' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('B' . $row . ':C' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FED7AA');
+    $sheet->getStyle('A5:C' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    foreach (range('A', 'C') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    $fileName = 'Laporan_Metode_Bayar_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+public function exportBayarKasir(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportBayar($request);
+}
+
+public function exportBayarAdmin2(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportBayar($request);
+}
+
+
+// ========== EXPORT SATUAN ==========
+public function exportSatuan(Request $request)
+{
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
+
+    $data = DB::table('satuan')
+        ->leftJoin('detail_transaksi', 'satuan.id_satuan', '=', 'detail_transaksi.id_satuan')
+        ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
+            $join->on('detail_transaksi.id_transaksi', '=', 'transaksi.id_transaksi')
+                ->where('transaksi.status_transaksi', 'selesai')
+                ->whereBetween('transaksi.tgl_transaksi', [$tglAwal.' 00:00:00', $tglAkhir.' 23:59:59']);
+        })
+        ->select(
+            'satuan.id_satuan',
+            'satuan.nama_satuan',
+            DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty')
+        )
+        ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
+        ->orderBy('satuan.nama_satuan')
+        ->get();
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    $sheet->setCellValue('A1', 'LAPORAN SATUAN');
+    $sheet->mergeCells('A1:C1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $periode = 'Periode: ' . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+    $sheet->setCellValue('A2', $periode);
+    $sheet->mergeCells('A2:C2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:C3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $row = 5;
+    $headers = ['No', 'Nama Satuan', 'Total Qty'];
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FCD34D');
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+
+    $row = 6;
+    $no = 1;
+    $totalQty = 0;
+
+    foreach ($data as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, $item->nama_satuan);
+        $sheet->setCellValue('C' . $row, $item->total_qty);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $totalQty += $item->total_qty;
+        $row++;
+    }
+
+    $sheet->setCellValue('B' . $row, 'TOTAL');
+    $sheet->setCellValue('C' . $row, $totalQty);
+    $sheet->getStyle('B' . $row . ':C' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('B' . $row . ':C' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FED7AA');
+    $sheet->getStyle('A5:C' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    foreach (range('A', 'C') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    $fileName = 'Laporan_Satuan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+public function exportSatuanKasir(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportSatuan($request);
+}
+
+public function exportSatuanAdmin2(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportSatuan($request);
+}
+
+
+// ========== EXPORT DRIVER ==========
+public function exportDriver(Request $request)
+{
+    requirePermission('laporan', 'view');
+    
+    $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+    $tglAkhir = $request->sampai ?? now()->toDateString();
+
+    $data = DB::table('delivery')
+        ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
+        ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
+        ->select(
+            'driver.id_driver',
+            'driver.nama_driver',
+            'driver.no_telp',
+            DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+            DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
+            DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
+            DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
+        )
+        ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+        ->orderByDesc('total_pengiriman')
+        ->get();
+
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    $sheet->setCellValue('A1', 'LAPORAN KINERJA DRIVER');
+    $sheet->mergeCells('A1:I1');
+    $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+    $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $periode = 'Periode: ' . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+    $sheet->setCellValue('A2', $periode);
+    $sheet->mergeCells('A2:I2');
+    $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+    $sheet->mergeCells('A3:I3');
+    $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+    $row = 5;
+    $headers = ['No', 'Nama Driver', 'No HP', 'Total Pengiriman', 'Pickup', 'Antar', 'Terkirim', 'Gagal', 'Dalam Proses'];
+    $col = 'A';
+    foreach ($headers as $header) {
+        $sheet->setCellValue($col . $row, $header);
+        $sheet->getStyle($col . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FCD34D');
+        $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $col++;
+    }
+
+    $row = 6;
+    $no = 1;
+    $totalPengiriman = 0;
+
+    foreach ($data as $item) {
+        $sheet->setCellValue('A' . $row, $no++);
+        $sheet->setCellValue('B' . $row, $item->nama_driver);
+        $sheet->setCellValue('C' . $row, $item->no_telp);
+        $sheet->setCellValue('D' . $row, $item->total_pengiriman);
+        $sheet->setCellValue('E' . $row, $item->total_pickup);
+        $sheet->setCellValue('F' . $row, $item->total_antar);
+        $sheet->setCellValue('G' . $row, $item->terkirim);
+        $sheet->setCellValue('H' . $row, $item->gagal);
+        $sheet->setCellValue('I' . $row, $item->dalam_proses);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $totalPengiriman += $item->total_pengiriman;
+        $row++;
+    }
+
+    $sheet->setCellValue('C' . $row, 'TOTAL');
+    $sheet->setCellValue('D' . $row, $totalPengiriman);
+    $sheet->getStyle('C' . $row . ':D' . $row)->getFont()->setBold(true);
+    $sheet->getStyle('C' . $row . ':D' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setRGB('FED7AA');
+    $sheet->getStyle('A5:I' . $row)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+    foreach (range('A', 'I') as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    $fileName = 'Laporan_Driver_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="' . $fileName . '"');
+    header('Cache-Control: max-age=0');
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+public function exportDriverKasir(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportDriver($request);
+}
+
+public function exportDriverAdmin2(Request $request) {
+    requirePermission('laporan', 'view');
+    return $this->exportDriver($request);
+}
 }

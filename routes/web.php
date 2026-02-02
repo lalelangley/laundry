@@ -465,6 +465,9 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         Route::delete('/{id}', [LaporanController::class, 'destroyKasir'])
             ->middleware('permission:delete')
             ->name('destroy');
+
+        Route::get('/pengeluaran', [LaporanController::class, 'pengeluaranIndexKasir'])->name('pengeluaran.index');
+        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])->name('pengeluaran.export'); // ← TAMBAH INI
         
     });
 
@@ -499,6 +502,8 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             ->middleware('permission:view')
             ->name('kasir.index');
 
+        Route::get('/bayar/export', [LaporanController::class, 'exportBayar']) // ✅ TAMBAHKAN INI
+        ->name('bayar.export');
         Route::get('/bayar/index', [LaporanController::class, 'bayarIndexKasir'])
             ->middleware('permission:view')
             ->name('bayar.index');
@@ -522,7 +527,21 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         // ✅ Export Excel
         Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiKasir'])->name('transaksi.export');
         
-    });
+            // Satuan
+        Route::get('/satuan/index', [LaporanController::class, 'satuanIndexKasir'])->name('satuan.index');
+        Route::get('/satuan/export', [LaporanController::class, 'exportSatuanKasir'])->name('satuan.export');
+        
+        // Pelanggan
+        Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexKasir'])->name('pelanggan.index');
+        Route::get('/pelanggan/export', [LaporanController::class, 'exportPelangganKasir'])->name('pelanggan.export');
+        
+        // Driver
+        Route::get('/driver/index', [LaporanController::class, 'driverKasir'])->name('driver.index');
+        Route::get('/driver/export', [LaporanController::class, 'exportDriverKasir'])->name('driver.export');
+
+          Route::get('/pengeluaran', [LaporanController::class, 'pengeluaranIndexKasir'])->name('pengeluaran.index');
+        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])->name('pengeluaran.export'); // ← TAMBAH INI
+        });
 
     // ================= CHANGE PASSWORD (No Permission) =================
     Route::get('/change-password', [ChangePasswordController::class, 'indexKasir'])
@@ -801,8 +820,6 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotification'])
             ->middleware('permission:edit')
             ->name('send-fcm-notification');
-
-
     });
 
     // ================= RIWAYAT (With Permission) =================
@@ -970,6 +987,11 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::delete('/{id}', [LaporanController::class, 'destroy'])
             ->middleware('permission:delete')
             ->name('destroy');
+        Route::get('/pengeluaran', [LaporanController::class, 'pengeluaranIndex'])->name('pengeluaran.index');
+        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaran'])->name('pengeluaran.export'); // ← TAMBAH INI
+
+        Route::get('/kasir', [LaporanController::class, 'kasirIndex'])->name('kasir.index');
+        Route::get('/kasir/export', [LaporanController::class, 'exportKasir'])->name('kasir.export'); // ← Tambahkan ini
     });
 
     // ================= PENGATURAN (ADMIN) - ✅ WITH PERMISSION =================
@@ -1024,43 +1046,64 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             ->name('metode.delete');
     });
 
-    // ================= LAPORAN (View Permission Only) =================
-    Route::prefix('laporan')->name('laporan.')->group(function () {
-        Route::get('/', [LaporanController::class, 'laporanIndex'])
-            ->middleware('permission:view')
-            ->name('index');
-        
-        Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndex'])
-            ->middleware('permission:view')
-            ->name('transaksi.index');
-        
-        Route::get('/kasir/index', [LaporanController::class, 'kasirIndex'])
-            ->middleware('permission:view')
-            ->name('kasir.index');
-        
-        Route::get('/bayar/index', [LaporanController::class, 'bayarIndex'])
-            ->middleware('permission:view')
-            ->name('bayar.index');
-        
-        Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndex'])
-            ->middleware('permission:view')
-            ->name('pengeluaran.index');
-        
-        Route::get('/satuan/index', [LaporanController::class, 'satuanIndex'])
-            ->middleware('permission:view')
-            ->name('satuan.index');
-        
-        Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndex'])
-            ->middleware('permission:view')
-            ->name('pelanggan.index');
+// ================= LAPORAN ADMIN (View Permission Only) =================
+Route::prefix('laporan')->name('laporan.')->group(function () {
+    Route::get('/', [LaporanController::class, 'laporanIndex'])
+        ->middleware('permission:view')
+        ->name('index');
+    
+    // Transaksi
+    Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndex'])
+        ->middleware('permission:view')
+        ->name('transaksi.index');
+    Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksi'])
+        ->name('transaksi.export');
+    
+    // Kasir
+    Route::get('/kasir/index', [LaporanController::class, 'kasirIndex'])
+        ->middleware('permission:view')
+        ->name('kasir.index');
+    Route::get('/kasir/export', [LaporanController::class, 'exportKasir'])
+        ->name('kasir.export');
+    
+    // Bayar
+    Route::get('/bayar/index', [LaporanController::class, 'bayarIndex'])
+        ->middleware('permission:view')
+        ->name('bayar.index');
+    
+    // Pengeluaran
+    Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndex'])
+        ->middleware('permission:view')
+        ->name('pengeluaran.index');
+    Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaran'])
+        ->name('pengeluaran.export');
+    
+    Route::get('/satuan/export', [LaporanController::class, 'exportSatuanKasir'])->name('satuan.export');
+    // Satuan
+    Route::get('/satuan/index', [LaporanController::class, 'satuanIndex'])
+        ->middleware('permission:view')
+        ->name('satuan.index');
+    
+    // Pelanggan
+    Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndex'])
+        ->middleware('permission:view')
+        ->name('pelanggan.index');
+    Route::get('/pelanggan/export', [LaporanController::class, 'exportPelanggan'])
+        ->name('pelanggan.export');
+    
+    // Driver
+    Route::get('/driver/index', [LaporanController::class, 'driver'])
+        ->middleware('permission:view')
+        ->name('driver.index');
+    Route::get('/driver/export', [LaporanController::class, 'exportDriverAdmin2'])->name('driver.export');
 
-        Route::get('/driver/index', [LaporanController::class, 'driver'])
-            ->middleware('permission:view')
-            ->name('driver.index');
-        
-        Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksi'])
-            ->name('transaksi.export');
-    });
+     // Bayar
+    Route::get('/bayar/index', [LaporanController::class, 'bayarIndex'])
+        ->middleware('permission:view')
+        ->name('bayar.index');
+    Route::get('/bayar/export', [LaporanController::class, 'exportBayar']) // ✅ TAMBAHKAN INI
+        ->name('bayar.export');
+});
 
     // ================= CHANGE PASSWORD =================
     Route::get('/change-password', [ChangePasswordController::class, 'index'])
@@ -1532,20 +1575,59 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         });
     });
 
-    // ================= LAPORAN =================
-    Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
-        Route::get('/', [LaporanController::class, 'laporanIndexAdmin2'])->name('index');
-        Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndexAdmin2'])->name('transaksi.index');
-        Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
-        Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
-        Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
-        Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
-        Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
-        Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
+// ================= LAPORAN ADMIN2 =================
+Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
+    Route::get('/', [LaporanController::class, 'laporanIndexAdmin2'])->name('index');
+    
+    // Transaksi
+    Route::get('/transaksi/index', [LaporanController::class, 'transaksiIndexAdmin2'])->name('transaksi.index');
+    Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiAdmin2'])->name('transaksi.export');
+    
+    // Kasir
+    Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
+    Route::get('/kasir/export', [LaporanController::class, 'exportKasirAdmin2'])->name('kasir.export');
+    
+    // Bayar
+    Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
+    
+    // Pengeluaran
+    Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
+    Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranAdmin2'])->name('pengeluaran.export');
+    
+    // Satuan
+    Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
+    
+    // Pelanggan
+    Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
+    Route::get('/pelanggan/export', [LaporanController::class, 'exportPelangganAdmin2'])->name('pelanggan.export');
+    
+    // Driver
+    Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
 
-        // ✅ Export Excel
-        Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiAdmin2'])->name('transaksi.export');
-    });
+     // Kasir
+    Route::get('/kasir/index', [LaporanController::class, 'kasirIndexAdmin2'])->name('kasir.index');
+    Route::get('/kasir/export', [LaporanController::class, 'exportKasirAdmin2'])->name('kasir.export');
+    
+    // Metode Bayar
+    Route::get('/bayar/index', [LaporanController::class, 'bayarIndexAdmin2'])->name('bayar.index');
+    Route::get('/bayar/export', [LaporanController::class, 'exportBayarAdmin2'])->name('bayar.export');
+    
+    // Pengeluaran
+    Route::get('/pengeluaran/index', [LaporanController::class, 'pengeluaranIndexAdmin2'])->name('pengeluaran.index');
+    Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranAdmin2'])->name('pengeluaran.export');
+    
+    // Satuan
+    Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
+    Route::get('/satuan/export', [LaporanController::class, 'exportSatuanAdmin2'])->name('satuan.export');
+    
+    // Pelanggan
+    Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');
+    Route::get('/pelanggan/export', [LaporanController::class, 'exportPelangganAdmin2'])->name('pelanggan.export');
+    
+    // Driver
+    Route::get('/driver/index', [LaporanController::class, 'driverAdmin2'])->name('driver.index');
+    Route::get('/driver/export', [LaporanController::class, 'exportDriverAdmin2'])->name('driver.export');
+});
 
     // ================= PENGATURAN ADMIN2 =================
     Route::prefix('pengaturan')->name('admin2.pengaturan.')->group(function () {
