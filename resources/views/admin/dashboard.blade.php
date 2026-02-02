@@ -74,21 +74,19 @@
      TAMBAHKAN POPUP REMINDER SETELAH HEADER
      Letakkan setelah <!-- USER BAR -->
      ======================================== --}}
-
 {{-- 🚨 AUTO POPUP REMINDER - Muncul saat login --}}
-{{-- 🚨 AUTO POPUP REMINDER - Muncul saat login --}}
-<div id="reminderPopup" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center p-4 animate-fade-in">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden transform animate-scale-in">
+<div id="reminderPopup" class="hidden fixed inset-0 bg-gradient-to-br from-black/20 via-gray-900/15 to-black/20 z-[60] flex items-center justify-center p-4 animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden transform animate-scale-in">
         {{-- HEADER --}}
         <div class="px-8 py-6 bg-gradient-to-r from-yellow-400 to-amber-500">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
                         <i class="bi bi-bell-fill text-white text-3xl"></i>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-900">🔔 Notifikasi Penting</h2>
-                        <p class="text-sm text-gray-800 mt-1">Ada beberapa hal yang perlu perhatian Anda</p>
+                        <h2 class="text-2xl font-bold text-gray-900">🔔 Reminder!</h2>
+                        <p class="text-sm text-gray-800 mt-1">Jangan lupa untuk memproses pesanan</p>
                     </div>
                 </div>
                 <button onclick="closeReminderPopup()" class="text-gray-800 hover:text-gray-900 transition">
@@ -97,11 +95,12 @@
             </div>
         </div>
 
-        {{-- CONTENT - LIST SEMUA NOTIFIKASI --}}
-        <div class="px-8 py-6 max-h-[60vh] overflow-y-auto">
-            <div id="notificationList" class="space-y-3">
-                {{-- Will be populated by JavaScript --}}
-            </div>
+        {{-- CONTENT - SIMPLE REMINDER MESSAGE --}}
+        <div class="px-8 py-10 text-center">
+            <div class="text-6xl mb-4">⏰</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">Ada pesanan yang perlu diproses!</h3>
+            <p class="text-gray-600 mb-2">Pastikan semua pesanan ditangani dengan baik.</p>
+            <p class="text-sm text-gray-500">Cek detail di panel notifikasi untuk info lengkap.</p>
         </div>
 
         {{-- FOOTER ACTIONS --}}
@@ -811,6 +810,9 @@ const notificationConfig = {
 // ========================================
 // JQUERY DOCUMENT READY - SEMUA INISIALISASI
 // ========================================
+// ========================================
+// JQUERY DOCUMENT READY - SEMUA INISIALISASI
+// ========================================
 $(document).ready(function() {
     // ======== INISIALISASI DATATABLE ========
     let table = $('#orderTable').DataTable({
@@ -858,19 +860,25 @@ $(document).ready(function() {
     
     console.log('✅ DataTable initialized - Total:', table.data().length);
     
-    // ======== CEK & TAMPILKAN POPUP NOTIFIKASI ========
-    console.log('🔍 Checking notifications...', notifications);
+    // ========================================
+    // 🔔 AUTO SHOW POPUP WITH LOCALSTORAGE CHECK
+    // ========================================
     
+    // CEK apakah popup sudah di-dismiss hari ini
+    const dismissedDate = localStorage.getItem('reminderDismissedDate');
     const today = new Date().toDateString();
-    const dismissedToday = localStorage.getItem('reminderDismissedDate');
     
     console.log('📅 Today:', today);
-    console.log('💾 Dismissed:', dismissedToday);
+    console.log('📅 Dismissed date:', dismissedDate);
     
-    if (dismissedToday === today) {
-        console.log('✅ Popup already dismissed today');
+    // Jika sudah di-dismiss hari ini, SKIP popup
+    if (dismissedDate === today) {
+        console.log('✅ Popup already dismissed today - SKIPPING');
         return;
     }
+    
+    // CEK NOTIFIKASI
+    console.log('🔍 Checking notifications...', notifications);
     
     const activeNotifications = [];
     for (const [type, count] of Object.entries(notifications)) {
@@ -887,13 +895,14 @@ $(document).ready(function() {
     activeNotifications.sort((a, b) => a.config.priority - b.config.priority);
     console.log('📋 Active notifications:', activeNotifications.length);
     
+    // SHOW POPUP JIKA ADA NOTIFIKASI
     if (activeNotifications.length > 0) {
-        console.log('🔔 WILL SHOW POPUP in 1 second...');
+        console.log('🔔 SHOWING POPUP...');
         setTimeout(() => {
             showGeneralReminderPopup(activeNotifications);
         }, 1000);
     } else {
-        console.log('✅ No notifications to show');
+        console.log('✅ No notifications - no popup needed');
     }
 });
 
@@ -901,76 +910,50 @@ $(document).ready(function() {
 // FUNGSI TAMPILKAN POPUP GENERAL
 // ========================================
 function showGeneralReminderPopup(notifications) {
-    console.log('🎯 showGeneralReminderPopup called with', notifications.length, 'notifications');
-    
-    const notificationList = document.getElementById('notificationList');
-    if (!notificationList) {
-        console.error('❌ ERROR: notificationList element NOT FOUND!');
-        return;
-    }
-    
-    let html = '';
-    notifications.forEach((notif, index) => {
-        const config = notif.config;
-        html += `
-            <div class="${config.bgColor} border-l-4 ${config.borderColor} rounded-xl p-4 hover:shadow-lg transition-all cursor-pointer" 
-                 onclick="handleNotificationClick('${notif.type}')">
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 ${config.iconBg} rounded-xl flex items-center justify-center flex-shrink-0 ${index === 0 ? 'animate-pulse' : ''}">
-                        <i class="bi ${config.icon} text-white text-2xl"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="${config.badgeClass} text-white text-xs font-bold px-2 py-1 rounded-full uppercase">${config.badge}</span>
-                            <h4 class="text-base font-bold text-gray-900">${config.title}</h4>
-                        </div>
-                        <p class="text-sm ${config.textColor} font-semibold">
-                            ${config.getMessage(notif.count)}
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <i class="bi bi-hand-index-thumb"></i> Tap untuk lihat detail
-                        </p>
-                    </div>
-                    <i class="bi bi-chevron-right text-xl text-gray-400"></i>
-                </div>
-            </div>
-        `;
-    });
-    
-    notificationList.innerHTML = html;
-    console.log('✅ Notification list HTML populated');
+    console.log('🎯 showGeneralReminderPopup called');
     
     const popup = document.getElementById('reminderPopup');
     if (popup) {
         popup.classList.remove('hidden');
-        console.log('✅✅✅ POPUP DISPLAYED SUCCESSFULLY! ✅✅✅');
+        console.log('✅ POPUP DISPLAYED!');
         playNotificationSound();
     } else {
         console.error('❌ ERROR: reminderPopup element NOT FOUND!');
     }
 }
 
-function handleNotificationClick(type) {
-    console.log('🖱️ Notification clicked:', type);
-    closeReminderPopup();
-    setTimeout(() => handleNotification(type), 300);
-}
-
 function closeReminderPopup() {
     const popup = document.getElementById('reminderPopup');
     if (!popup) return;
     
+    const dontShowAgain = document.getElementById('dontShowAgain');
+    
+    // CEK checkbox SEBELUM menutup popup
+    if (dontShowAgain && dontShowAgain.checked) {
+        const today = new Date().toDateString();
+        localStorage.setItem('reminderDismissedDate', today);
+        console.log('✅ Popup dismissed for today:', today);
+    }
+    
+    // Tutup popup dengan animasi
     popup.style.opacity = '0';
     setTimeout(() => {
         popup.classList.add('hidden');
         popup.style.opacity = '1';
     }, 300);
-    
+}
+
+function handleReminderAction() {
     const dontShowAgain = document.getElementById('dontShowAgain');
+    
+    // SELALU simpan tanggal jika tombol "Saya Sudah Mengerti" diklik
     if (dontShowAgain && dontShowAgain.checked) {
-        localStorage.setItem('reminderDismissedDate', new Date().toDateString());
-        console.log('✅ Popup dismissed for today');
+        const today = new Date().toDateString();
+        localStorage.setItem('reminderDismissedDate', today);
+        console.log('✅ Popup dismissed for today via button:', today);
     }
+    
+    closeReminderPopup();
 }
 
 function handleReminderAction() {
@@ -1344,6 +1327,5 @@ document.addEventListener('click', function(e) {
 .animate-slide-in { animation: slide-in 0.3s ease-out; }
 .animate-fade-in { animation: fade-in 0.3s ease-out; }
 .animate-scale-in { animation: scale-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-#reminderPopup { backdrop-filter: blur(4px); }
 </style>
 @endpush

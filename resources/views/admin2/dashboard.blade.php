@@ -67,6 +67,51 @@
     </div>
 </div>
 
+{{-- 🚨 AUTO POPUP REMINDER --}}
+<div id="reminderPopup" class="hidden fixed inset-0 bg-gradient-to-br from-black/20 via-gray-900/15 to-black/20 z-[60] flex items-center justify-center p-4 animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden transform animate-scale-in">
+        {{-- HEADER --}}
+        <div class="px-8 py-6 bg-gradient-to-r from-yellow-400 to-amber-500">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg">
+                        <i class="bi bi-bell-fill text-white text-3xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">🔔 Reminder!</h2>
+                        <p class="text-sm text-gray-800 mt-1">Jangan lupa untuk memproses pesanan</p>
+                    </div>
+                </div>
+                <button onclick="closeReminderPopup()" class="text-gray-800 hover:text-gray-900 transition">
+                    <i class="bi bi-x-lg text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        {{-- CONTENT --}}
+        <div class="px-8 py-10 text-center">
+            <div class="text-6xl mb-4">⏰</div>
+            <h3 class="text-xl font-bold text-gray-900 mb-3">Ada pesanan yang perlu diproses!</h3>
+            <p class="text-gray-600 mb-2">Pastikan semua pesanan ditangani dengan baik.</p>
+            <p class="text-sm text-gray-500">Cek detail di panel notifikasi untuk info lengkap.</p>
+        </div>
+
+        {{-- FOOTER --}}
+        <div class="px-8 pb-6">
+            <button onclick="handleReminderAction()" 
+                    class="w-full px-6 py-4 rounded-2xl font-bold text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-105 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600">
+                <i class="bi bi-check-circle-fill mr-2"></i>
+                <span>Saya Sudah Mengerti</span>
+            </button>
+
+            <div class="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
+                <input type="checkbox" id="dontShowAgain" class="w-4 h-4 rounded border-gray-300">
+                <label for="dontShowAgain" class="cursor-pointer">Jangan tampilkan lagi hari ini</label>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- NOTIFICATION PANEL -->
 <div id="notificationPanel" class="fixed top-0 left-0 right-0 bg-white shadow-2xl z-50 transform -translate-y-full transition-transform duration-300 max-h-[80vh] overflow-y-auto">
     <div class="p-6">
@@ -501,7 +546,23 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
 <script>
+// ========================================
+// DATA NOTIFIKASI
+// ========================================
+const notifications = {
+    terlambat: {{ $terlambatOnline ?? 0 }},
+    butuhPickup: {{ $butuhPickup ?? 0 }},
+    butuhAntar: {{ $butuhAntar ?? 0 }},
+    harusSelesaiHariIni: {{ $harusSelesaiHariIni ?? 0 }},
+    transaksiMasuk: {{ $transaksiMasukHariIni ?? 0 }},
+    belumLunas: {{ $belumLunas ?? 0 }}
+};
+
+// ========================================
+// DOCUMENT READY - SEMUA INISIALISASI
+// ========================================
 $(document).ready(function () {
+    // ======== INISIALISASI DATATABLE ========
     let table = $('#AdminTable').DataTable({
         pageLength: 25,
         lengthChange: true,
@@ -546,25 +607,103 @@ $(document).ready(function () {
     });
     
     console.log('✅ DataTable initialized - Total rows:', table.data().length);
+    
+    // ======== POPUP REMINDER LOGIC ========
+    const dismissedDate = localStorage.getItem('reminderDismissedDate');
+    const today = new Date().toDateString();
+    
+    console.log('📅 Today:', today);
+    console.log('📅 Dismissed date:', dismissedDate);
+    
+    // Jika sudah di-dismiss hari ini, SKIP popup
+    if (dismissedDate === today) {
+        console.log('✅ Popup already dismissed today - SKIPPING');
+        return;
+    }
+    
+    // CEK NOTIFIKASI
+    console.log('🔍 Checking notifications...', notifications);
+    
+    let hasNotifications = false;
+    for (const [type, count] of Object.entries(notifications)) {
+        if (count > 0) {
+            hasNotifications = true;
+            break;
+        }
+    }
+    
+    // SHOW POPUP JIKA ADA NOTIFIKASI
+    if (hasNotifications) {
+        console.log('🔔 SHOWING POPUP...');
+        setTimeout(() => {
+            showReminderPopup();
+        }, 1000);
+    } else {
+        console.log('✅ No notifications - no popup needed');
+    }
 });
 
+// ========================================
+// POPUP FUNCTIONS
+// ========================================
+function showReminderPopup() {
+    const popup = document.getElementById('reminderPopup');
+    if (popup) {
+        popup.classList.remove('hidden');
+        console.log('✅ POPUP DISPLAYED!');
+        playNotificationSound();
+    }
+}
+
+function closeReminderPopup() {
+    const popup = document.getElementById('reminderPopup');
+    if (!popup) return;
+    
+    const dontShowAgain = document.getElementById('dontShowAgain');
+    
+    if (dontShowAgain && dontShowAgain.checked) {
+        const today = new Date().toDateString();
+        localStorage.setItem('reminderDismissedDate', today);
+        console.log('✅ Popup dismissed for today:', today);
+    }
+    
+    popup.style.opacity = '0';
+    setTimeout(() => {
+        popup.classList.add('hidden');
+        popup.style.opacity = '1';
+    }, 300);
+}
+
+function handleReminderAction() {
+    const dontShowAgain = document.getElementById('dontShowAgain');
+    
+    if (dontShowAgain && dontShowAgain.checked) {
+        const today = new Date().toDateString();
+        localStorage.setItem('reminderDismissedDate', today);
+        console.log('✅ Popup dismissed for today via button:', today);
+    }
+    
+    closeReminderPopup();
+}
+
+function playNotificationSound() {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuAyvLTgjMGHm7A7+OZSA8PVqzn77BdGAg+ltzy0H8pBSh+zPDckT0KE2S36+mlThAPTKXh8L1pIAUrgM3z1YU1Bx1tv+/nm0sOD1Om4/C4ZRsGN5DY8tCBKwUle8rx34pGCRNjuuzrpE4RDkuq4/K+byEELYPO89WGNgcfcMPx6qBJDg5TqeXyt2McBTmQ1/PMfS0GJ37M8+CQPwsRZL3u66VTEw1Jqt/yvnAkBSyBzvTWhzYHH3HE8eqhSQ4OUqnl8rZlHQU5kdfy0oExBSiAyvLdkD0LElyz7OumUxMMSbDh8rxuIAQugM/01YY2Bx5xxPHqoUkODlSp5fK3YxwGOJLX8tKBMwQnf8rx3ZA9CxJctOzrplQTDEmy4fK8cCAFLoHO89WGNgceXb/w6qFJDg9Tp+Pyt2QcBjiS1/LSgTMEJ4DK8t2QPAsTW7Xs66ZUFA1JtuLyu2wgBSuB0PPUhzYGHl/A8OmhSQ4PUqfl8rJiHAU4k9byy4AzBSZ9y/LdjkALE12z7OumUxQMSrfh8rpuIQUsgc/z04c2Bx5ov/Dqn0kOD1Op5fK1YxwGN5PX8sl/MwUmfsrx3Y8+CxNdu+zrpVMUDUm14fK6biEFLIHP89OHNgcdX8Hw6Z9KDQ9Tp+Xys2McBjeR1/LJfzMFJn7K8d2OPwsUW7vs66ZUEw1KteLyumwgBSyB0PPUhjYHHmC/8OmgSQ0PUqnm8rJhHAU4ktjyzH8zBSd+yvLckD4LFVuy7OumVRQNSrLi8rlsIAUsgs/z1IY2Bx5gwPDon0kOEFGp5vKxYRwFOJLY8syAMwUnfsrx3I88DBVas+zrplQUDUqy4vK5biEFLYLO89SHNgceX8Hx559JDhBRqObysmAbBTiR2PLMgDMEJ37K8d2PPQsVW7Lr66ZVEg1JsuHyt2whBS2Cz/PUhjYHHl/B8OefSQ4QUanm8rFgHAU4kdfy0n8zBCd+y/HdjkAMFFuy7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQU=');
+    audio.volume = 0.3;
+    audio.play().catch(e => console.log('Audio autoplay prevented'));
+}
+
+// ========================================
+// NOTIFICATION FUNCTIONS
+// ========================================
 function toggleNotifications() {
     const panel = document.getElementById('notificationPanel');
     panel.classList.toggle('-translate-y-full');
 }
-// ========================================
-// ULTIMATE FIX: Filter Terlambat yang BENAR
-// ========================================
-// Harus match dengan query di controller:
-// - ONLINE only
-// - Status: antrian, proses, selesai_dicuci
-// - Deadline < today
 
 function handleNotification(type) {
     toggleNotifications();
     let table = $('#AdminTable').DataTable();
     
-    // Clear all filters
     $.fn.dataTable.ext.search = [];
     table.columns().search('');
     
@@ -572,77 +711,37 @@ function handleNotification(type) {
     
     switch(type) {
         case 'terlambat':
-            // ✅ CRITICAL FIX: Match dengan controller query
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
-                // 1️⃣ CEK JENIS TRANSAKSI (must be ONLINE)
                 let jenisCell = $(row).find('td:eq(4)');
-                let isOnline = jenisCell.text().includes('Online');
+                if (!jenisCell.text().includes('Online')) return false;
                 
-                if (!isOnline) {
-                    return false;
-                }
-                
-                // 2️⃣ CEK STATUS TRANSAKSI (must be antrian, proses, atau selesai_dicuci)
                 let statusCell = $(row).find('td:eq(6)');
                 let statusText = statusCell.text().trim();
-                
                 let isInProgress = statusText.includes('Antrian') || 
                                   statusText.includes('Proses') || 
                                   statusText.includes('Selesai Dicuci');
+                if (!isInProgress) return false;
                 
-                if (!isInProgress) {
-                    console.log('❌ Skipped (already completed):', data[1], '- Status:', statusText);
-                    return false;
-                }
-                
-                // 3️⃣ CEK DEADLINE (must have red badge = terlambat)
                 let deadlineCell = $(row).find('td:eq(9)');
-                let hasTerlambatBadge = deadlineCell.find('.bg-red-100').length > 0 || 
-                                       deadlineCell.find('i.bi-exclamation-triangle-fill').length > 0;
-                
-                if (!hasTerlambatBadge) {
-                    return false;
-                }
-                
-                // ✅ PASS ALL CHECKS
-                console.log('✅ FOUND TERLAMBAT:', {
-                    id: data[1],
-                    jenis: 'Online',
-                    status: statusText,
-                    deadline: 'OVERDUE'
-                });
-                
-                return true;
+                return deadlineCell.find('.bg-red-100').length > 0 || 
+                       deadlineCell.find('i.bi-exclamation-triangle-fill').length > 0;
             });
-            showToast('Menampilkan pesanan online terlambat (belum selesai)', 'red');
+            showToast('Menampilkan pesanan online terlambat', 'red');
             break;
             
         case 'pickup':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
-                // Must be ONLINE
                 let jenisCell = $(row).find('td:eq(4)');
                 if (!jenisCell.text().includes('Online')) return false;
                 
-                // Must NOT be completed
                 let statusCell = $(row).find('td:eq(6)');
                 let statusText = statusCell.text().trim();
-                if (statusText.includes('Selesai') || statusText.includes('Batal')) {
-                    return false;
-                }
+                if (statusText.includes('Selesai') || statusText.includes('Batal')) return false;
                 
-                // Must have Pickup badge
                 let idCell = $(row).find('td:eq(1)');
-                let hasPickupBadge = idCell.find('span:contains("Pickup")').length > 0;
-                
-                if (hasPickupBadge) {
-                    console.log('✅ Found pickup:', data[1]);
-                }
-                
-                return hasPickupBadge;
+                return idCell.find('span:contains("Pickup")').length > 0;
             });
             showToast('Menampilkan transaksi butuh pickup', 'orange');
             break;
@@ -650,27 +749,15 @@ function handleNotification(type) {
         case 'antar':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
-                // Must be ONLINE
                 let jenisCell = $(row).find('td:eq(4)');
                 if (!jenisCell.text().includes('Online')) return false;
                 
-                // Must NOT be completed
                 let statusCell = $(row).find('td:eq(6)');
                 let statusText = statusCell.text().trim();
-                if (statusText.includes('Selesai') || statusText.includes('Batal')) {
-                    return false;
-                }
+                if (statusText.includes('Selesai') || statusText.includes('Batal')) return false;
                 
-                // Must have Antar badge
                 let idCell = $(row).find('td:eq(1)');
-                let hasAntarBadge = idCell.find('span:contains("Antar")').length > 0;
-                
-                if (hasAntarBadge) {
-                    console.log('✅ Found antar:', data[1]);
-                }
-                
-                return hasAntarBadge;
+                return idCell.find('span:contains("Antar")').length > 0;
             });
             showToast('Menampilkan transaksi butuh pengantaran', 'orange');
             break;
@@ -678,12 +765,9 @@ function handleNotification(type) {
         case 'masuk':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
                 let jenisCell = $(row).find('td:eq(4)');
                 let statusCell = $(row).find('td:eq(6)');
-                
-                return jenisCell.text().includes('Online') && 
-                       statusCell.text().includes('Antrian');
+                return jenisCell.text().includes('Online') && statusCell.text().includes('Antrian');
             });
             showToast('Menampilkan transaksi baru masuk', 'yellow');
             break;
@@ -691,12 +775,9 @@ function handleNotification(type) {
         case 'belum_lunas':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
                 let jenisCell = $(row).find('td:eq(4)');
                 let bayarCell = $(row).find('td:eq(5)');
-                
-                return jenisCell.text().includes('Online') && 
-                       bayarCell.text().includes('Belum Lunas');
+                return jenisCell.text().includes('Online') && bayarCell.text().includes('Belum Lunas');
             });
             showToast('Menampilkan transaksi belum lunas', 'yellow');
             break;
@@ -704,82 +785,30 @@ function handleNotification(type) {
         case 'deadline':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let row = table.row(dataIndex).node();
-                
-                // Must be ONLINE
                 let jenisCell = $(row).find('td:eq(4)');
                 if (!jenisCell.text().includes('Online')) return false;
                 
-                // Must be IN PROGRESS
                 let statusCell = $(row).find('td:eq(6)');
                 let statusText = statusCell.text().trim();
                 let isInProgress = statusText.includes('Antrian') || 
                                   statusText.includes('Proses') || 
                                   statusText.includes('Selesai Dicuci');
-                
                 if (!isInProgress) return false;
                 
-                // Must have ORANGE badge (mendesak = deadline hari ini)
                 let deadlineCell = $(row).find('td:eq(9)');
-                let hasMendesakBadge = deadlineCell.find('.bg-orange-100').length > 0 ||
-                                      deadlineCell.find('i.bi-clock-fill').length > 0;
-                
-                if (hasMendesakBadge) {
-                    console.log('✅ Found deadline today:', data[1]);
-                }
-                
-                return hasMendesakBadge;
+                return deadlineCell.find('.bg-orange-100').length > 0 ||
+                       deadlineCell.find('i.bi-clock-fill').length > 0;
             });
-            showToast('Menampilkan pesanan deadline hari ini (belum selesai)', 'yellow');
+            showToast('Menampilkan pesanan deadline hari ini', 'yellow');
             break;
     }
     
     table.draw();
-    
-    let filteredCount = table.rows({search: 'applied'}).count();
-    console.log('📊 Filter result:', filteredCount, 'rows found');
-    
-    if (filteredCount === 0) {
-        console.warn('⚠️ No matching rows found!');
-    }
-    
-    // Scroll to table
     $('html, body').animate({
         scrollTop: $("#AdminTable").offset().top - 100
     }, 500);
 }
 
-// ========================================
-// DEBUGGING HELPER
-// ========================================
-function debugTableData() {
-    let table = $('#AdminTable').DataTable();
-    
-    console.log('=== TABLE DEBUG INFO ===');
-    console.log('Total rows:', table.rows().count());
-    
-    table.rows().every(function(rowIdx) {
-        let row = this.node();
-        let data = this.data();
-        
-        let jenis = $(row).find('td:eq(4)').text().trim();
-        let status = $(row).find('td:eq(6)').text().trim();
-        let deadlineCell = $(row).find('td:eq(9)');
-        let hasTerlambat = deadlineCell.find('.bg-red-100').length > 0;
-        
-        if (hasTerlambat) {
-            console.log('Row with RED badge:', {
-                id: data[1],
-                jenis: jenis,
-                status: status,
-                isOnline: jenis.includes('Online'),
-                isCompleted: status.includes('Selesai') || status.includes('Batal')
-            });
-        }
-    });
-}
-
-// Call this in console to debug:
-// debugTableData()
 function resetTableFilter() {
     let table = $('#AdminTable').DataTable();
     $.fn.dataTable.ext.search = [];
@@ -823,6 +852,15 @@ function showToast(message, color) {
     setTimeout(() => { toast.fadeOut(300, function() { $(this).remove(); }); }, 5000);
 }
 
+// ========================================
+// EVENT LISTENERS
+// ========================================
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeReminderPopup();
+    }
+});
+
 document.addEventListener('click', function(e) {
     const panel = document.getElementById('notificationPanel');
     const bellButton = e.target.closest('button[onclick="toggleNotifications()"]');
@@ -838,6 +876,22 @@ document.addEventListener('click', function(e) {
     from { transform: translateX(400px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes scale-in {
+    from { 
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px); 
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1) translateY(0); 
+    }
+}
 .animate-slide-in { animation: slide-in 0.3s ease-out; }
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+.animate-scale-in { animation: scale-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 </style>
 @endpush
