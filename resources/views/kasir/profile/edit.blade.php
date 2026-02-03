@@ -177,7 +177,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                                     <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
                                 </div>
-                                <input type="password" 
+                                <input type="" 
                                        name="password"
                                        id="password"
                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('password') border-red-300 @enderror"
@@ -210,7 +210,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                                     <i class="bi bi-shield-check text-gray-400 text-lg"></i>
                                 </div>
-                                <input type="password" 
+                                <input type="" 
                                        name="password_confirmation"
                                        id="password_confirmation"
                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none"

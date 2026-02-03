@@ -23,8 +23,9 @@
                     if(isset($belumLunas)) $totalNotif += $belumLunas;
                     if(isset($butuhPickup)) $totalNotif += $butuhPickup;
                     if(isset($butuhAntar)) $totalNotif += $butuhAntar;
-                    if(isset($terlambat)) $totalNotif += $terlambat;
+                    if(isset($terlambatOnline)) $totalNotif += $terlambatOnline;
                     if(isset($harusSelesaiHariIni)) $totalNotif += $harusSelesaiHariIni;
+                    if(isset($siapDiambil)) $totalNotif += $siapDiambil;  
                 @endphp
                 @if($totalNotif > 0)
                 <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
@@ -362,7 +363,7 @@
         <div class="mt-2 h-1 bg-gradient-to-r from-red-500 to-red-300 rounded-full"></div>
     </div>
 
-    <!-- Kasir Card -->
+    <!-- admin Card -->
     <div class="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-gray-100 hover:border-green-300">
         <div class="flex items-center justify-between mb-4">
             <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
@@ -373,7 +374,7 @@
                 <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Aktif</div>
             </div>
         </div>
-        <div class="text-base font-semibold text-gray-700">Kasir</div>
+        <div class="text-base font-semibold text-gray-700">admin</div>
         <div class="mt-2 h-1 bg-gradient-to-r from-green-500 to-green-300 rounded-full"></div>
     </div>
 
@@ -425,7 +426,7 @@
                         <th class="py-4 px-4 text-left font-bold">No</th>
                         <th class="py-4 px-4 text-left font-bold">ID Transaksi</th>
                         <th class="py-4 px-4 text-left font-bold">Pelanggan</th>
-                        <th class="py-4 px-4 text-left font-bold">Kasir</th>
+                        <th class="py-4 px-4 text-left font-bold">admin</th>
                         <th class="py-4 px-4 text-left font-bold">Jenis</th>
                         <th class="py-4 px-4 text-left font-bold">Metode Bayar</th>
                         <th class="py-4 px-4 text-left font-bold">Status Bayar</th>
@@ -486,24 +487,24 @@
                         </td>
 
                         <td class="py-4 px-4">
-                            @if($o->id_kasir)
+                            @if($o->id_admin)
                                 @php
                                     try {
-                                        $kasir = DB::table('akun_kasir')->where('id_kasir', $o->id_kasir)->first();
-                                        if (!$kasir) {
-                                            $kasir = DB::table('kasir')->where('id_kasir', $o->id_kasir)->first();
+                                        $admin = DB::table('akun_admin')->where('id_admin', $o->id_admin)->first();
+                                        if (!$admin) {
+                                            $admin = DB::table('admin')->where('id_admin', $o->id_admin)->first();
                                         }
                                     } catch (\Exception $e) {
-                                        $kasir = null;
+                                        $admin = null;
                                     }
                                 @endphp
                                 <div class="text-xs">
-                                    @if($kasir)
-                                        <div class="font-semibold text-gray-900">{{ $kasir->nama_kasir ?? $kasir->username ?? $kasir->name ?? 'Kasir' }}</div>
+                                    @if($admin)
+                                        <div class="font-semibold text-gray-900">{{ $admin->nama_admin ?? $admin->username ?? $admin->name ?? 'admin' }}</div>
                                     @else
-                                        <div class="font-semibold text-gray-900">Kasir</div>
+                                        <div class="font-semibold text-gray-900">admin</div>
                                     @endif
-                                    <div class="text-gray-500">ID: {{ $o->id_kasir }}</div>
+                                    <div class="text-gray-500">ID: {{ $o->id_admin }}</div>
                                 </div>
                             @else
                                 <span class="text-xs text-gray-400">-</span>
@@ -861,20 +862,31 @@ $(document).ready(function() {
     console.log('✅ DataTable initialized - Total:', table.data().length);
     
     // ========================================
-    // 🔔 AUTO SHOW POPUP WITH LOCALSTORAGE CHECK
+    // 🔔 AUTO SHOW POPUP - PER USER
     // ========================================
     
-    // CEK apakah popup sudah di-dismiss hari ini
-    const dismissedDate = localStorage.getItem('reminderDismissedDate');
     const today = new Date().toDateString();
+    const userId = '{{ auth()->id() }}'; // ✅ Ambil user ID
+    const storageKey = `reminderDismissed_${userId}`;
     
+    console.log('🔑 User ID:', userId);
     console.log('📅 Today:', today);
-    console.log('📅 Dismissed date:', dismissedDate);
     
-    // Jika sudah di-dismiss hari ini, SKIP popup
-    if (dismissedDate === today) {
-        console.log('✅ Popup already dismissed today - SKIPPING');
-        return;
+    // ✅ CEK localStorage untuk user ini
+    const dismissedData = localStorage.getItem(storageKey);
+    console.log('💾 Dismissed data:', dismissedData);
+    
+    // ✅ JIKA ADA DATA LAMA, CEK TANGGALNYA
+    if (dismissedData) {
+        if (dismissedData !== today) {
+            // Beda hari, HAPUS data lama
+            console.log('🗑️ Old date detected, clearing...');
+            localStorage.removeItem(storageKey);
+        } else {
+            // Masih hari yang sama, SKIP popup
+            console.log('✅ Popup already dismissed today - SKIPPING');
+            return;
+        }
     }
     
     // CEK NOTIFIKASI
@@ -926,40 +938,31 @@ function closeReminderPopup() {
     const popup = document.getElementById('reminderPopup');
     if (!popup) return;
     
-    const dontShowAgain = document.getElementById('dontShowAgain');
-    
-    // CEK checkbox SEBELUM menutup popup
-    if (dontShowAgain && dontShowAgain.checked) {
-        const today = new Date().toDateString();
-        localStorage.setItem('reminderDismissedDate', today);
-        console.log('✅ Popup dismissed for today:', today);
-    }
-    
     // Tutup popup dengan animasi
     popup.style.opacity = '0';
     setTimeout(() => {
         popup.classList.add('hidden');
         popup.style.opacity = '1';
     }, 300);
+    
+    console.log('❌ Popup closed (no save)');
 }
 
 function handleReminderAction() {
     const dontShowAgain = document.getElementById('dontShowAgain');
+    const today = new Date().toDateString();
+    const userId = '{{ auth()->id() }}';
+    const storageKey = `reminderDismissed_${userId}`;
     
-    // SELALU simpan tanggal jika tombol "Saya Sudah Mengerti" diklik
+    // ✅ HANYA simpan jika checkbox DICENTANG
     if (dontShowAgain && dontShowAgain.checked) {
-        const today = new Date().toDateString();
-        localStorage.setItem('reminderDismissedDate', today);
-        console.log('✅ Popup dismissed for today via button:', today);
+        localStorage.setItem(storageKey, today);
+        console.log('✅ Checkbox checked! Saved:', storageKey, '=', today);
+    } else {
+        console.log('⬜ Checkbox NOT checked - will show again next login');
     }
     
     closeReminderPopup();
-}
-
-function handleReminderAction() {
-    closeReminderPopup();
-    localStorage.setItem('reminderDismissedDate', new Date().toDateString());
-    console.log('✅ Reminder action handled');
 }
 
 function playNotificationSound() {
