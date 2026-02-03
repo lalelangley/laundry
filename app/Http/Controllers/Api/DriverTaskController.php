@@ -14,8 +14,9 @@ class DriverTaskController extends Controller
     public function getPendingTasks($driverId)
     {
         $myTasks = Delivery::with([
-            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi,id_metode_bayar',
             'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.metodeBayar:id_metode_bayar,nama_metode_bayar', // ✅ TAMBAH INI
             'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
             'transaksi.detail.layanan:id_layanan,nama_layanan',
             'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
@@ -35,6 +36,29 @@ class DriverTaskController extends Controller
         return response()->json([
             'success' => true,
             'tasks' => $myTasks,
+        ]);
+    }
+
+    public function getAntarTasks($driverId)
+    {
+        $tasks = Delivery::with([
+            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi,id_metode_bayar',
+            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.metodeBayar:id_metode_bayar,nama_metode_bayar', // ✅ TAMBAH INI
+            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
+            'transaksi.detail.layanan:id_layanan,nama_layanan',
+            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
+            'transaksi.detail.parfum:id_parfum,nama_parfum',
+        ])
+        ->where('id_driver', $driverId)
+        ->where('jenis', 'antar')
+        ->whereIn('status', ['pending', 'accepted', 'on_the_way_to_customer'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+        return response()->json([
+            'success' => true,
+            'tasks' => $tasks,
         ]);
     }
 
@@ -139,6 +163,7 @@ class DriverTaskController extends Controller
                         $body,
                         [
                             'transaksi_id' => (string) $transaksi->id_transaksi,
+                            'id_delivery' => (string) $delivery->id_delivery,
                             'type' => $type,
                             'action' => 'open_detail',
                             'delivery_status' => $status,
@@ -207,8 +232,9 @@ class DriverTaskController extends Controller
     public function getDriverHistory($driverId)
     {
         $history = Delivery::with([
-            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
+            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi,id_metode_bayar',
             'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'transaksi.metodeBayar:id_metode_bayar,nama_metode_bayar', // ✅ TAMBAH INI
             'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
             'transaksi.detail.layanan:id_layanan,nama_layanan',
             'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
@@ -225,28 +251,7 @@ class DriverTaskController extends Controller
         ]);
     }
 
-    public function getAntarTasks($driverId)
-    {
-        $tasks = Delivery::with([
-            'transaksi:id_transaksi,id_pelanggan,total_harga,status_transaksi,tgl_transaksi',
-            'transaksi.pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-            'transaksi.detail:id_detail_transaksi,id_transaksi,id_layanan,id_jenis_layanan,id_parfum,qty,harga,id_satuan,tipe_diskon',
-            'transaksi.detail.layanan:id_layanan,nama_layanan',
-            'transaksi.detail.jenis:id_jenis_layanan,id_layanan,nama_jenis,harga',
-            'transaksi.detail.parfum:id_parfum,nama_parfum',
-        ])
-        ->where('id_driver', $driverId)
-        ->where('jenis', 'antar')
-        ->whereIn('status', ['accepted', 'on_the_way_to_customer'])
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-        return response()->json([
-            'success' => true,
-            'tasks' => $tasks,
-        ]);
-    }
-
+    
     public function startAntar(Request $request)
     {
         $request->validate([

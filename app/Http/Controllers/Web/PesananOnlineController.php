@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use App\Models\DetailTransaksi;
-use App\Models\BiayaTambahan; // ✅ WAJIB INI
+use App\Models\BiayaTambahan; 
 use Illuminate\Support\Facades\DB;
 use App\Models\Pembayaran;
 use App\Models\Delivery;
@@ -362,7 +362,7 @@ public function prosesKasir($id)
                     'id_driver' => null,
                     'jenis' => 'antar',
                     'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                    'status' => 'pending',
+                    'status' => 'accepted',
                     'waktu' => now(),
                     'catatan' => 'Auto-generated: Pesanan melewati estimasi saat proses',
                 ]);
@@ -751,7 +751,7 @@ public function proses($id)
                     'id_driver' => null,
                     'jenis' => 'antar',
                     'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                    'status' => 'pending',
+                    'status' => 'accepted',
                     'waktu' => now(),
                     'catatan' => 'Auto-generated: Pesanan melewati estimasi saat proses',
                 ]);
@@ -1310,7 +1310,7 @@ public function prosesAdmin2($id)
                     'id_driver' => null,
                     'jenis' => 'antar',
                     'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                    'status' => 'pending',
+                    'status' => 'accepted',
                     'waktu' => now(),
                     'catatan' => 'Auto-generated: Pesanan melewati estimasi saat proses',
                 ]);
@@ -1642,580 +1642,670 @@ public function siapDiAntarKasir($id)
 
 // ==================== ASSIGN DRIVER PICKUP ====================
 
-public function assignDriverPickup(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->first();
-        
-        $driver = Driver::find($request->id_driver);
-        
-        // ✅ CREATE atau UPDATE delivery
-        if (!$pickupDelivery) {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'pickup',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending', // ✅ PENDING dulu!
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Created new pickup delivery for transaksi {$pesanan->id_transaksi}");
-        } else {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending', // ✅ PENDING dulu!
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Updated existing pickup delivery for transaksi {$pesanan->id_transaksi}");
-        }
-
-        // 🔔 FCM NOTIF - DRIVER DITUGASKAN (bukan accepted!)
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi, 
-                            'type' => 'driver_assigned_pickup', 
-                            'action' => 'open_detail'
-                        ]
-                    );
-                }
-                Log::info("✅ FCM sent: Driver Assigned Pickup - Order {$pesanan->id_transaksi}");
-            }
-        }
-
-        DB::commit();
-        
-        return redirect()->route('pesanan.online.detail', $id)
-            ->with('success', 'Driver pickup berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver pickup: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-public function assignDriverPickupKasir(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->first();
-        
-        $driver = Driver::find($request->id_driver);
-        
-        if (!$pickupDelivery) {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'pickup',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Created new pickup delivery for transaksi {$pesanan->id_transaksi}");
-        } else {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Updated existing pickup delivery for transaksi {$pesanan->id_transaksi}");
-        }
-
-        // 🔔 FCM NOTIF
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi, 
-                            'type' => 'driver_assigned_pickup', 
-                            'action' => 'open_detail'
-                        ]
-                    );
-                }
-                Log::info("✅ FCM sent: Driver Assigned Pickup - Order {$pesanan->id_transaksi}");
-            }
-        }
-
-        DB::commit();
-        
-        return redirect()->route('kasir.pesanan.online.detail', $id)
-            ->with('success', 'Driver pickup berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver pickup: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-public function assignDriverPickupAdmin2(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->first();
-        
-        $driver = Driver::find($request->id_driver);
-        
-        if (!$pickupDelivery) {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'pickup',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Created new pickup delivery for transaksi {$pesanan->id_transaksi}");
-        } else {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            
-            Log::info("✅ Updated existing pickup delivery for transaksi {$pesanan->id_transaksi}");
-        }
-
-        // 🔔 FCM NOTIF
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi, 
-                            'type' => 'driver_assigned_pickup', 
-                            'action' => 'open_detail'
-                        ]
-                    );
-                }
-                Log::info("✅ FCM sent: Driver Assigned Pickup - Order {$pesanan->id_transaksi}");
-            }
-        }
-
-        DB::commit();
-        
-        return redirect()->route('admin2.pesanan.online.detail', $id)
-            ->with('success', 'Driver pickup berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver pickup: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-// ==================== ASSIGN DRIVER ANTAR ====================
-
-public function assignDriverAntar(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'antar')
-            ->first();
-
-        $driver = Driver::find($request->id_driver);
-
-        if ($existingDelivery) {
-            $existingDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending', // ✅ PENDING dulu!
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            Log::info("✅ Updated existing delivery antar for transaksi {$pesanan->id_transaksi}");
-        } else {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending', // ✅ PENDING dulu!
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-            Log::info("✅ Created new delivery antar for transaksi {$pesanan->id_transaksi}");
-        }
-
-        // ❌ JANGAN update status transaksi di sini!
-        // Status tetap selesai_dicuci, nanti berubah pas driver accept
-
-        // 🔔 FCM NOTIF - DRIVER DITUGASKAN
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi,
-                            'type' => 'driver_assigned_delivery',
-                            'action' => 'open_detail',
-                        ]
-                    );
-                }
-                Log::info("✅ FCM sent: Driver Assigned Delivery - Order {$pesanan->id_transaksi}");
-            }
-        }
-
-        DB::commit();
-
-        return redirect()
-            ->route('pesanan.online.detail', $id)
-            ->with('success', 'Driver delivery berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver antar: ' . $e->getMessage());
-        
-        return redirect()
-            ->back()
-            ->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-public function assignDriverAntarKasir(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'antar')
-            ->first();
-
-        $driver = Driver::find($request->id_driver);
-
-        if ($existingDelivery) {
-            $existingDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-        } else {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-        }
-
-        // 🔔 FCM NOTIF
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi,
-                            'type' => 'driver_assigned_delivery',
-                            'action' => 'open_detail',
-                        ]
-                    );
-                }
-            }
-        }
-
-        DB::commit();
-
-        return redirect()->route('kasir.pesanan.online.detail', $id)
-            ->with('success', 'Driver delivery berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver antar: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-public function assignDriverAntarAdmin2(Request $request, $id)
-{
-    $request->validate([
-        'id_driver' => 'required|exists:driver,id_driver',
-        'catatan_driver' => 'nullable|string'
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'antar')
-            ->first();
-
-        $driver = Driver::find($request->id_driver);
-
-        if ($existingDelivery) {
-            $existingDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-        } else {
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now(),
-                'catatan' => $request->catatan_driver,
-            ]);
-        }
-
-        // 🔔 FCM NOTIF
-        $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
-        if ($idPelanggan) {
-            $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
-            if ($tokens->isNotEmpty()) {
-                foreach ($tokens as $token) {
-                    FcmService::send(
-                        $token, 
-                        '👤 Driver Sudah Ditugaskan!', 
-                        "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}). Menunggu konfirmasi driver.", 
-                        [
-                            'transaksi_id' => (string) $pesanan->id_transaksi,
-                            'type' => 'driver_assigned_delivery',
-                            'action' => 'open_detail',
-                        ]
-                    );
-                }
-            }
-        }
-
-        DB::commit();
-
-        return redirect()->route('admin2.pesanan.online.detail', $id)
-            ->with('success', 'Driver delivery berhasil ditugaskan!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error assign driver antar: ' . $e->getMessage());
-        return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
-    }
-}
-
-    public function assignDriver(Request $request, $id)
+ public function assignDriverPickup(Request $request, $id)
     {
         $request->validate([
             'id_driver' => 'required|exists:driver,id_driver',
             'catatan_driver' => 'nullable|string'
         ]);
 
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->where('status', 'pending')
-            ->first();
-        
-        if ($pickupDelivery && $pesanan->status_transaksi === 'pick_up') {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status'    => 'accepted',
-                'waktu'     => now(),
-            ]);
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
             
-            return redirect()
-                ->route('pesanan.online.detail', $id)
-                ->with('success', 'Driver pickup berhasil ditentukan!');
-        } 
-        else {
-            $pesanan->update([
-                'status_transaksi' => 'siap_di_antar'
-            ]);
+            $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'pickup')
+                ->first();
+            
+            $driver = Driver::find($request->id_driver);
+            
+            // ✅ CREATE atau UPDATE delivery - STATUS ACCEPTED
+            if (!$pickupDelivery) {
+                $pickupDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'pickup',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED: langsung accepted
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Created new pickup delivery with status ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            } else {
+                $pickupDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED: langsung accepted
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Updated existing pickup delivery to ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            }
 
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now()
-            ]);
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi, 
+                                'type' => 'driver_assigned_pickup', 
+                                'action' => 'open_detail'
+                            ]
+                        );
+                    }
+                    Log::info("✅ FCM sent to customer");
+                }
+            }
 
-            return redirect()
-                ->route('pesanan.online.detail', $id)
-                ->with('success', 'Driver berhasil ditentukan!');
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '📦 Tugas Pickup Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Pickup dari {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $pickupDelivery->id_delivery,
+                                'jenis' => 'pickup', // ✅ CRITICAL!
+                                'type' => 'new_pickup_task', // ✅ CRITICAL!
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+            
+            return redirect()->route('pesanan.online.detail', $id)
+                ->with('success', 'Driver pickup berhasil ditugaskan & notifikasi terkirim!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver pickup: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
         }
     }
 
-    public function assignDriverKasir(Request $request, $id)
+    public function assignDriverPickupKasir(Request $request, $id)
     {
         $request->validate([
             'id_driver' => 'required|exists:driver,id_driver',
             'catatan_driver' => 'nullable|string'
         ]);
 
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->where('status', 'pending')
-            ->first();
-        
-        if ($pickupDelivery && $pesanan->status_transaksi === 'pick_up') {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status'    => 'accepted',
-                'waktu'     => now(),
-            ]);
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
             
-            return redirect()
-                ->route('pesanan.online.detail', $id)
-                ->with('success', 'Driver pickup berhasil ditentukan!');
-        } 
-        else {
-            $pesanan->update([
-                'status_transaksi' => 'siap_di_antar'
-            ]);
+            $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'pickup')
+                ->first();
+            
+            $driver = Driver::find($request->id_driver);
+            
+            if (!$pickupDelivery) {
+                $pickupDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'pickup',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Created new pickup delivery with status ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            } else {
+                $pickupDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Updated existing pickup delivery to ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            }
 
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now()
-            ]);
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi, 
+                                'type' => 'driver_assigned_pickup', 
+                                'action' => 'open_detail'
+                            ]
+                        );
+                    }
+                    Log::info("✅ FCM sent to customer");
+                }
+            }
 
-            return redirect()
-                ->route('kasir.pesanan.online.detail', $id)
-                ->with('success', 'Driver berhasil ditentukan!');
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '📦 Tugas Pickup Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Pickup dari {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $pickupDelivery->id_delivery,
+                                'jenis' => 'pickup',
+                                'type' => 'new_pickup_task',
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+            
+            return redirect()->route('kasir.pesanan.online.detail', $id)
+                ->with('success', 'Driver pickup berhasil ditugaskan & notifikasi terkirim!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver pickup: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
         }
     }
 
-    public function assignDriverAdmin2(Request $request, $id)
+    public function assignDriverPickupAdmin2(Request $request, $id)
     {
         $request->validate([
             'id_driver' => 'required|exists:driver,id_driver',
             'catatan_driver' => 'nullable|string'
         ]);
 
-        $pesanan = Transaksi::where('jenis_transaksi', 'online')->findOrFail($id);
-        
-        $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
-            ->where('jenis', 'pickup')
-            ->where('status', 'pending')
-            ->first();
-        
-        if ($pickupDelivery && $pesanan->status_transaksi === 'pick_up') {
-            $pickupDelivery->update([
-                'id_driver' => $request->id_driver,
-                'status'    => 'accepted',
-                'waktu'     => now(),
-            ]);
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
             
+            $pickupDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'pickup')
+                ->first();
+            
+            $driver = Driver::find($request->id_driver);
+            
+            if (!$pickupDelivery) {
+                $pickupDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'pickup',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Created new pickup delivery with status ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            } else {
+                $pickupDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                
+                Log::info("✅ Updated existing pickup delivery to ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            }
+
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk pickup cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi, 
+                                'type' => 'driver_assigned_pickup', 
+                                'action' => 'open_detail'
+                            ]
+                        );
+                    }
+                    Log::info("✅ FCM sent to customer");
+                }
+            }
+
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '📦 Tugas Pickup Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Pickup dari {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $pickupDelivery->id_delivery,
+                                'jenis' => 'pickup',
+                                'type' => 'new_pickup_task',
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+            
+            return redirect()->route('admin2.pesanan.online.detail', $id)
+                ->with('success', 'Driver pickup berhasil ditugaskan & notifikasi terkirim!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver pickup: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
+        }
+    }
+
+    // ==================== ASSIGN DRIVER ANTAR - FIXED STATUS ====================
+
+    public function assignDriverAntar(Request $request, $id)
+    {
+        $request->validate([
+            'id_driver' => 'required|exists:driver,id_driver',
+            'catatan_driver' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
+            
+            $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'antar')
+                ->first();
+
+            $driver = Driver::find($request->id_driver);
+
+            if ($existingDelivery) {
+                $existingDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                Log::info("✅ Updated existing delivery antar to ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            } else {
+                $existingDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'antar',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+                Log::info("✅ Created new delivery antar with status ACCEPTED for transaksi {$pesanan->id_transaksi}");
+            }
+
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => 'driver_assigned_delivery',
+                                'action' => 'open_detail',
+                            ]
+                        );
+                    }
+                    Log::info("✅ FCM sent to customer");
+                }
+            }
+
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '🚚 Tugas Delivery Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Antar ke {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $existingDelivery->id_delivery,
+                                'jenis' => 'antar', // ✅ CRITICAL!
+                                'type' => 'new_delivery_task', // ✅ CRITICAL!
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+
             return redirect()
                 ->route('pesanan.online.detail', $id)
-                ->with('success', 'Driver pickup berhasil ditentukan!');
-        } 
-        else {
-            $pesanan->update([
-                'status_transaksi' => 'siap_di_antar'
-            ]);
+                ->with('success', 'Driver delivery berhasil ditugaskan & notifikasi terkirim!');
 
-            Delivery::create([
-                'id_transaksi' => $pesanan->id_transaksi,
-                'id_driver' => $request->id_driver,
-                'jenis' => 'antar',
-                'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                'status' => 'pending',
-                'waktu' => now()
-            ]);
-
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver antar: ' . $e->getMessage());
+            
             return redirect()
-                ->route('admin2.pesanan.online.detail', $id)
-                ->with('success', 'Driver berhasil ditentukan!');
+                ->back()
+                ->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
+        }
+    }
+
+    public function assignDriverAntarKasir(Request $request, $id)
+    {
+        $request->validate([
+            'id_driver' => 'required|exists:driver,id_driver',
+            'catatan_driver' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
+            
+            $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'antar')
+                ->first();
+
+            $driver = Driver::find($request->id_driver);
+
+            if ($existingDelivery) {
+                $existingDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+            } else {
+                $existingDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'antar',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+            }
+
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => 'driver_assigned_delivery',
+                                'action' => 'open_detail',
+                            ]
+                        );
+                    }
+                }
+            }
+
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '🚚 Tugas Delivery Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Antar ke {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $existingDelivery->id_delivery,
+                                'jenis' => 'antar',
+                                'type' => 'new_delivery_task',
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+
+            return redirect()->route('kasir.pesanan.online.detail', $id)
+                ->with('success', 'Driver delivery berhasil ditugaskan & notifikasi terkirim!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver antar: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
+        }
+    }
+
+    public function assignDriverAntarAdmin2(Request $request, $id)
+    {
+        $request->validate([
+            'id_driver' => 'required|exists:driver,id_driver',
+            'catatan_driver' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $pesanan = Transaksi::with('pelanggan')->where('jenis_transaksi', 'online')->findOrFail($id);
+            
+            $existingDelivery = Delivery::where('id_transaksi', $pesanan->id_transaksi)
+                ->where('jenis', 'antar')
+                ->first();
+
+            $driver = Driver::find($request->id_driver);
+
+            if ($existingDelivery) {
+                $existingDelivery->update([
+                    'id_driver' => $request->id_driver,
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+            } else {
+                $existingDelivery = Delivery::create([
+                    'id_transaksi' => $pesanan->id_transaksi,
+                    'id_driver' => $request->id_driver,
+                    'jenis' => 'antar',
+                    'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
+                    'status' => 'accepted', // ✅ FIXED
+                    'waktu' => now(),
+                    'catatan' => $request->catatan_driver,
+                ]);
+            }
+
+            // 🔔 FCM NOTIF - KE PELANGGAN
+            $idPelanggan = $pesanan->pelanggan->id_pelanggan ?? null;
+            if ($idPelanggan) {
+                $tokens = FcmToken::where('pelanggan_id', $idPelanggan)->pluck('token');
+                if ($tokens->isNotEmpty()) {
+                    foreach ($tokens as $token) {
+                        FcmService::send(
+                            $token, 
+                            '👤 Driver Sudah Ditugaskan!', 
+                            "Driver {$driver->nama_driver} telah ditugaskan untuk mengantar cucian Anda (ORDER/{$pesanan->id_transaksi}).", 
+                            [
+                                'transaksi_id' => (string) $pesanan->id_transaksi,
+                                'type' => 'driver_assigned_delivery',
+                                'action' => 'open_detail',
+                            ]
+                        );
+                    }
+                }
+            }
+
+            // ✅ 🔔 FCM NOTIF - KE DRIVER
+            $driverFcmTokens = FcmToken::where('driver_id', $driver->id_driver)
+                ->pluck('token')
+                ->filter();
+            
+            if ($driverFcmTokens->isNotEmpty()) {
+                $alamat = $pesanan->pelanggan->alamat ?? 'Alamat tidak tersedia';
+                $namaPelanggan = $pesanan->pelanggan->nama_pelanggan ?? 'Customer';
+                $noHp = $pesanan->pelanggan->no_hp ?? '-';
+                
+                foreach ($driverFcmTokens as $token) {
+                    try {
+                        FcmService::send(
+                            $token,
+                            '🚚 Tugas Delivery Baru!',
+                            "ORDER/{$pesanan->id_transaksi} - Antar ke {$namaPelanggan}. Alamat: {$alamat}",
+                            [
+                                'id_transaksi' => (string) $pesanan->id_transaksi,
+                                'id_delivery' => (string) $existingDelivery->id_delivery,
+                                'jenis' => 'antar',
+                                'type' => 'new_delivery_task',
+                                'nama_pelanggan' => $namaPelanggan,
+                                'no_hp' => $noHp,
+                                'alamat' => $alamat,
+                                'catatan' => $request->catatan_driver ?? '',
+                                'action' => 'open_delivery_detail'
+                            ]
+                        );
+                        
+                        Log::info("✅ FCM sent to driver {$driver->nama_driver} (ID: {$driver->id_driver})");
+                    } catch (\Exception $e) {
+                        Log::error("❌ FCM to driver error: " . $e->getMessage());
+                    }
+                }
+            } else {
+                Log::warning("⚠️ Driver {$driver->nama_driver} (ID: {$driver->id_driver}) tidak punya FCM token!");
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin2.pesanan.online.detail', $id)
+                ->with('success', 'Driver delivery berhasil ditugaskan & notifikasi terkirim!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error assign driver antar: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menentukan driver: ' . $e->getMessage());
         }
     }
 
@@ -3795,7 +3885,7 @@ public function autoCheckTerlambat()
                         'id_driver' => null,
                         'jenis' => 'antar',
                         'alamat_tujuan' => $pesanan->pelanggan->alamat ?? '-',
-                        'status' => 'pending',
+                        'status' => 'accepted',
                         'waktu' => now(),
                         'catatan' => 'Auto-generated: Pesanan melewati estimasi (auto-check)',
                     ]);
