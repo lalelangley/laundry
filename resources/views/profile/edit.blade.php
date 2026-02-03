@@ -19,8 +19,15 @@
             <div class="bg-gradient-to-r from-yellow-50 to-white px-12 py-10 border-b border-gray-200">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-5">
-                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
-                            <i class="bi bi-person-circle text-white text-2xl"></i>
+                        {{-- Foto di header ikut update --}}
+                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg overflow-hidden">
+                            @if($admin->gambar)
+                                <img src="{{ asset('storage/' . $admin->gambar) }}" 
+                                     alt="Profile" 
+                                     class="w-full h-full object-cover">
+                            @else
+                                <i class="bi bi-person-circle text-white text-2xl"></i>
+                            @endif
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-gray-900">Edit Profile Admin</h3>
@@ -38,12 +45,12 @@
             <div class="px-12 py-12">
                 {{-- Alert Success --}}
                 @if(session('success'))
-                <div class="mb-8 bg-orange-50 border-2 border-orange-200 rounded-xl p-6">
+                <div class="mb-8 bg-green-50 border-2 border-green-200 rounded-xl p-6">
                     <div class="flex items-start gap-3">
-                        <i class="bi bi-check-circle-fill text-orange-600 text-xl flex-shrink-0"></i>
+                        <i class="bi bi-check-circle-fill text-green-600 text-xl flex-shrink-0"></i>
                         <div>
-                            <h3 class="font-bold text-orange-900 mb-1">Berhasil!</h3>
-                            <p class="text-sm text-orange-700">{{ session('success') }}</p>
+                            <h3 class="font-bold text-green-900 mb-1">Berhasil!</h3>
+                            <p class="text-sm text-green-700">{{ session('success') }}</p>
                         </div>
                     </div>
                 </div>
@@ -66,10 +73,47 @@
                 </div>
                 @endif
 
-                <form method="POST" action="{{ route('profile.admin.update') }}">
+                {{-- enctype ditambah buat file upload --}}
+                <form id="profileForm" method="POST" action="{{ route('profile.admin.update') }}" enctype="multipart/form-data">
                     @csrf
                     
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        {{-- Foto Profil --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Foto Profil <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <div class="w-24 h-24 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden border-2 border-gray-200">
+                                    @if($admin->gambar)
+                                        <img src="{{ asset('storage/' . $admin->gambar) }}" 
+                                             alt="Current" 
+                                             id="preview-image"
+                                             class="w-full h-full object-cover">
+                                    @else
+                                        <i class="bi bi-person-circle text-gray-400 text-4xl" id="preview-icon"></i>
+                                    @endif
+                                </div>
+                                <div class="flex-1">
+                                    <input type="file" 
+                                           name="gambar"
+                                           id="photoInput"
+                                           accept="image/jpeg,image/png,image/jpg"
+                                           class="hidden">
+                                    <button type="button"
+                                            onclick="document.getElementById('photoInput').click()"
+                                            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-semibold transition inline-flex items-center gap-2">
+                                        <i class="bi bi-upload"></i>
+                                        <span>Pilih Foto</span>
+                                    </button>
+                                    <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                        <i class="bi bi-info-circle"></i>
+                                        Format: JPG, PNG (Max 2MB)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Nama Lengkap --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
@@ -117,7 +161,6 @@
                                 </p>
                             @enderror
                         </div>
-
                         {{-- Password Baru --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
@@ -127,7 +170,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                                     <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
                                 </div>
-                                <input type="password" 
+                                <input type="" 
                                        name="password"
                                        id="password"
                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none @error('password') border-red-300 @enderror"
@@ -160,7 +203,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                                     <i class="bi bi-shield-check text-gray-400 text-lg"></i>
                                 </div>
-                                <input type="password" 
+                                <input type="" 
                                        name="password_confirmation"
                                        id="password_confirmation"
                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition outline-none"
@@ -222,6 +265,34 @@
 
 @push('scripts')
 <script>
+// Preview foto
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+            alert('Ukuran file maksimal 2MB!');
+            this.value = '';
+            return;
+        }
+        if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+            alert('Format file harus JPG atau PNG!');
+            this.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewImage = document.getElementById('preview-image');
+            const previewIcon = document.getElementById('preview-icon');
+            if (previewImage) {
+                previewImage.src = e.target.result;
+            } else if (previewIcon) {
+                previewIcon.outerHTML = `<img src="${e.target.result}" alt="Preview" id="preview-image" class="w-full h-full object-cover">`;
+            }
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
 // Toggle Password Visibility
 function togglePassword() {
     const passwordInput = document.getElementById('password');
@@ -255,7 +326,7 @@ function togglePasswordConfirm() {
 }
 
 // Password Match Validation
-document.querySelector('form').addEventListener('submit', function(e) {
+document.getElementById('profileForm').addEventListener('submit', function(e) {
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password_confirmation').value;
     

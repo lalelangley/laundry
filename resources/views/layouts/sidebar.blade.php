@@ -10,7 +10,7 @@ if (Auth::guard('kasir')->check()) {
     $role = 'Kasir';
 } elseif (Auth::guard('admin')->check()) {
     $user = Auth::guard('admin')->user();
-    $nama = $user->nama_admin ?? 'Admin';
+    $nama = $user->nama;  // ✅ ganti dari nama_admin ke nama
     $role = $user->role->nama_role ?? 'Admin';
 } else {
     $user = null;
@@ -45,13 +45,25 @@ if (Auth::guard('kasir')->check()) {
         </div>
         
         <div class="flex items-center gap-3">
-            <img src="{{ $user->profile_photo_url ?? asset('images/default-pfp.png') }}"
-                 class="w-14 h-14 rounded-full border-3 border-gray-900 object-cover">
-            <div>
-                <p class="font-bold text-gray-900 text-lg">{{ $nama }}</p>
-                <p class="text-sm text-gray-800">{{ $role }}</p>
-            </div>
+        @if(Auth::guard('kasir')->check())
+            <img src="{{ $user->gambar ? asset('storage/' . $user->gambar) : asset('images/default-pfp.png') }}"
+                class="w-14 h-14 rounded-full border-3 border-gray-900 object-cover">
+        @elseif(Auth::guard('admin')->check())
+            @if($user->gambar)
+                <img src="{{ asset('storage/' . $user->gambar) }}"
+                    alt="Profile" 
+                    class="w-14 h-14 rounded-full border-3 border-gray-900 object-cover">
+            @else
+                <div class="w-14 h-14 rounded-full border-3 border-gray-900 bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                    <i class="bi bi-person-circle text-white text-2xl"></i>
+                </div>
+            @endif
+        @endif
+        <div>
+            <p class="font-bold text-gray-900 text-lg">{{ $nama }}</p>
+            <p class="text-sm text-gray-800">{{ $role }}</p>
         </div>
+    </div>
     </div>
 
   <!-- MENU -->

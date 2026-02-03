@@ -185,89 +185,75 @@ $siapDiambil = Transaksi::where('status_transaksi', 'siap_di_ambil')
         'siapDiambil'
     ));
 }
-// =============================
-// DASHBOARD ADMIN2 (No Permission Check)
+
+ // =============================
+// DASHBOARD ADMIN (No Permission Check)
 // =============================
 public function admin2Dashboard()
 {
     $admin = auth()->guard('admin')->user();
-    
-    if (!$admin || $admin->role_id == 1) {
+
+    if (!$admin) {
         return redirect()->route('login.show')
-            ->with('error', 'Silakan login sebagai admin biasa');
+            ->with('error', 'Silakan login dulu');
     }
 
-    // ========================================
-    // STATISTIK OFFLINE (untuk cards)
-    // ========================================
+    $totalPelanggan  = Pelanggan::count();
+    $totalKasir      = Kasir::count();
+    $totalTransaksi  = Transaksi::where('jenis_transaksi', 'offline')->count();
+    
     $totalOmzet = Transaksi::where('jenis_transaksi', 'offline')
         ->whereDate('tgl_transaksi', today())
         ->where('status_bayar', 'lunas')
         ->sum('total_bayar');
 
-    $masuk = Transaksi::where('status_transaksi', 'antrian')
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+    // ✅ NOTIFIKASI & ALERT DATA - FIXED VERSION
+$transaksiMasukHariIni = Transaksi::whereDate('tgl_transaksi', today())
+    ->where('status_transaksi', 'antrian')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    $harusSelesai = Transaksi::whereDate('tgl_estimasi', Carbon::today())
-        ->whereIn('status_transaksi', ['antrian', 'proses'])
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+$pembayaranLunasHariIni = Transaksi::whereDate('tgl_lunas', today())
+    ->where('status_bayar', 'lunas')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    $terlambat = Transaksi::whereDate('tgl_estimasi', '<', Carbon::today())
-        ->whereIn('status_transaksi', ['antrian', 'proses'])
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+$belumLunas = Transaksi::where('status_bayar', 'belum_lunas')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereNotIn('status_transaksi', ['batal', 'selesai'])
+    ->count();
 
-    // ========================================
-    // NOTIFIKASI ONLINE (untuk notification panel)
-    // ========================================
-    
-    // Transaksi masuk hari ini (Online + Antrian)
-    $transaksiMasukHariIni = Transaksi::whereDate('tgl_transaksi', today())
-        ->where('status_transaksi', 'antrian')
-        ->where('jenis_transaksi', 'online')
-        ->count();
+// ✅ Transaksi online yang butuh driver
+$butuhPickup = DB::table('delivery')
+    ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
+    ->where('delivery.jenis', 'pickup')
+    ->whereNull('delivery.id_driver')
+    ->where('transaksi.jenis_transaksi', 'online')
+    ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal']) // ← INI KEY-nya!
+    ->count();
 
-    // Belum lunas (Online + Belum Lunas + BELUM Selesai/Batal)
-    $belumLunas = Transaksi::where('status_bayar', 'belum_lunas')
-        ->where('jenis_transaksi', 'online')
-        ->whereNotIn('status_transaksi', ['batal', 'selesai'])
-        ->count();
+$butuhAntar = DB::table('delivery')
+    ->where('jenis', 'antar')
+    ->whereNull('id_driver')
+    ->count();
 
-    // ✅ Butuh Pickup (JOIN + Filter Status Transaksi)
-    $butuhPickup = DB::table('delivery')
-        ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
-        ->where('delivery.jenis', 'pickup')
-        ->whereNull('delivery.id_driver')
-        ->where('transaksi.jenis_transaksi', 'online')
-        ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal'])
-        ->count();
+// ✅ Estimasi selesai hari ini - ONLINE ONLY
+$harusSelesaiHariIni = Transaksi::whereDate('tgl_estimasi', today())
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
+    ->count();
 
-    // ✅ Butuh Antar (JOIN + Filter Status Transaksi)
-    $butuhAntar = DB::table('delivery')
-        ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
-        ->where('delivery.jenis', 'antar')
-        ->whereNull('delivery.id_driver')
-        ->where('transaksi.jenis_transaksi', 'online')
-        ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal'])
-        ->count();
+// ✅ Terlambat - ONLINE ONLY
+$terlambat = Transaksi::where('tgl_estimasi', '<', now())
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
+    ->count();
 
-    // Harus selesai hari ini (Online + Estimasi Today + Belum Selesai)
-    $harusSelesaiHariIni = Transaksi::whereDate('tgl_estimasi', today())
-        ->where('jenis_transaksi', 'online')
-        ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
-        ->count();
+// ✅ Siap diambil - ONLINE ONLY
+$siapDiambil = Transaksi::where('status_transaksi', 'siap_di_ambil')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    // Terlambat Online (untuk notifikasi, beda dengan $terlambat yang offline)
-    $terlambatOnline = Transaksi::where('tgl_estimasi', '<', now()->startOfDay())
-        ->where('jenis_transaksi', 'online')
-        ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
-        ->count();
-
-    // ========================================
-    // AMBIL SEMUA TRANSAKSI DENGAN DEADLINE STATUS
-    // ========================================
     $orders = Transaksi::query()
         ->orderBy('id_transaksi', 'DESC')
         ->get()
@@ -293,112 +279,93 @@ public function admin2Dashboard()
             return $o;
         });
 
-    // ========================================
-    // RETURN VIEW DENGAN SEMUA VARIABEL
-    // ========================================
     return view('admin2.dashboard', compact(
         'admin',
-        // Statistik Offline (cards)
-        'masuk',
-        'harusSelesai',
-        'terlambat',
+        'totalPelanggan',
+        'totalKasir',
+        'totalTransaksi',
         'totalOmzet',
-        // Data
         'orders',
-        // Notifikasi Online (notification panel)
+        // Notifikasi
         'transaksiMasukHariIni',
+        'pembayaranLunasHariIni',
         'belumLunas',
         'butuhPickup',
         'butuhAntar',
         'harusSelesaiHariIni',
-        'terlambatOnline'
+        'terlambat',
+        'siapDiambil'
     ));
 }
 
-   // =============================
+ // =============================
 // DASHBOARD KASIR (No Permission Check)
 // =============================
 public function kasirDashboard()
 {
-    // ✅ FIX: Use kasir guard instead of admin guard
     $kasir = auth()->guard('kasir')->user();
-    
+
     if (!$kasir) {
         return redirect()->route('login.show')
-            ->with('error', 'Silakan login sebagai kasir');
+            ->with('error', 'Silakan login dulu');
     }
 
-    // ========================================
-    // STATISTIK OFFLINE (untuk cards)
-    // ========================================
+    $totalPelanggan  = Pelanggan::count();
+    $totalKasir      = Kasir::count();
+    $totalTransaksi  = Transaksi::where('jenis_transaksi', 'offline')->count();
+    
     $totalOmzet = Transaksi::where('jenis_transaksi', 'offline')
         ->whereDate('tgl_transaksi', today())
         ->where('status_bayar', 'lunas')
         ->sum('total_bayar');
 
-    $masuk = Transaksi::where('status_transaksi', 'antrian')
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+    // ✅ NOTIFIKASI & ALERT DATA - FIXED VERSION
+$transaksiMasukHariIni = Transaksi::whereDate('tgl_transaksi', today())
+    ->where('status_transaksi', 'antrian')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    $harusSelesai = Transaksi::whereDate('tgl_estimasi', Carbon::today())
-        ->whereIn('status_transaksi', ['antrian', 'proses'])
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+$pembayaranLunasHariIni = Transaksi::whereDate('tgl_lunas', today())
+    ->where('status_bayar', 'lunas')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    $terlambat = Transaksi::whereDate('tgl_estimasi', '<', Carbon::today())
-        ->whereIn('status_transaksi', ['antrian', 'proses'])
-        ->where('jenis_transaksi', 'offline')
-        ->count();
+$belumLunas = Transaksi::where('status_bayar', 'belum_lunas')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereNotIn('status_transaksi', ['batal', 'selesai'])
+    ->count();
 
-    // ========================================
-    // NOTIFIKASI ONLINE (untuk notification panel)
-    // ========================================
-    
-    // Transaksi masuk hari ini (Online + Antrian)
-    $transaksiMasukHariIni = Transaksi::whereDate('tgl_transaksi', today())
-        ->where('status_transaksi', 'antrian')
-        ->where('jenis_transaksi', 'online')
-        ->count();
+// ✅ Transaksi online yang butuh driver
+$butuhPickup = DB::table('delivery')
+    ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
+    ->where('delivery.jenis', 'pickup')
+    ->whereNull('delivery.id_driver')
+    ->where('transaksi.jenis_transaksi', 'online')
+    ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal']) // ← INI KEY-nya!
+    ->count();
 
-    // Belum lunas (Online + Belum Lunas + BELUM Selesai/Batal)
-    $belumLunas = Transaksi::where('status_bayar', 'belum_lunas')
-        ->where('jenis_transaksi', 'online')
-        ->whereNotIn('status_transaksi', ['batal', 'selesai'])
-        ->count();
+$butuhAntar = DB::table('delivery')
+    ->where('jenis', 'antar')
+    ->whereNull('id_driver')
+    ->count();
 
-    // ✅ Butuh Pickup (JOIN + Filter Status Transaksi)
-    $butuhPickup = DB::table('delivery')
-        ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
-        ->where('delivery.jenis', 'pickup')
-        ->whereNull('delivery.id_driver')
-        ->where('transaksi.jenis_transaksi', 'online')
-        ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal'])
-        ->count();
+// ✅ Estimasi selesai hari ini - ONLINE ONLY
+$harusSelesaiHariIni = Transaksi::whereDate('tgl_estimasi', today())
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
+    ->count();
 
-    // ✅ Butuh Antar (JOIN + Filter Status Transaksi)
-    $butuhAntar = DB::table('delivery')
-        ->join('transaksi', 'delivery.id_transaksi', '=', 'transaksi.id_transaksi')
-        ->where('delivery.jenis', 'antar')
-        ->whereNull('delivery.id_driver')
-        ->where('transaksi.jenis_transaksi', 'online')
-        ->whereNotIn('transaksi.status_transaksi', ['selesai', 'batal'])
-        ->count();
+// ✅ Terlambat - ONLINE ONLY
+$terlambat = Transaksi::where('tgl_estimasi', '<', now())
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
+    ->count();
 
-    // Harus selesai hari ini (Online + Estimasi Today + Belum Selesai)
-    $harusSelesaiHariIni = Transaksi::whereDate('tgl_estimasi', today())
-        ->where('jenis_transaksi', 'online')
-        ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
-        ->count();
+// ✅ Siap diambil - ONLINE ONLY
+$siapDiambil = Transaksi::where('status_transaksi', 'siap_di_ambil')
+    ->where('jenis_transaksi', 'online')  // ← ONLINE ONLY
+    ->count();
 
-    // Terlambat Online (untuk notifikasi, beda dengan $terlambat yang offline)
-    $terlambatOnline = Transaksi::where('tgl_estimasi', '<', now()->startOfDay())
-        ->where('jenis_transaksi', 'online')
-        ->whereIn('status_transaksi', ['antrian', 'proses', 'selesai_dicuci'])
-        ->count();
-
-    // ========================================
-    // AMBIL SEMUA TRANSAKSI DENGAN DEADLINE STATUS
-    // ========================================
     $orders = Transaksi::query()
         ->orderBy('id_transaksi', 'DESC')
         ->get()
@@ -424,26 +391,22 @@ public function kasirDashboard()
             return $o;
         });
 
-    // ========================================
-    // RETURN VIEW DENGAN SEMUA VARIABEL
-    // ✅ FIX: Change $admin to $kasir
-    // ========================================
     return view('kasir.dashboard', compact(
-        'kasir',  // ← CHANGED from 'admin'
-        // Statistik Offline (cards)
-        'masuk',
-        'harusSelesai',
-        'terlambat',
+        'kasir',
+        'totalPelanggan',
+        'totalKasir',
+        'totalTransaksi',
         'totalOmzet',
-        // Data
         'orders',
-        // Notifikasi Online (notification panel)
+        // Notifikasi
         'transaksiMasukHariIni',
+        'pembayaranLunasHariIni',
         'belumLunas',
         'butuhPickup',
         'butuhAntar',
         'harusSelesaiHariIni',
-        'terlambatOnline'
+        'terlambat',
+        'siapDiambil'
     ));
 }
 
