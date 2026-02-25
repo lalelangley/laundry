@@ -200,7 +200,6 @@
                                 Kosongkan jika tidak ingin mengubah password
                             </p>
                         </div>
-
                         {{-- Confirm Password --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
