@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class
 | PUBLIC ROUTES - Authentication
 |--------------------------------------------------------------------------
 */
+// ✅ Landing Page - Bisa diakses tanpa login
+Route::get('/', [AuthWebController::class, 'landingPage'])->name('landing');
+
 Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthWebController::class, 'processLogin'])->name('login.process');
 

@@ -8,7 +8,8 @@
         <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <span class="text-2xl font-bold text-gray-900">Kelola Pelanggan</span>
+        <span class="text-2xl font-bold text-gray-900">Kelola Laporan
+        </span>
     </div>
 
     {{-- TABS CONTAINER --}}

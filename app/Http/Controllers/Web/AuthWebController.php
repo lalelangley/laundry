@@ -19,10 +19,61 @@ use Illuminate\Support\Facades\DB;
 class AuthWebController extends Controller
 {
     // =============================
+    // LANDING PAGE (No Permission Check - Public)
+    // =============================
+    public function landingPage()
+    {
+        // ✅ DATA REAL: Pesanan Hari Ini
+        $pesanan_hari_ini = Transaksi::whereDate('tgl_transaksi', Carbon::today())
+            ->count();
+
+        // ✅ DATA REAL: Dalam Proses (antrian + proses)
+        $dalam_proses = Transaksi::whereIn('status_transaksi', ['antrian', 'proses'])
+            ->count();
+
+        // ✅ DATA REAL: Selesai (siap_di_ambil + siap_di_antar + selesai)
+        $selesai = Transaksi::whereIn('status_transaksi', ['siap_di_ambil', 'siap_di_antar', 'selesai'])
+            ->count();
+
+        // ✅ DATA REAL: Total Pelanggan
+        $total_pelanggan = Pelanggan::count();
+
+        // ✅ DATA REAL: Total Transaksi Bulan Ini
+        $transaksi_bulan_ini = Transaksi::whereYear('tgl_transaksi', Carbon::now()->year)
+            ->whereMonth('tgl_transaksi', Carbon::now()->month)
+            ->count();
+
+        // ✅ DATA REAL: Pendapatan Bulan Ini (hanya yang sudah lunas)
+        $pendapatan_bulan_ini = Transaksi::whereYear('tgl_transaksi', Carbon::now()->year)
+            ->whereMonth('tgl_transaksi', Carbon::now()->month)
+            ->where('status_bayar', 'lunas')
+            ->sum('total_bayar');
+
+        return view('auth.landing-page', compact(
+            'pesanan_hari_ini',
+            'dalam_proses',
+            'selesai',
+            'total_pelanggan',
+            'transaksi_bulan_ini',
+            'pendapatan_bulan_ini'
+        ));
+    }
+
+    // =============================
     // LOGIN (No Permission Check)
     // =============================
     public function showLogin()
     {
+        // ✅ PERBAIKAN: Jika sudah login, langsung redirect ke dashboard yang sesuai
+        if (Auth::guard('admin')->check()) {
+            $admin = Auth::guard('admin')->user();
+            return redirect()->route($admin->role_id == 1 ? 'admin.dashboard' : 'admin2.dashboard');
+        }
+
+        if (Auth::guard('kasir')->check()) {
+            return redirect()->route('kasir.dashboard');
+        }
+
         $admins = Admin::all();
         $kasirs = Kasir::all();
 
@@ -30,49 +81,56 @@ class AuthWebController extends Controller
     }
 
     public function processLogin(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required',
-            'pin' => 'required',
-        ]);
+{
+    $request->validate([
+        'user_id' => 'required',
+        'pin' => 'required',
+    ]);
 
-        if (!str_contains($request->user_id, '-')) {
-            return back()->with('error', 'Pilih pengguna terlebih dahulu');
-        }
-
-        [$role, $id] = explode('-', $request->user_id);
-        $pin = trim($request->pin);
-
-        if ($role === 'admin') {
-            $admin = Admin::find($id);
-            if (!$admin || !Hash::check($pin, $admin->password) || $admin->status !== 'aktif') {
-                return back()->with('error', 'PIN salah atau user tidak aktif');
-            }
-
-            auth()->guard('admin')->login($admin);
-            $request->session()->regenerate();
-
-            if ($admin->role_id == 1) {
-                return redirect()->route('admin.dashboard');
-            } else {
-                return redirect()->route('admin2.dashboard');
-            }
-        }
-
-        if ($role === 'kasir') {
-            $kasir = Kasir::find($id);
-            if (!$kasir || !Hash::check($pin, $kasir->password) || $kasir->status !== 'aktif') {
-                return back()->with('error', 'PIN salah atau user tidak aktif');
-            }
-
-            auth()->guard('kasir')->login($kasir);
-            $request->session()->regenerate();
-            
-            return redirect()->route('kasir.dashboard');
-        }
-
-        return back()->with('error', 'Role tidak dikenali');
+    if (!str_contains($request->user_id, '-')) {
+        return back()->with('error', 'Pilih pengguna terlebih dahulu');
     }
+
+    [$role, $id] = explode('-', $request->user_id);
+    $pin = trim($request->pin);
+
+    if ($role === 'admin') {
+        $admin = Admin::find($id);
+        
+        if (!$admin || !Hash::check($pin, $admin->password) || $admin->status !== 'aktif') {
+            return back()->with('error', 'PIN salah atau user tidak aktif');
+        }
+
+        // ✅ FIX: Login tanpa remember token
+        auth()->guard('admin')->login($admin);
+        
+        // ✅ Regenerate session
+        $request->session()->regenerate();
+
+        // ✅ Redirect ke dashboard
+        $dashboardRoute = $admin->role_id == 1 ? 'admin.dashboard' : 'admin2.dashboard';
+        
+        return redirect()->route($dashboardRoute)->with('success', 'Login berhasil!');
+    }
+
+    if ($role === 'kasir') {
+        $kasir = Kasir::find($id);
+        
+        if (!$kasir || !Hash::check($pin, $kasir->password) || $kasir->status !== 'aktif') {
+            return back()->with('error', 'PIN salah atau user tidak aktif');
+        }
+
+        // ✅ FIX: Login tanpa remember token
+        auth()->guard('kasir')->login($kasir);
+        
+        // ✅ Regenerate session
+        $request->session()->regenerate();
+        
+        return redirect()->route('kasir.dashboard')->with('success', 'Login berhasil!');
+    }
+
+    return back()->with('error', 'Role tidak dikenali');
+}
 
    // =============================
 // DASHBOARD ADMIN (No Permission Check)
@@ -82,7 +140,7 @@ public function adminDashboard()
     $admin = auth()->guard('admin')->user();
 
     if (!$admin) {
-        return redirect()->route('login.show')
+        return redirect()->route('login')
             ->with('error', 'Silakan login dulu');
     }
 
@@ -194,7 +252,7 @@ public function admin2Dashboard()
     $admin = auth()->guard('admin')->user();
 
     if (!$admin) {
-        return redirect()->route('login.show')
+        return redirect()->route('login')
             ->with('error', 'Silakan login dulu');
     }
 
@@ -306,7 +364,7 @@ public function kasirDashboard()
     $kasir = auth()->guard('kasir')->user();
 
     if (!$kasir) {
-        return redirect()->route('login.show')
+        return redirect()->route('login')
             ->with('error', 'Silakan login dulu');
     }
 
