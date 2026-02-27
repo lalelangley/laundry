@@ -830,6 +830,11 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::get('/', [RiwayatController::class, 'index'])
             ->middleware('permission:view')
             ->name('index');
+
+        Route::get('/{id}/cetak-nota', [RiwayatController::class, 'cetakNota'])
+            ->middleware('permission:view')
+            ->whereNumber('id')
+            ->name('cetak-nota');
         
         Route::get('/{id}/detail', [RiwayatController::class, 'detail'])
             ->middleware('permission:view')

@@ -21,12 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/fcm-token/save', [FcmTokenController::class, 'saveToken']);
 
-    Route::prefix('profile')->group(function () {
-        Route::get('/{id}', [ProfilePelanggansController::class, 'show']);
-        Route::post('/update/{id}', [ProfilePelanggansController::class, 'update']);
-        Route::post('/update-gambar/{id}', [ProfilePelanggansController::class, 'updateGambar']);
-    });
-
+   
+    // Profile routes
+    Route::get('/profile/{id}', [ProfilePelanggansController::class, 'show']);
+    Route::post('/profile/update/{id}', [ProfilePelanggansController::class, 'update']);
+    Route::post('/profile/update-gambar/{id}', [ProfilePelanggansController::class, 'updateGambar']);
     Route::prefix('order')->group(function () {
         Route::get('/options', [LaundryOrderController::class, 'getOptions']);
         Route::post('/create', [LaundryOrderController::class, 'createOrder']);

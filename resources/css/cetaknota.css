@@ -1,0 +1,240 @@
+/* ================================================
+   resources/css/cetak-nota.css
+   CSS untuk halaman cetak nota thermal
+   ================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #000;
+    background: #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+}
+
+/* ==============================
+   WRAPPER NOTA
+============================== */
+.nota-wrapper {
+    background: #fff;
+    width: 72mm;
+    padding: 4mm 3mm;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+/* ==============================
+   UTILITY
+============================== */
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+.bold        { font-weight: bold; }
+
+.dashed {
+    border-top: 1px dashed #000;
+    margin: 5px 0;
+}
+
+/* ==============================
+   HEADER TOKO
+============================== */
+.header {
+    text-align: center;
+    padding-bottom: 5px;
+}
+.header .store-name {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+.header .store-info {
+    font-size: 9px;
+    margin-top: 2px;
+    line-height: 1.5;
+}
+
+/* ==============================
+   JUDUL NOTA
+============================== */
+.nota-title {
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 4px 0;
+}
+
+/* ==============================
+   SECTION & ROW
+============================== */
+.section {
+    margin: 4px 0;
+    padding-bottom: 4px;
+}
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2px;
+    gap: 4px;
+}
+.row .lbl {
+    color: #333;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.row .val {
+    font-weight: bold;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ==============================
+   TABEL ITEM
+============================== */
+.items-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 10px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px;
+    margin-bottom: 3px;
+}
+.item {
+    margin-bottom: 6px;
+}
+.item-name {
+    font-weight: bold;
+    font-size: 11px;
+}
+.item-sub {
+    font-size: 10px;
+    color: #333;
+}
+.item-hitung {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    margin-top: 1px;
+}
+
+/* ==============================
+   RINCIAN HARGA
+============================== */
+.totals .row {
+    font-size: 11px;
+}
+.totals .grand-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: bold;
+    border-top: 2px solid #000;
+    border-bottom: 2px solid #000;
+    padding: 3px 0;
+    margin: 3px 0;
+}
+.totals .dp-row {
+    font-size: 11px;
+}
+.totals .sisa-row {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* ==============================
+   STATUS BADGE
+============================== */
+.status-badge {
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid #000;
+    padding: 3px 0;
+    margin: 5px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* ==============================
+   FOOTER
+============================== */
+.footer {
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.6;
+    margin-top: 6px;
+}
+.footer .thank-you {
+    font-size: 12px;
+    font-weight: bold;
+}
+.footer .print-time {
+    font-size: 9px;
+    margin-top: 3px;
+    color: #555;
+}
+
+/* ==============================
+   TOMBOL AKSI
+============================== */
+.btn-wrap {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    width: 72mm;
+}
+.btn {
+    flex: 1;
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    transition: opacity 0.2s;
+}
+.btn-print {
+    background: #f59e0b;
+    color: #1a1a1a;
+}
+.btn-close {
+    background: #6b7280;
+    color: #fff;
+}
+.btn:hover {
+    opacity: 0.85;
+}
+
+/* ==============================
+   PRINT MEDIA QUERY
+============================== */
+@media print {
+    body {
+        background: #fff;
+        padding: 0;
+    }
+    .btn-wrap {
+        display: none !important;
+    }
+    .nota-wrapper {
+        box-shadow: none;
+        width: 72mm;
+        padding: 2mm;
+    }
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+}

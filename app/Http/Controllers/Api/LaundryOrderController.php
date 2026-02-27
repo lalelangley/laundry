@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\DB;
 
 class LaundryOrderController extends Controller
 {
-    // ======================
-    // GET DATA UNTUK DROPDOWN
-    // ======================
     public function getOptions()
     {
         return response()->json([
@@ -28,9 +25,6 @@ class LaundryOrderController extends Controller
         ]);
     }
 
-    // ======================
-    // CREATE ORDER (ONLINE)
-    // ======================
     public function createOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -59,9 +53,6 @@ class LaundryOrderController extends Controller
 
             $alamatKirim = $request->alamat_kirim ?: $pelanggan->alamat;
 
-            // ======================
-            // TRANSAKSI (HEADER)
-            // ======================
             $transaksi = Transaksi::create([
                 'id_pelanggan'     => $pelanggan->id_pelanggan,
                 'nama_pelanggan'   => $pelanggan->nama_pelanggan,
@@ -78,9 +69,6 @@ class LaundryOrderController extends Controller
                 'keterangan'       => $request->keterangan,
             ]);
 
-            // ======================
-            // DETAIL TRANSAKSI (FIX)
-            // ======================
             if (empty($request->items)) {
                 throw new \Exception('Item detail tidak boleh kosong');
             }
@@ -92,7 +80,6 @@ class LaundryOrderController extends Controller
                     'id_jenis_layanan' => $item['id_jenis_layanan'],
                     'id_parfum'        => $item['id_parfum'],
 
-                    // online → belum ditimbang
                     'id_satuan'        => isset($item['id_satuan'])
                         ? (string) $item['id_satuan']
                         : null,
@@ -106,9 +93,6 @@ class LaundryOrderController extends Controller
                 ]);
             }
 
-            // ======================
-            // DELIVERY
-            // ======================
             Delivery::create([
                 'id_transaksi'  => $transaksi->id_transaksi,
                 'jenis'         => 'pickup',
@@ -135,101 +119,101 @@ class LaundryOrderController extends Controller
         }
     }
 
-    // ======================
-    // GET ORDER LIST
-    // ======================
     public function getOrders()
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    $orders = Transaksi::with([
-            'detail.layanan',
-            'detail.jenis',
-            'detail.parfum',
-            'delivery'
-        ])
-        ->where('id_pelanggan', $user->id_pelanggan)
-        ->orderByDesc('id_transaksi')
-        ->get();
+        $orders = Transaksi::with([
+                'detail.layanan',
+                'detail.jenis',
+                'detail.parfum',
+                'delivery'
+            ])
+            ->where('id_pelanggan', $user->id_pelanggan)
+            ->orderByDesc('id_transaksi')
+            ->get();
 
-    return response()->json([
-        'status' => true,
-        'data'   => $orders
-    ]);
-}
-
-    // ======================
-    // GET ORDER DETAIL
-    // ======================
-    public function getOrderDetail($id)
-{
-    $order = Transaksi::with([
-        'pelanggan:id_pelanggan,nama_pelanggan,no_hp',
-        'detail.layanan:id_layanan,nama_layanan',
-        'detail.jenis:id_jenis_layanan,nama_jenis',
-        'detail.parfum:id_parfum,nama_parfum',
-        'delivery',
-        'biayaTambahan' // relasi ke biaya_tambahan
-    ])
-    ->where('id_transaksi', $id)
-    ->first();
-
-    if (!$order) {
         return response()->json([
-            'status'  => false,
-            'message' => 'Order tidak ditemukan'
-        ], 404);
+            'status' => true,
+            'data'   => $orders
+        ]);
     }
 
-    // ✅ SUBTOTAL
-    $subtotal = $order->detail->sum(function ($item) {
-        return $item->harga * ($item->qty ?? 1);
-    });
+    public function getOrderDetail($id)
+    {
+        $order = Transaksi::with([
+            'pelanggan:id_pelanggan,nama_pelanggan,no_hp',
+            'detail.layanan:id_layanan,nama_layanan',
+            'detail.jenis:id_jenis_layanan,nama_jenis',
+            'detail.parfum:id_parfum,nama_parfum',
+            'delivery',
+            'biayaTambahan'
+        ])
+        ->where('id_transaksi', $id)
+        ->first();
 
-    // ✅ BIAYA TAMBAHAN (ONGKIR)
-    $biayaTambahan = $order->biayaTambahan?->nominal ?? 0;
+        if (!$order) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Order tidak ditemukan'
+            ], 404);
+        }
 
-    // ✅ TOTAL ITEM
-    $totalItem = $order->detail->sum('qty') ?: $order->detail->count();
+        $subtotal = $order->detail->sum(function ($item) {
+            return $item->harga * ($item->qty ?? 1);
+        });
 
+        $biayaTambahanList = $order->biayaTambahan->map(function ($item) {
+            return [
+                'id'      => $item->id_biaya_tambahan ?? $item->id,
+                'nama'    => $item->nama,
+                'nominal' => (int) $item->nominal,
+            ];
+        });
 
-return response()->json([
-    'status' => true,
-    'data' => [
-        'id_transaksi'     => $order->id_transaksi,
-        'tanggal'          => $order->created_at,
-        'pelanggan'        => [
-            'nama' => $order->nama_pelanggan,
-           'hp' => $order->pelanggan->no_hp ?? null
-        ],
-        'items'            => $order->detail,
-        'subtotal'         => $subtotal,
-        'biaya_tambahan'   => $biayaTambahan,
-        'diskon'           => $order->diskon ?? 0,
-        'tipe_diskon'      => $order->tipe_diskon,
-        'total_bayar'      => $order->total_bayar,
-        'total_dibayar'    => $order->total_dibayar ?? 0,
-        'sisa_pembayaran'  => ($order->total_bayar - ($order->total_dibayar ?? 0)),
-        'status_bayar'     => $order->status_bayar,
-        'delivery'         => $order->delivery,
-        'total_item'       => $totalItem,
-        'tgl_estimasi'     => $order->tgl_estimasi,
-        'status_transaksi' => $order->status_transaksi,
+        $totalBiayaTambahan = $order->biayaTambahan->sum('nominal');
+        $totalItem = $order->detail->sum('qty') ?: $order->detail->count();
 
-        // ✅ INI FOTONYA
-        'foto_bukti' => $order->foto_bukti
-            ? url('storage/' . $order->foto_bukti)
-            : null,
-    ]
-]);
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'id_transaksi'     => $order->id_transaksi,
+                'tanggal'          => $order->created_at,
 
-}
+                'pelanggan' => [
+                    'nama' => $order->nama_pelanggan,
+                    'hp'   => $order->pelanggan->no_hp ?? null
+                ],
 
+                'items' => $order->detail,
 
-    // ======================
-    // GET INVOICE (ORDER SUDAH ADA HARGA)
-    // ======================
-   public function getInvoice($id)
+                'subtotal' => $subtotal,
+
+                'biaya_tambahan' => $biayaTambahanList,
+                'total_biaya_tambahan' => $totalBiayaTambahan,
+
+                'diskon'      => $order->diskon ?? 0,
+                'tipe_diskon' => $order->tipe_diskon,
+
+                'total_bayar'     => $order->total_bayar,
+                'total_dibayar'   => $order->total_dibayar ?? 0,
+                'sisa_pembayaran' => ($order->total_bayar - ($order->total_dibayar ?? 0)),
+                'id_metode_bayar' => $order->id_metode_bayar, 
+                'status_bayar'     => $order->status_bayar,
+                'status_transaksi'=> $order->status_transaksi,
+
+                'delivery'   => $order->delivery,
+                'total_item' => $totalItem,
+                'tgl_estimasi' => $order->tgl_estimasi,
+
+                'foto_bukti' => $order->foto_bukti
+                    ? url('storage/' . $order->foto_bukti)
+                    : null,
+            ]
+        ]);
+    }
+
+    public function getInvoice($id)
     {
         $order = Transaksi::with([
             'pelanggan:id_pelanggan,nama_pelanggan,no_hp',
@@ -250,16 +234,20 @@ return response()->json([
             ], 404);
         }
 
-        // ================= SUBTOTAL =================
         $subtotal = $order->detail->sum(fn ($d) =>
             $d->harga * ($d->qty ?? 1)
         );
 
-        // ================= BIAYA TAMBAHAN (FIX UTAMA) =================
-       $biayaTambahan = $order->biayaTambahan->nominal ?? 0;
+        $biayaTambahanList = $order->biayaTambahan->map(function ($item) {
+            return [
+                'id'      => $item->id_biaya_tambahan ?? $item->id,
+                'nama'    => $item->nama,
+                'nominal' => (int) $item->nominal,
+            ];
+        });
 
+        $totalBiayaTambahan = $order->biayaTambahan->sum('nominal');
 
-        // ================= DISKON =================
         $nominalDiskon = 0;
         if ($order->tipe_diskon === 'percent') {
             $nominalDiskon = ($subtotal * $order->diskon) / 100;
@@ -267,47 +255,50 @@ return response()->json([
             $nominalDiskon = $order->diskon;
         }
 
-        // ================= TOTAL =================
-        $totalBayar = max(0, ($subtotal + $biayaTambahan) - $nominalDiskon);
-        $totalDibayar = $order->dp ?? 0;
+        $totalBayar = max(
+            0,
+            ($subtotal + $totalBiayaTambahan) - $nominalDiskon
+        );
+
         $totalItem = $order->detail->sum('qty') ?: $order->detail->count();
 
-
         return response()->json([
-    'status' => true,
-    'data' => [
-        'id_transaksi' => $order->id_transaksi,
-        'tanggal' => $order->created_at,
-        'pelanggan' => [
-            'nama' => $order->nama_pelanggan,
-            'hp'   => $order->pelanggan->no_hp ?? null
-        ],
-        'items' => $order->detail,
-        'subtotal' => $subtotal,
-        'biaya_tambahan' => $biayaTambahan,
-        'diskon' => $order->diskon ?? 0,
-        'tipe_diskon' => $order->tipe_diskon,
-        'total_bayar' => $order->total_bayar,
-        'total_dibayar' => $order->total_dibayar ?? 0,
-        'sisa_pembayaran' => ($order->total_bayar - ($order->total_dibayar ?? 0)),
-        'status_bayar' => $order->status_bayar,
-        'delivery' => $order->delivery,
-        'total_item' => $totalItem,
-        'tgl_estimasi' => $order->tgl_estimasi,
+            'status' => true,
+            'data' => [
+                'id_transaksi' => $order->id_transaksi,
+                'tanggal' => $order->created_at,
 
-        // ✅ INI YANG PENTING
-        'foto_bukti' => $order->foto_bukti
-            ? url('storage/' . $order->foto_bukti)
-            : null,
-    ]
-]);
+                'pelanggan' => [
+                    'nama' => $order->nama_pelanggan,
+                    'hp'   => $order->pelanggan->no_hp ?? null
+                ],
+
+                'items' => $order->detail,
+
+                'subtotal' => $subtotal,
+                'biaya_tambahan' => $biayaTambahanList,
+                'total_biaya_tambahan' => $totalBiayaTambahan,
+                'id_metode_bayar' => $order->id_metode_bayar,
+
+                'diskon' => $order->diskon ?? 0,
+                'tipe_diskon' => $order->tipe_diskon,
+
+                'total_bayar' => $totalBayar,
+                'total_dibayar' => $order->total_dibayar ?? 0,
+                'sisa_pembayaran' => $totalBayar - ($order->total_dibayar ?? 0),
+
+                'status_bayar' => $order->status_bayar,
+                'delivery' => $order->delivery,
+                'total_item' => $totalItem,
+                'tgl_estimasi' => $order->tgl_estimasi,
+
+                'foto_bukti' => $order->foto_bukti
+                    ? url('storage/' . $order->foto_bukti)
+                    : null,
+            ]
+        ]);
     }
 
-
-
-    // ======================
-    // GET LIST INVOICE (SUDAH ADA HARGA)
-    // ======================
     public function getInvoiceList(Request $request)
     {
         $idPelanggan = $request->query('id_pelanggan');
@@ -322,12 +313,12 @@ return response()->json([
         $invoices = Transaksi::select(
                 'id_transaksi',
                 'tgl_transaksi',
+                'total_harga',
                 'total_bayar',
                 'status_bayar'
             )
             ->where('id_pelanggan', $idPelanggan)
-            ->whereNotNull('total_harga')
-            ->where('total_harga', '>', 0)
+            ->where('total_harga', '>', 0) 
             ->orderByDesc('id_transaksi')
             ->get()
             ->map(function ($item) {
@@ -335,8 +326,12 @@ return response()->json([
                     'id_transaksi' => $item->id_transaksi,
                     'invoice_no'   => 'INV-' . str_pad($item->id_transaksi, 6, '0', STR_PAD_LEFT),
                     'tanggal'      => $item->tgl_transaksi,
-                    'total_bayar'  => $item->total_bayar,
-                    'status_bayar' => $item->status_bayar,
+
+                    'total'        => $item->total_harga,
+
+                    'dibayar'      => $item->total_bayar,
+                    'sisa'         => max(0, $item->total_harga - ($item->total_bayar ?? 0)),
+                    'status_bayar' => $item->status_bayar ?? 'belum_bayar',
                 ];
             });
 
@@ -346,80 +341,67 @@ return response()->json([
         ]);
     }
 
-    // ✅ PERBAIKAN METHOD pilihMetodePengambilan
-// ✅ FINAL FIX - Delivery record hanya untuk 'antar', pickup tidak buat record
+    public function pilihMetodePengambilan(Request $request, $id_transaksi)
+    {
+        $request->validate([
+            'jenis_transaksi' => 'required|in:pickup,antar',
+            'alamat_tujuan'   => 'required_if:jenis_transaksi,antar|string|max:255',
+        ]);
 
-public function pilihMetodePengambilan(Request $request, $id_transaksi)
-{
-    // ================= VALIDASI =================
-    $request->validate([
-        'jenis_transaksi' => 'required|in:pickup,antar',
-        'alamat_tujuan'   => 'required_if:jenis_transaksi,antar|string|max:255',
-    ]);
+        $transaksi = Transaksi::where('id_transaksi', $id_transaksi)
+            ->where('id_pelanggan', auth()->user()->id_pelanggan)
+            ->where('status_transaksi', 'selesai_dicuci')
+            ->first();
 
-    // ================= AMBIL TRANSAKSI =================
-    $transaksi = Transaksi::where('id_transaksi', $id_transaksi)
-        ->where('id_pelanggan', auth()->user()->id_pelanggan)
-        ->where('status_transaksi', 'selesai_dicuci')
-        ->first();
+        if (!$transaksi) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Transaksi tidak ditemukan atau belum selesai dicuci',
+            ], 404);
+        }
 
-    if (!$transaksi) {
-        return response()->json([
-            'status'  => false,
-            'message' => 'Transaksi tidak ditemukan atau belum selesai dicuci',
-        ], 404);
-    }
+        if ($request->jenis_transaksi === 'pickup') {
+            $transaksi->update([
+                'status_transaksi' => 'siap_di_ambil',
+            ]);
 
-    // ================= TENTUKAN STATUS =================
-    if ($request->jenis_transaksi === 'pickup') {
+            return response()->json([
+                'status'  => true,
+                'message' => 'Metode ambil sendiri berhasil dipilih',
+                'data'    => [
+                    'id_transaksi'      => $transaksi->id_transaksi,
+                    'status_transaksi'  => 'siap_di_ambil',
+                    'metode'            => 'pickup',
+                    'delivery'          => null,
+                ]
+            ], 200);
+        }
 
-        // ---------- PICKUP ----------
         $transaksi->update([
-            'status_transaksi' => 'siap_di_ambil',
+            'status_transaksi' => 'siap_di_antar',
+        ]);
+
+        $delivery = Delivery::create([
+            'id_transaksi'  => $transaksi->id_transaksi,
+            'jenis'         => 'antar',
+            'alamat_tujuan' => $request->alamat_tujuan,
+            'status'        => 'pending',
+            'waktu'         => null, 
         ]);
 
         return response()->json([
             'status'  => true,
-            'message' => 'Metode ambil sendiri berhasil dipilih',
+            'message' => 'Metode antar berhasil dipilih',
             'data'    => [
-                'id_transaksi'      => $transaksi->id_transaksi,
-                'status_transaksi'  => 'siap_di_ambil',
-                'metode'            => 'pickup',
-                'delivery'          => null,
+                'id_transaksi'     => $transaksi->id_transaksi,
+                'status_transaksi' => 'siap_di_antar',
+                'metode'           => 'antar',
+                'delivery'         => [
+                    'id_delivery'   => $delivery->id,
+                    'alamat_tujuan' => $delivery->alamat_tujuan,
+                    'status'        => $delivery->status,
+                ],
             ]
         ], 200);
     }
-
-    // ================= ANTAR (DELIVERY) =================
-
-    // Update status transaksi
-    $transaksi->update([
-        'status_transaksi' => 'siap_di_antar',
-    ]);
-
-    // BUAT DELIVERY BARU (TANPA UPDATE / DELETE DATA LAMA)
-    $delivery = Delivery::create([
-        'id_transaksi'  => $transaksi->id_transaksi,
-        'jenis'         => 'antar',
-        'alamat_tujuan' => $request->alamat_tujuan,
-        'status'        => 'pending',
-        'waktu'         => null, // diisi admin saat assign driver
-    ]);
-
-    return response()->json([
-        'status'  => true,
-        'message' => 'Metode antar berhasil dipilih',
-        'data'    => [
-            'id_transaksi'     => $transaksi->id_transaksi,
-            'status_transaksi' => 'siap_di_antar',
-            'metode'           => 'antar',
-            'delivery'         => [
-                'id_delivery'   => $delivery->id,
-                'alamat_tujuan' => $delivery->alamat_tujuan,
-                'status'        => $delivery->status,
-            ],
-        ]
-    ], 200);
-}
-
 }
