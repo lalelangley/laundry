@@ -95,7 +95,6 @@ class TransaksiExport implements FromCollection, WithHeadings, WithMapping, With
             'Total Bayar',
             'DP',
             'Diskon',
-            'Tipe Diskon',
             'Keterangan'
         ];
     }
@@ -119,7 +118,6 @@ class TransaksiExport implements FromCollection, WithHeadings, WithMapping, With
             $transaksi->total_bayar ?? 0,
             $transaksi->dp ?? 0,
             $transaksi->diskon ?? 0,
-            $transaksi->tipe_diskon === 'percent' ? 'Persen' : 'Nominal',
             $transaksi->keterangan ?? '-'
         ];
     }
