@@ -1240,4 +1240,10 @@ class RiwayatController extends Controller
         }
         return ['valid' => true];
     }
+
+public function notaHtml($id)
+{
+    $data = $this->getDataCetakNota($id);
+    return view('riwayat.cetaknota', $data);
+}
 }

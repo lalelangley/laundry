@@ -110,6 +110,8 @@ class PengaturanController extends Controller
     // =============================
     public function update(Request $request)
     {
+        \Log::info('📥 UPDATE REQUEST:', $request->all());
+    
         if (!$this->isSuperAdmin()) {
             requirePermission('pengaturan', 'edit');
         }

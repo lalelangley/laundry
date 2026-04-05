@@ -124,7 +124,15 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
             return redirect()->route('kasir.dashboard');
         })->name('reset');
+
+        // ✅ TAMBAH INI (ganti route jenis.tambah yang lama)
+        Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])
+            ->middleware('permission:add')
+            ->name('jenis.session.form');
     });
+
+    Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->name('jenis.session.form');
+    Route::post('/{from}/jenis/add-edit', [LayananController::class, 'addJenisEdit'])->name('jenis.add.edit');
 
     // ================= PELANGGAN (With Permission) =================
     Route::prefix('pelanggan')->name('kasir.pelanggan.')->group(function () {
@@ -154,80 +162,27 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
     });
 
     // ================= LAYANAN (With Permission) =================
-    Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
-        Route::get('/', [LayananController::class, 'index'])
-            ->middleware('permission:view')
-            ->name('index');
+Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
+    Route::get('/', [LayananController::class, 'index'])->middleware('permission:view')->name('index');
+    Route::get('/create', [LayananController::class, 'createKasir'])->middleware('permission:add')->name('create');
+    Route::post('/store', [LayananController::class, 'storeKasir'])->middleware('permission:add')->name('store');
+    Route::get('/{id}/edit', [LayananController::class, 'edit'])->middleware('permission:edit')->whereNumber('id')->name('edit');
+    Route::put('/{id}', [LayananController::class, 'update'])->middleware('permission:edit')->whereNumber('id')->name('update');
+    Route::delete('/{id}', [LayananController::class, 'destroyKasir'])->middleware('permission:delete')->whereNumber('id')->name('destroy');
+    Route::get('/{id}/duplicate', [LayananController::class, 'duplicateKasir'])->middleware('permission:add')->whereNumber('id')->name('duplicate');
 
-        Route::get('/create', [LayananController::class, 'createKasir'])
-            ->middleware('permission:add')
-            ->name('create');
+    // JENIS LAYANAN
+    Route::get('{from}/jenis/add', [LayananController::class, 'sessionCreateJenisKasir'])->middleware('permission:add')->name('jenis.session.create')->whereNumber('from');
+    Route::post('{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenisKasir'])->middleware('permission:add')->name('jenis.session.store');
+    Route::get('{id_layanan}/jenis/create', [LayananController::class, 'createJenisKasir'])->middleware('permission:add')->name('jenis.create')->whereNumber('id_layanan');
+    Route::post('{id_layanan}/jenis/store', [LayananController::class, 'storeJenisKasir'])->middleware('permission:add')->name('jenis.store')->whereNumber('id_layanan');
+    Route::get('jenis/{id}/edit', [LayananController::class, 'editJenisKasir'])->middleware('permission:edit')->name('jenis.edit');
+    Route::put('jenis/{id}', [LayananController::class, 'updateJenisKasir'])->middleware('permission:edit')->name('jenis.update');
+    Route::post('{from}/jenis/add-edit-kasir', [LayananController::class, 'addJenisEdit'])->middleware('permission:edit')->name('jenis.add.edit');
 
-        Route::post('/store', [LayananController::class, 'storeKasir'])
-            ->middleware('permission:add')
-            ->name('store');
-
-        Route::get('/{id}/edit', [LayananController::class, 'edit'])
-            ->middleware('permission:edit')
-            ->whereNumber('id')
-            ->name('edit');
-
-        Route::put('/{id}', [LayananController::class, 'update'])
-            ->middleware('permission:edit')
-            ->whereNumber('id')
-            ->name('update');
-
-        Route::delete('/{id}', [LayananController::class, 'destroyKasir'])
-            ->middleware('permission:delete')
-            ->whereNumber('id')
-            ->name('destroy');
-
-        Route::get('/{id}/duplicate', [LayananController::class, 'duplicateKasir'])
-            ->middleware('permission:add')
-            ->whereNumber('id')
-            ->name('duplicate');
-
-        // ================= JENIS LAYANAN (With Permission) =================
-        Route::get('{from}/jenis/add', [LayananController::class, 'sessionCreateJenisKasir'])
-            ->middleware('permission:add')
-            ->name('jenis.session.create')
-            ->whereNumber('from');
-
-        Route::post('{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenisKasir'])
-            ->middleware('permission:add')
-            ->name('jenis.session.store');
-
-        Route::get('{id_layanan}/jenis/create', [LayananController::class, 'createJenisKasir'])
-            ->middleware('permission:add')
-            ->name('jenis.create')
-            ->whereNumber('id_layanan');
-
-        Route::post('{id_layanan}/jenis/store', [LayananController::class, 'storeJenisKasir'])
-            ->middleware('permission:add')
-            ->name('jenis.store')
-            ->whereNumber('id_layanan');
-
-        Route::get('jenis/{id}/edit', [LayananController::class, 'editJenisKasir'])
-            ->middleware('permission:edit')
-            ->name('jenis.edit');
-
-        Route::put('jenis/{id}', [LayananController::class, 'updateJenisKasir'])
-            ->middleware('permission:edit')
-            ->name('jenis.update');
-
-        Route::post('{from}/jenis/add-edit-kasir', [LayananController::class, 'addJenisEdit'])
-            ->middleware('permission:edit')
-            ->name('jenis.add.edit');
-
-        Route::get('/{layanan}/jenis/tambah', function ($layanan) {
-            $satuan = Satuan::all();
-            return view('kasir.layanan.tambah_jenis_layanan_create', [
-                'from'       => $layanan,
-                'id_layanan' => $layanan,
-                'satuan'     => $satuan,
-            ]);
-        })->middleware('permission:add')->name('jenis.tambah');
-    });
+    // ✅ GANTI jenis.tambah DENGAN INI
+    Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->middleware('permission:add')->name('jenis.session.form');
+});
 
     // ================= PESANAN ONLINE (KASIR) =================
     Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function () {
@@ -378,6 +333,10 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         Route::delete('/detail/{id}', [RiwayatController::class, 'deleteDetail'])
             ->middleware('permission:delete')
             ->name('deleteDetail');
+
+        Route::get('/{id}/nota-html', [RiwayatController::class, 'notaHtml'])
+            ->middleware('permission:view')
+            ->name('nota-html');
 
         // ✅ FCM Notification & Assign Driver
         Route::post('/{id}/send-fcm-notification', [PesananOnlineController::class, 'sendFcmNotificationKasir'])
@@ -714,27 +673,35 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
             session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
             return redirect()->route('admin.dashboard');
         })->name('reset');
+
+        // ✅ TAMBAH INI
+        Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->name('jenis.session.form');
+        Route::post('/{from}/jenis/add-edit', [LayananController::class, 'addJenisEdit'])->name('jenis.add.edit');
     });
 
-    // ================= LAYANAN =================
-    Route::prefix('layanan')
-        ->name('layanan.')
-        ->group(function () {
-            Route::get('/', [LayananController::class, 'index'])->name('index');
-            Route::get('/create', [LayananController::class, 'create'])->name('create');
-            Route::post('/store', [LayananController::class, 'store'])->name('store');
-            Route::get('/{id}/edit', [LayananController::class, 'edit'])->name('edit');
-            Route::put('/{id}', [LayananController::class, 'update'])->name('update');
-            Route::delete('/{id}', [LayananController::class, 'destroy'])->name('destroy');
-            Route::get('/{id}/duplicate', [LayananController::class, 'duplicate'])->name('duplicate');
+   // ================= LAYANAN =================
+Route::prefix('layanan')
+    ->name('layanan.')
+    ->group(function () {
+        Route::get('/', [LayananController::class, 'index'])->name('index');
+        Route::get('/create', [LayananController::class, 'create'])->name('create');
+        Route::post('/store', [LayananController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [LayananController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [LayananController::class, 'update'])->name('update');
+        Route::delete('/{id}', [LayananController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/duplicate', [LayananController::class, 'duplicate'])->name('duplicate');
 
-            // JENIS LAYANAN
-            Route::get('/{id_layanan}/jenis/create', [LayananController::class, 'createJenis'])->name('jenis.create');
-            Route::post('/{id_layanan}/jenis/store', [LayananController::class, 'storeJenis'])->name('jenis.store');
-            Route::get('/jenis/{id_jenis}/edit', [LayananController::class, 'editJenis'])->name('jenis.edit');
-            Route::put('/jenis/{id_jenis}', [LayananController::class, 'updateJenis'])->name('jenis.update');
-            Route::delete('/jenis/{id_jenis}', [LayananController::class, 'destroyJenis'])->name('jenis.destroy');
-        });
+        // JENIS LAYANAN
+        Route::get('/{id_layanan}/jenis/create', [LayananController::class, 'createJenis'])->name('jenis.create');
+        Route::post('/{id_layanan}/jenis/store', [LayananController::class, 'storeJenis'])->name('jenis.store');
+        Route::get('/jenis/{id_jenis}/edit', [LayananController::class, 'editJenis'])->name('jenis.edit');
+        Route::put('/jenis/{id_jenis}', [LayananController::class, 'updateJenis'])->name('jenis.update');
+        Route::delete('/jenis/{id_jenis}', [LayananController::class, 'destroyJenis'])->name('jenis.destroy');
+
+        // ✅ TAMBAH JENIS DARI EDIT
+        Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->name('jenis.session.form');
+        Route::post('/{from}/jenis/add-edit', [LayananController::class, 'addJenisEdit'])->name('jenis.add.edit');
+    });
 
     // ================= PESANAN ONLINE (With Permission) =================
     Route::prefix('pesanan-online')->name('pesanan.online.')->group(function () {
@@ -914,6 +881,10 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
         Route::post('/{id}/assign-driver', [PesananOnlineController::class, 'assignDriver'])
             ->middleware('permission:edit')
             ->name('assign-driver');
+
+        // Admin
+        Route::get('/{id}/nota-html', [RiwayatController::class, 'notaHtml'])
+            ->whereNumber('id')->name('nota-html');
     });
 
     // ================= SATUAN (With Permission) =================
@@ -1231,72 +1202,28 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         })->name('reset');
     });
 
-    // ================= LAYANAN =================
+   // ================= LAYANAN =================
     Route::prefix('layanan')->name('admin2.layanan.')->group(function () {
-        Route::get('/', [LayananController::class, 'indexAdmin2'])
-            ->name('index');
+        Route::get('/', [LayananController::class, 'indexAdmin2'])->name('index');
+        Route::get('/create', [LayananController::class, 'createAdmin2'])->name('create');
+        Route::post('/store', [LayananController::class, 'storeAdmin2'])->name('store');
+        Route::get('/{id}/edit', [LayananController::class, 'editAdmin2'])->whereNumber('id')->name('edit');
+        Route::put('/{id}', [LayananController::class, 'updateAdmin2'])->whereNumber('id')->name('update');
+        Route::delete('/{id}', [LayananController::class, 'destroyAdmin2'])->whereNumber('id')->name('destroy');
+        Route::get('/{id}/duplicate', [LayananController::class, 'duplicateAdmin2'])->whereNumber('id')->name('duplicate');
 
-        Route::get('/create', [LayananController::class, 'createAdmin2'])
-            ->name('create');
+        // JENIS LAYANAN
+        Route::get('{from}/jenis/add', [LayananController::class, 'sessionCreateJenisAdmin2'])->name('jenis.session.create');
+        Route::post('{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenisAdmin2'])->name('jenis.session.store');
+        Route::get('{id_layanan}/jenis/create', [LayananController::class, 'createJenisAdmin2'])->name('jenis.create');
+        Route::post('{id_layanan}/jenis/store', [LayananController::class, 'storeJenisAdmin2'])->name('jenis.store');
+        Route::get('jenis/{id}/edit', [LayananController::class, 'editJenisAdmin2'])->whereNumber('id')->name('jenis.edit');
+        Route::put('jenis/{id}', [LayananController::class, 'updateJenisAdmin2'])->whereNumber('id')->name('jenis.update');
+        Route::delete('jenis/{id}', [LayananController::class, 'destroyJenisAdmin2'])->whereNumber('id')->name('jenis.destroy');
+        Route::post('{from}/jenis/add-edit', [LayananController::class, 'addJenisEditAdmin2'])->name('jenis.add.edit');
 
-        Route::post('/store', [LayananController::class, 'storeAdmin2'])
-            ->name('store');
-
-        Route::get('/{id}/edit', [LayananController::class, 'editAdmin2'])
-            ->whereNumber('id')
-            ->name('edit');
-
-        Route::put('/{id}', [LayananController::class, 'updateAdmin2'])
-            ->whereNumber('id')
-            ->name('update');
-
-        Route::delete('/{id}', [LayananController::class, 'destroyAdmin2'])
-            ->whereNumber('id')
-            ->name('destroy');
-
-        Route::get('/{id}/duplicate', [LayananController::class, 'duplicateAdmin2'])
-            ->whereNumber('id')
-            ->name('duplicate');
-
-        // ---- JENIS LAYANAN ----
-        Route::get('{from}/jenis/add', [LayananController::class, 'sessionCreateJenisAdmin2'])
-            ->name('jenis.session.create');
-
-        Route::post('{from}/jenis/store-session', [LayananController::class, 'sessionStoreJenisAdmin2'])
-            ->name('jenis.session.store');
-
-        Route::get('{id_layanan}/jenis/create', [LayananController::class, 'createJenisAdmin2'])
-            ->name('jenis.create');
-
-        Route::post('{id_layanan}/jenis/store', [LayananController::class, 'storeJenisAdmin2'])
-            ->name('jenis.store');
-
-        Route::get('jenis/{id}/edit', [LayananController::class, 'editJenisAdmin2'])
-            ->whereNumber('id')
-            ->name('jenis.edit');
-
-        Route::put('jenis/{id}', [LayananController::class, 'updateJenisAdmin2'])
-            ->whereNumber('id')
-            ->name('jenis.update');
-
-        Route::delete('jenis/{id}', [LayananController::class, 'destroyJenisAdmin2'])
-            ->whereNumber('id')
-            ->name('jenis.destroy');
-
-        Route::post('{from}/jenis/add-edit', [LayananController::class, 'addJenisEditAdmin2'])
-            ->name('jenis.add.edit');
-
-        Route::get('/{layanan}/jenis/tambah', function ($layanan) {
-            $satuan = \App\Models\Satuan::all();
-            $parfum = \App\Models\Parfum::all();
-            
-            return view('admin2.layanan.tambah_jenis_layanan_edit', [
-                'from'       => $layanan,
-                'id_layanan' => $layanan,
-                'satuan'     => $satuan,
-                'parfum'     => $parfum,
-            ]);
-        })->name('jenis.tambah');
+        // ✅ TAMBAH JENIS DARI EDIT
+        Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->name('jenis.session.form');
     });
 
     // ================= PARFUM =================
@@ -1446,6 +1373,9 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         Route::get('/{id}/detail', [RiwayatController::class, 'detailAdmin2'])
             ->whereNumber('id')
             ->name('detail');
+
+        Route::get('/{id}/nota-html', [RiwayatController::class, 'notaHtml'])
+        ->whereNumber('id')->name('nota-html');
         
         Route::get('/{id}/show', [RiwayatController::class, 'showAdmin2'])
             ->whereNumber('id')

@@ -17,8 +17,14 @@
         <label class="block font-bold mb-2 text-lg">Nama Parfum</label>
 
         <input type="text" name="nama_parfum"
-            class="w-full p-4 rounded-2xl bg-gray-200 text-lg outline-none"
-            placeholder="">
+            class="w-full p-4 rounded-2xl bg-gray-200 text-lg outline-none @error('nama_parfum') border-2 border-red-500 @enderror"
+            placeholder=""
+            value="{{ old('nama_parfum') }}">
+
+        {{-- ERROR MESSAGE --}}
+        @error('nama_parfum')
+            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+        @enderror
 
         {{-- BUTTON --}}
         <button type="submit"

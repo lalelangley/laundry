@@ -18,9 +18,7 @@
     $harusPelunasan = in_array($transaksi->status_transaksi, ['siap_di_ambil', 'selesai']);
 @endphp
 
-{{-- CSS --}}
 <link rel="stylesheet" href="{{ asset('css/riwayat-detail.css') }}">
-
 <div class="min-h-screen bg-gray-50">
 
     {{-- HEADER --}}

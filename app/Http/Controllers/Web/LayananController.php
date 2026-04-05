@@ -946,134 +946,136 @@ class LayananController extends Controller
     // =========================
     // UPDATE JENIS - ADMIN2
     // =========================
-    public function updateJenisAdmin2(Request $request, $id)
-    {
-        // ✅ CHECK PERMISSION EDIT
-        requirePermission('layanan', 'edit');
-        
-        $jenis = JenisLayanan::findOrFail($id);
-        
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan' => 'required|exists:satuan,id_satuan',
-            'harga' => 'required|numeric',
-            'lama' => 'required|numeric',
-            'lama_satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
-        ]);
+   public function updateJenisAdmin2(Request $request, $id)
+{
+    requirePermission('layanan', 'edit');
+    
+    $jenis = JenisLayanan::findOrFail($id);
+    
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|exists:satuan,id_satuan',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string|max:50',
+        'keterangan' => 'nullable|string',
+        'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        if ($request->hasFile('gambar')) {
-            if ($jenis->gambar && Storage::disk('public')->exists($jenis->gambar)) {
-                Storage::disk('public')->delete($jenis->gambar);
-            }
+    $gambarPath = $jenis->gambar; // ✅ default gambar lama
 
-            $file = $request->file('gambar');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('jenis', $filename, 'public');
-            $jenis->gambar = $path;
+    if ($request->hasFile('gambar')) {
+        if ($jenis->gambar && Storage::disk('public')->exists($jenis->gambar)) {
+            Storage::disk('public')->delete($jenis->gambar);
         }
-
-        $jenis->update([
-            'nama_jenis' => $request->nama_jenis,
-            'id_satuan' => $request->id_satuan,
-            'harga' => $request->harga,
-            'lama' => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan' => $request->keterangan,
-        ]); 
-
-        return redirect()->route('admin2.layanan.edit', $request->from ?? $jenis->id_layanan)
-            ->with('success', 'Jenis layanan berhasil diperbarui.');
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $gambarPath = $file->storeAs('jenis', $filename, 'public');
     }
+
+    $jenis->update([
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+        'gambar' => $gambarPath, // ✅ fix
+    ]);
+
+    return redirect()->route('admin2.layanan.edit', $request->from ?? $jenis->id_layanan)
+        ->with('success', 'Jenis layanan berhasil diperbarui.');
+}
 
      // =========================
-    // UPDATE JENIS - ADMIN2
+    // UPDATE JENIS - kasir
     // =========================
-    public function updateJenisKasir(Request $request, $id)
-    {
-        // ✅ CHECK PERMISSION EDIT
-        requirePermission('layanan', 'edit');
-        
-        $jenis = JenisLayanan::findOrFail($id);
-        
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan' => 'required|exists:satuan,id_satuan',
-            'harga' => 'required|numeric',
-            'lama' => 'required|numeric',
-            'lama_satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
-        ]);
+   public function updateJenisKasir(Request $request, $id)
+{
+    requirePermission('layanan', 'edit');
+    
+    $jenis = JenisLayanan::findOrFail($id);
+    
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|exists:satuan,id_satuan',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string|max:50',
+        'keterangan' => 'nullable|string',
+        'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        if ($request->hasFile('gambar')) {
-            if ($jenis->gambar && Storage::disk('public')->exists($jenis->gambar)) {
-                Storage::disk('public')->delete($jenis->gambar);
-            }
+    $gambarPath = $jenis->gambar; // ✅ default gambar lama
 
-            $file = $request->file('gambar');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('jenis', $filename, 'public');
-            $jenis->gambar = $path;
+    if ($request->hasFile('gambar')) {
+        if ($jenis->gambar && Storage::disk('public')->exists($jenis->gambar)) {
+            Storage::disk('public')->delete($jenis->gambar);
         }
-
-        $jenis->update([
-            'nama_jenis' => $request->nama_jenis,
-            'id_satuan' => $request->id_satuan,
-            'harga' => $request->harga,
-            'lama' => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan' => $request->keterangan,
-        ]); 
-
-        return redirect()->route('kasir.layanan.edit', $request->from ?? $jenis->id_layanan)
-            ->with('success', 'Jenis layanan berhasil diperbarui.');
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $gambarPath = $file->storeAs('jenis', $filename, 'public');
     }
+
+    $jenis->update([
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+        'gambar' => $gambarPath, // ✅ fix
+    ]);
+
+    return redirect()->route('kasir.layanan.edit', $request->from ?? $jenis->id_layanan)
+        ->with('success', 'Jenis layanan berhasil diperbarui.');
+}
 
     // =========================
     // UPDATE JENIS - ADMIN
     // =========================
     public function updateJenis(Request $request, $id)
-    {
-        // ✅ CHECK PERMISSION EDIT
-        requirePermission('layanan', 'edit');
-        
-        $jenis = JenisLayanan::findOrFail($id);
+{
+    requirePermission('layanan', 'edit');
+    
+    $jenis = JenisLayanan::findOrFail($id);
 
-        $request->validate([
-            'nama_jenis' => 'required|string|max:255',
-            'id_satuan' => 'required|exists:satuan,id_satuan',
-            'harga' => 'required|numeric',
-            'lama' => 'required|numeric',
-            'lama_satuan' => 'required|string|max:50',
-            'keterangan' => 'nullable|string',
-            'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
-        ]);
+    $request->validate([
+        'nama_jenis' => 'required|string|max:255',
+        'id_satuan' => 'required|exists:satuan,id_satuan',
+        'harga' => 'required|numeric',
+        'lama' => 'required|numeric',
+        'lama_satuan' => 'required|string|max:50',
+        'keterangan' => 'nullable|string',
+        'gambar' => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+    ]);
 
-        if ($request->hasFile('gambar')) {
-            if ($jenis->gambar && \Storage::disk('public')->exists($jenis->gambar)) {
-                \Storage::disk('public')->delete($jenis->gambar);
-            }
+    $gambarPath = $jenis->gambar; // ✅ default gambar lama
 
-            $file = $request->file('gambar');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $path = $file->storeAs('jenis', $filename, 'public');
-            $jenis->gambar = $path;
+    if ($request->hasFile('gambar')) {
+        // Hapus gambar lama
+        if ($jenis->gambar && \Storage::disk('public')->exists($jenis->gambar)) {
+            \Storage::disk('public')->delete($jenis->gambar);
         }
 
-        $jenis->update([
-            'nama_jenis' => $request->nama_jenis,
-            'id_satuan' => $request->id_satuan,
-            'harga' => $request->harga,
-            'lama' => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan' => $request->keterangan,
-        ]);
-
-        return redirect()->route('layanan.edit', $request->from ?? $jenis->id_layanan)
-            ->with('success', 'Jenis layanan berhasil diperbarui.');
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $gambarPath = $file->storeAs('jenis', $filename, 'public'); // ✅ simpan path baru
     }
+
+    $jenis->update([
+        'nama_jenis' => $request->nama_jenis,
+        'id_satuan' => $request->id_satuan,
+        'harga' => $request->harga,
+        'lama' => $request->lama,
+        'lama_satuan' => $request->lama_satuan,
+        'keterangan' => $request->keterangan,
+        'gambar' => $gambarPath, // ✅ selalu masuk ke update()
+    ]);
+
+    return redirect()->route('layanan.edit', $request->from ?? $jenis->id_layanan)
+        ->with('success', 'Jenis layanan berhasil diperbarui.');
+}
 
     // =========================
     // SESSION METHODS - ADMIN

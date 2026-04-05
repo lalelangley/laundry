@@ -19,6 +19,11 @@
         <input type="text" name="nama_satuan"
             value="{{ $satuan->nama_satuan }}"
             class="w-full p-4 rounded-2xl bg-gray-200 text-lg outline-none">
+            
+         {{-- ERROR MESSAGE --}}
+        @error('nama_satuan')
+            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+        @enderror
 
         <!-- BUTTON -->
         <button type="submit"

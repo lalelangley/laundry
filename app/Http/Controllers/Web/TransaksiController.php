@@ -327,7 +327,6 @@ public function bayar(Request $request)
         }
 
         $diskon       = floatval($request->input('diskon', 0));
-        $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
         $dp           = floatval($request->input('dp', 0));
         $langsungBayar= intval($request->input('langsung_bayar', 0));
         $keterangan   = $request->input('keterangan', '-');
@@ -336,6 +335,7 @@ public function bayar(Request $request)
 
         $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
+        $tipeDiskon = $request->input('tipe_diskon', 'nominal');
         if ($tipeDiskon === 'percent') {
             $diskon = $totalAwal * ($diskon / 100);
         }
@@ -371,7 +371,6 @@ public function bayar(Request $request)
             'total_bayar'      => $totalBayar,
             'dp'               => $dp,
             'diskon'           => $diskon,
-            'tipe_diskon'      => $tipeDiskon,
             'status_bayar'     => $statusBayar,
             'status_transaksi' => 'antrian',
             'jenis_transaksi'  => 'offline',
@@ -387,20 +386,21 @@ public function bayar(Request $request)
         \Log::info('✅ Transaction created:', ['id' => $trans->id_transaksi]);
 
         foreach ($detail as $d) {
+            \Log::info('Detail item:', $d);
             $jenis = \App\Models\JenisLayanan::with('satuan')
                 ->where('id_jenis_layanan', $d['id_jenis_layanan'])
                 ->first();
 
             $idSatuan = $jenis?->satuan?->id_satuan ?? null;
 
-            $trans->detail()->create([
+            \App\Models\DetailTransaksi::create([
+                'id_transaksi'     => $trans->id_transaksi,
                 'id_layanan'       => $d['id_layanan'],
                 'id_jenis_layanan' => $d['id_jenis_layanan'],
                 'id_parfum'        => $d['id_parfum'] ?? null,
                 'harga'            => $d['harga'],
                 'qty'              => $d['qty'],
                 'id_satuan'        => $idSatuan,
-                'tipe_diskon'      => $tipeDiskon,
             ]);
         }
 
@@ -491,7 +491,6 @@ public function bayarKasir(Request $request)
         }
 
         $diskon       = floatval($request->input('diskon', 0));
-        $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
         $dp           = floatval($request->input('dp', 0));
         $langsungBayar= intval($request->input('langsung_bayar', 0));
         $keterangan   = $request->input('keterangan', '-');
@@ -500,6 +499,7 @@ public function bayarKasir(Request $request)
 
         $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
+        $tipeDiskon = $request->input('tipe_diskon', 'nominal');
         if ($tipeDiskon === 'percent') {
             $diskon = $totalAwal * ($diskon / 100);
         }
@@ -535,7 +535,6 @@ public function bayarKasir(Request $request)
             'total_bayar'      => $totalBayar,
             'dp'               => $dp,
             'diskon'           => $diskon,
-            'tipe_diskon'      => $tipeDiskon,
             'status_bayar'     => $statusBayar,
             'status_transaksi' => 'antrian',
             'jenis_transaksi'  => 'offline',
@@ -557,14 +556,14 @@ public function bayarKasir(Request $request)
 
             $idSatuan = $jenis?->satuan?->id_satuan ?? null;
 
-            $trans->detail()->create([
+            \App\Models\DetailTransaksi::create([
+                'id_transaksi'     => $trans->id_transaksi,
                 'id_layanan'       => $d['id_layanan'],
                 'id_jenis_layanan' => $d['id_jenis_layanan'],
                 'id_parfum'        => $d['id_parfum'] ?? null,
                 'harga'            => $d['harga'],
                 'qty'              => $d['qty'],
                 'id_satuan'        => $idSatuan,
-                'tipe_diskon'      => $tipeDiskon,
             ]);
         }
 
@@ -781,7 +780,6 @@ public function bayarAdmin2(Request $request)
         }
 
         $diskon       = floatval($request->input('diskon', 0));
-        $tipeDiskon   = $request->input('tipe_diskon', 'nominal');
         $dp           = floatval($request->input('dp', 0));
         $langsungBayar= intval($request->input('langsung_bayar', 0));
         $keterangan   = $request->input('keterangan', '-');
@@ -790,6 +788,7 @@ public function bayarAdmin2(Request $request)
 
         $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
+        $tipeDiskon = $request->input('tipe_diskon', 'nominal');
         if ($tipeDiskon === 'percent') {
             $diskon = $totalAwal * ($diskon / 100);
         }
@@ -825,7 +824,6 @@ public function bayarAdmin2(Request $request)
             'total_bayar'      => $totalBayar,
             'dp'               => $dp,
             'diskon'           => $diskon,
-            'tipe_diskon'      => $tipeDiskon,
             'status_bayar'     => $statusBayar,
             'status_transaksi' => 'antrian',
             'jenis_transaksi'  => 'offline',
@@ -847,14 +845,14 @@ public function bayarAdmin2(Request $request)
 
             $idSatuan = $jenis?->satuan?->id_satuan ?? null;
 
-            $trans->detail()->create([
+            \App\Models\DetailTransaksi::create([
+                'id_transaksi'     => $trans->id_transaksi,
                 'id_layanan'       => $d['id_layanan'],
                 'id_jenis_layanan' => $d['id_jenis_layanan'],
                 'id_parfum'        => $d['id_parfum'] ?? null,
                 'harga'            => $d['harga'],
                 'qty'              => $d['qty'],
                 'id_satuan'        => $idSatuan,
-                'tipe_diskon'      => $tipeDiskon,
             ]);
         }
 
@@ -1030,6 +1028,11 @@ public function confirmAdmin2()
             ]);
 
             $jenis = JenisLayanan::find($idJenis);
+            
+            \Log::info('Jenis data:', [
+                'id_jenis'   => $jenis->id_jenis_layanan,
+                'id_layanan' => $jenis->id_layanan,  // ← cek ini null atau tidak
+            ]);
             
             if (!$jenis) {
                 return response()->json([

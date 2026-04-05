@@ -6,16 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
+   public function up(): void
     {
-        Schema::create('kasir', function (Blueprint $table) {
-            $table->id('id_kasir');
-            $table->string('gambar', 255)->nullable();
-            $table->string('nama_kasir', 100)->nullable();
-            $table->string('no_hp', 20)->nullable();
-            $table->string('password', 255)->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('kasir')) {
+            Schema::create('kasir', function (Blueprint $table) {
+                $table->id('id_kasir');
+                $table->string('gambar', 255)->nullable();
+                $table->string('nama_kasir', 100)->nullable();
+                $table->string('no_hp', 20)->nullable();
+                $table->string('password', 255)->nullable();
+                $table->string('status', 20)->default('aktif'); // ✅ tambah
+                $table->timestamps();
+            });
+        } else {
+            Schema::table('kasir', function (Blueprint $table) {
+                if (!Schema::hasColumn('kasir', 'status')) {
+                    $table->string('status', 20)->default('aktif')->after('password');
+                }
+            });
+        }
     }
 
     public function down(): void

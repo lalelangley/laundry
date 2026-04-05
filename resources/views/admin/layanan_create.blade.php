@@ -2,13 +2,12 @@
 
 @section('content')
 @php
-    $layanan_id = 0; // default untuk layanan baru
+    $layanan_id = 0;
     $jenisBaru = session()->get("jenis_baru_{$layanan_id}", []);
     $jenisLama = \App\Models\JenisLayanan::selectRaw('MIN(id_jenis_layanan) as id_jenis_layanan, nama_jenis, harga, id_satuan, lama, lama_satuan, keterangan')
-    ->groupBy('nama_jenis', 'harga', 'id_satuan', 'lama', 'lama_satuan', 'keterangan')
-    ->orderBy('nama_jenis')
-    ->get();
-
+        ->groupBy('nama_jenis', 'harga', 'id_satuan', 'lama', 'lama_satuan', 'keterangan')
+        ->orderBy('nama_jenis')
+        ->get();
 @endphp
 
 {{-- HEADER --}}
@@ -33,11 +32,9 @@
         </div>
     @endif
 
-
     {{-- JENIS DARI SESSION --}}
     @if(count($jenisBaru) > 0)
         <h3 class="mt-6 mb-3 font-bold text-lg">Jenis Layanan (Baru)</h3>
-
         <div class="space-y-4">
             @foreach ($jenisBaru as $jb)
                 @php
@@ -47,7 +44,6 @@
                         if($satuan) $satuanNama = $satuan->nama_satuan;
                     }
                 @endphp
-
                 <div class="flex gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl shadow">
                     <div class="flex-1">
                         <p class="font-semibold capitalize">{{ $jb['nama_jenis'] ?? '-' }}</p>
@@ -57,7 +53,6 @@
                         <p class="text-gray-500 text-xs">
                             {{ $jb['lama'] ?? '-' }} {{ $jb['lama_satuan'] ?? '-' }}
                         </p>
-
                         @if(!empty($jb['keterangan']))
                             <p class="text-gray-600 text-xs mt-1">{{ $jb['keterangan'] }}</p>
                         @endif
@@ -67,19 +62,15 @@
         </div>
     @endif
 
-
- {{-- BUTTON TAMBAH JENIS BARU --}}
-    <a href="{{ route('layanan.jenis.create', ['id_layanan' => $layanan_id]) }}" 
+    {{-- BUTTON TAMBAH JENIS BARU --}}
+    <a href="{{ route('layanan.jenis.create', ['id_layanan' => $layanan_id]) }}"
        class="block mt-6 mb-6 bg-yellow-400 hover:bg-yellow-500 text-black text-center py-3 rounded-2xl font-semibold shadow transition inline-flex items-center justify-center gap-2">
-        <i class="bi bi-plus-circle"></i> 
+        <i class="bi bi-plus-circle"></i>
         <span>Tambah Jenis Layanan Baru</span>
     </a>
 
-
-    {{-- ======================== --}}
-    {{-- FORM CREATE LAYANAN      --}}
-    {{-- ======================== --}}
-    <form action="{{ route('layanan.store') }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
+    {{-- FORM CREATE LAYANAN --}}
+    <form id="formLayanan" action="{{ route('layanan.store') }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
         @csrf
 
         {{-- JENIS LAYANAN LAMA --}}
@@ -131,13 +122,16 @@
 
         {{-- SUBMIT --}}
         <div class="flex justify-end mt-6">
-            <button type="submit" 
+            <button type="submit"
                     class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl font-semibold text-white">
                 Simpan Layanan
             </button>
         </div>
-
     </form>
 </div>
+
 @endsection
 
+@push('scripts')
+    <script src="{{ asset('js/superadmin/layanan-create.js') }}"></script>
+@endpush

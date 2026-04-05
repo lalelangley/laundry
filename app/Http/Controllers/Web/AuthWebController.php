@@ -148,10 +148,9 @@ public function adminDashboard()
     $totalKasir      = Kasir::count();
     $totalTransaksi  = Transaksi::where('jenis_transaksi', 'offline')->count();
     
-    $totalOmzet = Transaksi::where('jenis_transaksi', 'offline')
-        ->whereDate('tgl_transaksi', today())
-        ->where('status_bayar', 'lunas')
-        ->sum('total_bayar');
+    $totalOmzet = Transaksi::where('status_bayar', 'lunas')
+    ->whereDate('tgl_lunas', today())
+    ->sum('total_bayar');
 
     // ✅ NOTIFIKASI & ALERT DATA - FIXED VERSION
 $transaksiMasukHariIni = Transaksi::whereDate('tgl_transaksi', today())

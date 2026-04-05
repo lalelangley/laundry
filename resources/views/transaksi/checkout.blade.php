@@ -76,13 +76,20 @@
 
     {{-- KETERANGAN --}}
     <div class="bg-white rounded-2xl p-5 shadow-xl">
-        <p class="font-semibold text-base mb-2 flex items-center gap-2">
+        <p class="font-semibold text-base mb-3 flex items-center gap-2">
             <i class="bi bi-chat-left-text-fill text-yellow-500 text-xl"></i>
             Keterangan Transaksi
         </p>
-        <div class="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 whitespace-pre-line text-[16px] leading-normal">
-            {{ $keterangan ?: 'Tidak ada keterangan.' }}
-        </div>
+        @if($keterangan)
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
+                <p class="text-gray-800 text-sm leading-relaxed whitespace-pre-line">{{ $keterangan }}</p>
+            </div>
+        @else
+            <div class="flex items-center gap-2 text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-xl px-4 py-3">
+                <i class="bi bi-dash-circle text-base"></i>
+                <p class="text-sm italic">Tidak ada keterangan.</p>
+            </div>
+        @endif
         <input type="hidden" id="keteranganTransaksi" value="{{ $keterangan }}">
     </div>
 

@@ -221,7 +221,7 @@
                 @endif
 
                 <!-- Login Form -->
-                <form method="POST" action="{{ route('login.process') }}" class="space-y-4">
+                <form method="POST" action="{{ route('login.process') }}" class="space-y-4" onsubmit="return validateForm()">
                     @csrf
 
                     <!-- User Selection -->
@@ -232,8 +232,7 @@
                         </label>
                         <div class="relative">
                             <select name="user_id" 
-                                    class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 appearance-none bg-white" 
-                                    required>
+                                class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 appearance-none bg-white">
                                 <option value="">Pilih pengguna...</option>
                                 
                                 <optgroup label="Super Admin">
@@ -272,12 +271,11 @@
                         </label>
                         <div class="relative">
                             <input type="password" 
-                                   name="pin"
-                                   id="pin-input"
-                                   class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 tracking-widest text-center text-lg font-semibold"
-                                   placeholder="• • • • • • • •"
-                                   required
-                                   maxlength="8">
+                                    name="pin"
+                                    id="pin-input"
+                                    class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 tracking-widest text-center text-lg font-semibold"
+                                    placeholder="• • • • • • • •"
+                                    maxlength="8">
                             <button type="button"
                                     onclick="togglePassword()"
                                     class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
@@ -330,14 +328,54 @@
             }
         }
 
-        // Auto-focus on first input
+        function validateForm() {
+            const userSelect = document.querySelector('select[name="user_id"]');
+            const pinInput = document.getElementById('pin-input');
+            const userId = userSelect.value;
+            const pin = pinInput.value.trim();
+
+            let isValid = true;
+            const messages = [];
+
+            // Reset border
+            userSelect.style.borderColor = '';
+            pinInput.style.borderColor = '';
+
+            if (!userId) {
+                userSelect.style.borderColor = '#ef4444';
+                messages.push('pengguna');
+                isValid = false;
+            }
+
+            if (!pin) {
+                pinInput.style.borderColor = '#ef4444';
+                messages.push('PIN');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                let alertEl = document.getElementById('js-validation-alert');
+                if (!alertEl) {
+                    alertEl = document.createElement('div');
+                    alertEl.id = 'js-validation-alert';
+                    alertEl.style.cssText = 'margin-bottom:1rem; background:#fef2f2; border-left:4px solid #ef4444; padding:0.75rem; border-radius:0.5rem;';
+                    alertEl.innerHTML = `<div style="display:flex; align-items:center;">
+                        <i class="fas fa-exclamation-circle" style="color:#ef4444; margin-right:0.5rem;"></i>
+                        <p id="js-alert-msg" style="color:#b91c1c; font-size:0.875rem; font-weight:500; margin:0;"></p>
+                    </div>`;
+                    document.querySelector('form').prepend(alertEl);
+                }
+                document.getElementById('js-alert-msg').textContent =
+                    'Harap isi ' + messages.join(' dan ') + ' terlebih dahulu.';
+                alertEl.style.display = 'block';
+                return false;
+            }
+
+            return true;
+        }
+
         window.addEventListener('load', function() {
             document.querySelector('select[name="user_id"]').focus();
-        });
-
-        // Add number validation for PIN
-        document.getElementById('pin-input').addEventListener('input', function(e) {
-            this.value = this.value.replace(/[^0-9]/g, '');
         });
     </script>
 </body>
