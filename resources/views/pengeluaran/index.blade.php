@@ -65,83 +65,51 @@
 
         @else
 
-            <div class="space-y-5" id="pengeluaranContainer">
+            <div class="space-y-4" id="pengeluaranContainer">
 
                 @foreach ($pengeluaran as $item)
-                    {{-- ✅ overflow-visible supaya dropdown tidak terpotong card --}}
-                    <div class="pengeluaran-item bg-white p-6 rounded-3xl shadow-md relative border overflow-visible"
+                    <div class="pengeluaran-item bg-white rounded-2xl shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex items-center overflow-visible relative"
                          data-nama="{{ strtolower($item->nama_pengeluaran) }}"
                          data-tanggal="{{ $item->tanggal_pengeluaran }}"
                          data-nominal="{{ $item->nominal }}">
 
                         {{-- Garis Kuning Kiri --}}
-                        <div class="absolute left-0 top-0 h-full w-2 bg-yellow-400 rounded-l-3xl"></div>
+                        <div class="absolute left-0 top-0 h-full w-2 bg-yellow-400 rounded-l-2xl flex-shrink-0"></div>
 
-                        {{-- Dropdown Menu --}}
-                        {{-- ✅ style z-index pakai inline supaya tidak dibatasi stacking context --}}
-                        <div class="absolute right-4 top-4" style="z-index: 100;">
-                            <button class="dropdown-btn text-gray-700 text-2xl hover:text-yellow-600 transition">
-                                <i class="bi bi-three-dots-vertical"></i>
+                        {{-- KONTEN --}}
+                        <div class="flex-1 min-w-0 pl-6 pr-4 py-4">
+                            <p class="text-sm font-semibold text-gray-500 mb-0.5">
+                                {{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->locale('id')->translatedFormat('l, d/m/Y') : '-' }}
+                            </p>
+                            <p class="text-base font-bold text-gray-800 truncate uppercase tracking-wide">
+                                {{ $item->nama_pengeluaran }}
+                            </p>
+                            <p class="text-sm font-bold text-yellow-600 mt-0.5">
+                                Rp{{ number_format($item->nominal, 0, ',', '.') }}
+                            </p>
+                            @if($item->catatan)
+                            <p class="text-xs text-gray-400 mt-1 truncate">{{ $item->catatan }}</p>
+                            @endif
+                        </div>
+
+                        {{-- ACTIONS --}}
+                        <div class="flex items-center gap-2 pr-4 flex-shrink-0">
+                            <a href="{{ route('pengeluaran.edit', $item->id_pengeluaran) }}"
+                               class="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
+
+                            <button type="button"
+                                    class="btn-delete bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110"
+                                    data-id="{{ $item->id_pengeluaran }}"
+                                    data-nama="{{ $item->nama_pengeluaran }}"
+                                    data-nominal="{{ number_format($item->nominal, 0, ',', '.') }}"
+                                    data-tanggal="{{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('d/m/Y') : '-' }}">
+                                <i class="bi bi-trash-fill"></i>
                             </button>
-
-                            {{-- ✅ z-index tinggi via inline style --}}
-                            <ul class="dropdown-menu hidden absolute right-0 top-10 w-40 bg-yellow-400 rounded-2xl shadow-xl overflow-hidden py-1" style="z-index: 9999;">
-                                <li>
-                                    {{-- ✅ stopPropagation di Edit supaya tidak nutup dropdown sebelum navigate --}}
-                                    <a href="{{ route('pengeluaran.edit', $item->id_pengeluaran) }}"
-                                       onclick="event.stopPropagation()"
-                                       class="flex items-center gap-2 px-4 py-3 text-black text-sm font-medium hover:bg-yellow-300">
-                                        <i class="bi bi-pencil text-lg"></i> Edit
-                                    </a>
-                                </li>
-                                <li>
-                                    {{-- ✅ stopPropagation di Hapus supaya event tidak bubble ke document --}}
-                                    <button type="button"
-                                        class="btn-delete w-full flex items-center gap-2 px-4 py-3 text-red-600 text-sm font-medium hover:bg-yellow-300"
-                                        data-id="{{ $item->id_pengeluaran }}"
-                                        data-nama="{{ $item->nama_pengeluaran }}"
-                                        data-nominal="{{ number_format($item->nominal, 0, ',', '.') }}"
-                                        data-tanggal="{{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('d/m/Y') : '-' }}">
-                                        <i class="bi bi-trash text-lg"></i> Hapus
-                                    </button>
-                                </li>
-                            </ul>
                         </div>
 
-                        <div class="flex justify-between items-start">
-
-                            {{-- TEXT --}}
-                            <div class="ml-4 w-full pr-12">
-
-                                {{-- JUDUL --}}
-                                <p class="font-extrabold text-lg uppercase tracking-wide text-gray-800 leading-tight">
-                                    {{ $item->nama_pengeluaran }}
-                                </p>
-
-                                {{-- TGL --}}
-                                <p class="text-sm text-gray-500 mt-1">
-                                    {{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('l, d/m/Y') : '-' }}
-                                </p>
-
-                                {{-- CATATAN --}}
-                                @if($item->catatan)
-                                <div class="bg-gray-100 p-3 rounded-xl mt-3 border border-gray-200">
-                                    <p class="text-sm text-gray-600 leading-relaxed">
-                                        {{ $item->catatan }}
-                                    </p>
-                                </div>
-                                @endif
-
-                                {{-- NOMINAL --}}
-                                <p class="font-bold mt-4 text-lg text-gray-800">
-                                    Rp{{ number_format($item->nominal, 0, ',', '.') }}
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        {{-- Hidden Form DELETE ada di dalam card supaya ikut saat sort --}}
+                        {{-- Hidden Form DELETE --}}
                         <form id="deleteForm{{ $item->id_pengeluaran }}"
                               action="{{ route('pengeluaran.destroy', $item->id_pengeluaran) }}"
                               method="POST"
@@ -187,19 +155,14 @@ document.addEventListener('click', function(e) {
         e.stopPropagation();
         const targetMenu = btn.nextElementSibling;
 
-        // Tutup semua dropdown lain
         document.querySelectorAll('.dropdown-menu').forEach(m => {
             if (m !== targetMenu) m.classList.add('hidden');
         });
 
-        // Toggle dropdown yang diklik
         targetMenu.classList.toggle('hidden');
         return;
     }
 
-    // Klik di luar dropdown & sort menu: tutup semua
-    // ✅ Cek apakah klik berasal dari dalam .dropdown-menu
-    // Kalau iya, JANGAN tutup supaya onclick di tombol sempat terpanggil
     const insideMenu = e.target.closest('.dropdown-menu');
     if (!insideMenu) {
         document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
@@ -232,7 +195,7 @@ if (searchInput) {
         document.querySelectorAll('.pengeluaran-item').forEach(item => {
             const nama = item.dataset.nama;
             if (nama.includes(searchTerm)) {
-                item.style.display = 'block';
+                item.style.display = 'flex';
                 hasResults = true;
             } else {
                 item.style.display = 'none';
@@ -252,7 +215,7 @@ if (searchInput) {
 // ==================== DELETE BUTTON HANDLER ====================
 document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', function(e) {
-        e.stopPropagation(); // 🔥 ini kunci biar dropdown gak nutup dulu
+        e.stopPropagation();
 
         const id = this.dataset.id;
         const nama = this.dataset.nama;
@@ -294,9 +257,8 @@ function sortPengeluaran(type) {
     sortMenu.classList.add('hidden');
 }
 
-// ==================== CONFIRM DELETE FUNCTION ====================
+// ==================== CONFIRM DELETE FUNCTION (AJAX) ====================
 function confirmDelete(id, nama, nominal, tanggal) {
-    // Tutup semua dropdown dulu
     document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.add('hidden'));
 
     Swal.fire({
@@ -364,17 +326,81 @@ function confirmDelete(id, nama, nominal, tanggal) {
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
 
             const form = document.getElementById('deleteForm' + id);
-            if (form) {
-                form.submit();
-            } else {
-                Swal.fire('Error', 'Form tidak ditemukan!', 'error');
-            }
+            const url = form.action;
+            const token = form.querySelector('input[name="_token"]').value;
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: `_token=${token}&_method=DELETE`
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Animasi fade out lalu remove dari DOM
+                    const item = document.querySelector(`.btn-delete[data-id="${id}"]`).closest('.pengeluaran-item');
+                    item.style.transition = 'all 0.3s ease';
+                    item.style.opacity = '0';
+                    item.style.transform = 'translateX(30px)';
+
+                    setTimeout(() => {
+                        item.remove();
+
+                        // Cek jika list sudah kosong
+                        const remaining = document.querySelectorAll('.pengeluaran-item');
+                        if (remaining.length === 0) {
+                            const container = document.getElementById('pengeluaranContainer');
+                            if (container) {
+                                container.innerHTML = `
+                                    <div class="flex flex-col items-center justify-center mt-20 opacity-80">
+                                        <i class="bi bi-search text-[90px] text-yellow-400 drop-shadow"></i>
+                                        <p class="text-lg font-semibold text-gray-600 mt-3">Data Tidak Ditemukan</p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }, 300);
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: data.message ?? 'Pengeluaran berhasil dihapus.',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        customClass: { popup: 'rounded-2xl' }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: data.message ?? 'Terjadi kesalahan.',
+                        confirmButtonColor: '#dc2626',
+                        customClass: {
+                            popup: 'rounded-2xl',
+                            confirmButton: 'rounded-xl px-6 py-3 font-bold'
+                        }
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Gagal menghubungi server. Coba lagi.',
+                    confirmButtonColor: '#dc2626',
+                    customClass: {
+                        popup: 'rounded-2xl',
+                        confirmButton: 'rounded-xl px-6 py-3 font-bold'
+                    }
+                });
+            });
         }
     });
 }

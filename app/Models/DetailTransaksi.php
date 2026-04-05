@@ -17,7 +17,7 @@ class DetailTransaksi extends Model
         'id_layanan',
         'id_jenis_layanan',
         'id_parfum',
-        'harga',
+        'subtotal',
         'qty',
         'keterangan',
         'id_satuan',
