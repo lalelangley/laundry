@@ -28,9 +28,8 @@
     <input type="hidden" name="from" value="{{ request('from') }}">
         
     {{-- FOTO --}}
-<div class="flex flex-col items-center">
-    <div class="w-28 h-28 bg-gray-200 rounded-full overflow-hidden shadow flex items-center justify-center relative">
-            {{-- ✅ FIX: Ganti $item jadi $pelanggan --}}
+    <div class="flex flex-col items-center">
+        <div class="w-28 h-28 bg-gray-200 rounded-full overflow-hidden shadow flex items-center justify-center relative">
             @if ($pelanggan->gambar)
                 <img id="previewImg" 
                     src="{{ asset('images/' . $pelanggan->gambar) }}"
@@ -58,29 +57,51 @@
         <div>
             <label class="font-semibold text-gray-700">Nama Pelanggan</label>
             <input type="text" name="nama_pelanggan"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none"
-                placeholder="Nama pelanggan..." value="{{ old('nama_pelanggan', $pelanggan->nama_pelanggan) }}">
+                value="{{ old('nama_pelanggan', $pelanggan->nama_pelanggan) }}"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none @error('nama_pelanggan') border-2 border-red-500 bg-red-50 @enderror"
+                placeholder="Nama pelanggan...">
+            {{-- TC-09: Validasi Nama Pelanggan tidak boleh kosong --}}
+            @error('nama_pelanggan')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
         {{-- No HP --}}
         <div>
             <label class="font-semibold text-gray-700">No Handphone</label>
             <input type="text" name="no_hp"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder="08xxxxxxxxxx" value="{{ old('no_hp', $pelanggan->no_hp) }}">
+                value="{{ old('no_hp', $pelanggan->no_hp) }}"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('no_hp') border-2 border-red-500 bg-red-50 @enderror"
+                placeholder="08xxxxxxxxxx">
+            {{-- TC-10: Validasi No HP tidak boleh kosong --}}
+            {{-- TC-11: Validasi format No HP tidak valid --}}
+            @error('no_hp')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
         {{-- Email --}}
         <div>
             <label class="font-semibold text-gray-700">Email</label>
             <input type="email" name="email"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder="Email pelanggan..." value="{{ old('email', $pelanggan->email) }}">
+                value="{{ old('email', $pelanggan->email) }}"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('email') border-2 border-red-500 bg-red-50 @enderror"
+                placeholder="Email pelanggan...">
+            {{-- TC-12: Validasi format Email tidak valid --}}
+            @error('email')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
-       {{-- Gender --}}
+        {{-- Jenis Kelamin --}}
         <div>
-            <label class="font-semibold text-gray-700">Gender</label>
+            <label class="font-semibold text-gray-700">Jenis Kelamin</label>
             <div class="flex items-center gap-8 mt-2">
                 @php
                     $jk = old('jk', $pelanggan->jk);
@@ -99,22 +120,20 @@
             </div>
         </div>
 
-
         {{-- ALAMAT --}}
         <div>
             <label class="font-semibold text-gray-700">Alamat</label>
             <textarea name="alamat" rows="3"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('alamat') border-2 border-red-500 bg-red-50 @enderror"
                 placeholder="Alamat pelanggan...">{{ old('alamat', $pelanggan->alamat) }}</textarea>
+            @error('alamat')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
     </div>
-
-    @if ($errors->any())
-        <div class="bg-red-300 text-red-900 p-3 rounded-xl mb-4">
-            {{ $errors->first() }}
-        </div>
-    @endif
 
     {{-- BUTTON --}}
     <button type="submit"
@@ -138,7 +157,7 @@
             reader.onload = function (e) {
                 preview.src = e.target.result;
                 preview.classList.remove('hidden');
-                icon.classList.add('hidden');
+                if (icon) icon.classList.add('hidden');
             }
             reader.readAsDataURL(file);
         }

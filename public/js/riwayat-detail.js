@@ -397,3 +397,10 @@ function confirmHapus() {
         }
     });
 }
+// ==============================
+// CETAK NOTA
+// ==============================
+function bukaPopupNota(idTransaksi) {
+    const url = `/admin/riwayat/${idTransaksi}/cetak-nota`;
+    window.open(url, '_blank', 'width=420,height=650,scrollbars=yes,resizable=yes');
+}
