@@ -80,102 +80,59 @@
             </div>
 
         @else
-            <div class="space-y-5" id="pengeluaranContainer">
+
+            <div class="space-y-4" id="pengeluaranContainer">
 
                 @foreach ($pengeluaran as $item)
-                    {{-- 
-                        KARTU PENGELUARAN
-                        overflow-visible diperlukan agar dropdown tidak terpotong border card.
-                        data-* digunakan untuk sort, search, dan konfirmasi hapus.
-                    --}}
-                    <div class="pengeluaran-item bg-white p-6 rounded-3xl shadow-md relative border overflow-visible"
+                    <div class="pengeluaran-item bg-white rounded-2xl shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex items-center overflow-visible relative"
                          data-nama="{{ strtolower($item->nama_pengeluaran) }}"
                          data-tanggal="{{ $item->tanggal_pengeluaran }}"
                          data-nominal="{{ $item->nominal }}">
 
-                        {{-- Aksen garis kuning di sisi kiri kartu --}}
-                        <div class="absolute left-0 top-0 h-full w-2 bg-yellow-400 rounded-l-3xl"></div>
+                        {{-- Garis Kuning Kiri --}}
+                        <div class="absolute left-0 top-0 h-full w-2 bg-yellow-400 rounded-l-2xl flex-shrink-0"></div>
 
-                        {{-- 
-                            DROPDOWN AKSI (Edit / Hapus)
-                            z-index inline tinggi untuk mencegah dropdown terpotong 
-                            oleh stacking context kartu lain.
-                        --}}
-                        <div class="absolute right-4 top-4" style="z-index: 100;">
-                            <button class="dropdown-btn text-gray-700 text-2xl hover:text-yellow-600 transition">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-
-                            {{-- 
-                                FIX BUG: dropdown-menu tidak menggunakan overflow-hidden
-                                agar klik pada tombol di dalamnya tidak terpotong event.
-                                z-index 9999 via inline style untuk jaminan di atas elemen lain.
-                            --}}
-                            <ul class="dropdown-menu hidden absolute right-0 top-10 w-40 bg-yellow-400 rounded-2xl shadow-xl py-1" style="z-index: 9999;">
-                                <li>
-                                    <a href="{{ route('pengeluaran.edit', $item->id_pengeluaran) }}"
-                                       class="flex items-center gap-2 px-4 py-3 text-black text-sm font-medium hover:bg-yellow-300">
-                                        <i class="bi bi-pencil text-lg"></i> Edit
-                                    </a>
-                                </li>
-                                <li>
-                                    {{-- 
-                                        FIX BUG: Tombol hapus sekarang menggunakan onclick langsung
-                                        (bukan event listener terpisah yang mungkin tidak terpanggil
-                                        karena dropdown sudah ditutup lebih dulu oleh document click).
-                                        Data diteruskan langsung ke fungsi confirmDelete().
-                                    --}}
-                                   <button type="button"
-                                        class="btn-delete w-full flex items-center gap-2 px-4 py-3 text-red-500 text-sm font-medium hover:bg-red-50 transition"
-                                        data-id="{{ $item->id_pengeluaran }}"
-                                        data-nama="{{ addslashes($item->nama_pengeluaran) }}"
-                                        data-nominal="{{ number_format($item->nominal, 0, ',', '.') }}"
-                                        data-tanggal="{{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('d/m/Y') : '-' }}">
-                                        <i class="bi bi-trash"></i> Hapus
-                                    </button>
-                                </li>
-                            </ul>
+                        {{-- KONTEN --}}
+                        <div class="flex-1 min-w-0 pl-6 pr-4 py-4">
+                            <p class="text-sm font-semibold text-gray-500 mb-0.5">
+                                {{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->locale('id')->translatedFormat('l, d/m/Y') : '-' }}
+                            </p>
+                            <p class="text-base font-bold text-gray-800 truncate uppercase tracking-wide">
+                                {{ $item->nama_pengeluaran }}
+                            </p>
+                            <p class="text-sm font-bold text-yellow-600 mt-0.5">
+                                Rp{{ number_format($item->nominal, 0, ',', '.') }}
+                            </p>
+                            @if($item->catatan)
+                            <p class="text-xs text-gray-400 mt-1 truncate">{{ $item->catatan }}</p>
+                            @endif
                         </div>
 
-                        {{-- Konten kartu: nama, tanggal, catatan, nominal --}}
-                        <div class="flex justify-between items-start">
-                            <div class="ml-4 w-full pr-12">
+                        {{-- ACTIONS --}}
+                        <div class="flex items-center gap-2 pr-4 flex-shrink-0">
+                            <a href="{{ route('pengeluaran.edit', $item->id_pengeluaran) }}"
+                            class="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
+                                <i class="bi bi-pencil-fill"></i>
+                            </a>
 
-                                {{-- Nama pengeluaran --}}
-                                <p class="font-extrabold text-lg uppercase tracking-wide text-gray-800 leading-tight">
-                                    {{ $item->nama_pengeluaran }}
-                                </p>
-
-                                {{-- Tanggal pengeluaran --}}
-                                <p class="text-sm text-gray-500 mt-1">
-                                    {{ $item->tanggal_pengeluaran
-                                        ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('l, d/m/Y')
-                                        : '-' }}
-                                </p>
-
-                                {{-- Catatan (opsional, hanya tampil jika ada) --}}
-                                @if($item->catatan)
-                                    <div class="bg-gray-100 p-3 rounded-xl mt-3 border border-gray-200">
-                                        <p class="text-sm text-gray-600 leading-relaxed">
-                                            {{ $item->catatan }}
-                                        </p>
-                                    </div>
-                                @endif
-
-                                {{-- Nominal pengeluaran --}}
-                                <p class="font-bold mt-4 text-lg text-gray-800">
-                                    Rp{{ number_format($item->nominal, 0, ',', '.') }}
-                                </p>
-
-                            </div>
+                            {{-- Ganti: wrap button dalam form, pakai confirmDelete dari master --}}
+                            <form action="{{ route('pengeluaran.destroy', $item->id_pengeluaran) }}"
+                                method="POST"
+                                style="display:inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="button"
+                                        onclick="confirmDelete(this, 'pengeluaran')"
+                                        data-nama="{{ $item->nama_pengeluaran }}"
+                                        data-tanggal="{{ $item->tanggal_pengeluaran ? \Carbon\Carbon::parse($item->tanggal_pengeluaran)->translatedFormat('d/m/Y') : '-' }}"
+                                        data-harga="Rp{{ number_format($item->nominal, 0, ',', '.') }}"
+                                        class="bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:shadow-lg transition-all hover:scale-110">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
                         </div>
 
-                        {{-- 
-                            HIDDEN FORM DELETE
-                            Form ini diletakkan DI LUAR container sort agar tidak
-                            ikut terhapus saat sort memanggil container.innerHTML = ''.
-                            Dengan meletakkan di dalam card, form ikut berpindah saat sort.
-                        --}}
+                        {{-- Hidden Form DELETE --}}
                         <form id="deleteForm{{ $item->id_pengeluaran }}"
                               action="{{ route('pengeluaran.destroy', $item->id_pengeluaran) }}"
                               method="POST"
@@ -210,103 +167,30 @@
     </a>
 </div>
 
-{{-- SweetAlert2 untuk dialog konfirmasi hapus --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 
-// =============================
-// DROPDOWN TOGGLE
-// =============================
-document.addEventListener('click', function (e) {
-    const deleteBtn = e.target.closest('.btn-delete');
-    const dropBtn   = e.target.closest('.dropdown-btn');
-
-    if (deleteBtn) {
-        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-        confirmDelete(
-            deleteBtn.dataset.id,
-            deleteBtn.dataset.nama,
-            deleteBtn.dataset.nominal,
-            deleteBtn.dataset.tanggal
-        );
-        return;
-    }
-
-    if (dropBtn) {
-        e.stopPropagation();
-        const menu = dropBtn.nextElementSibling;
-        document.querySelectorAll('.dropdown-menu').forEach(m => {
-            if (m !== menu) m.classList.add('hidden');
-        });
-        menu.classList.toggle('hidden');
-        return;
-    }
-
-    document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-
-    if (!e.target.closest('#sortBtn') && !e.target.closest('#sortMenu')) {
-        document.getElementById('sortMenu')?.classList.add('hidden');
-    }
-});
-
-// =============================
-// SORT MENU
-// =============================
+// SORT MENU TOGGLE
 document.getElementById('sortBtn').addEventListener('click', function (e) {
     e.stopPropagation();
     document.getElementById('sortMenu').classList.toggle('hidden');
 });
 
-// =============================
-// SORT FUNCTION
-// Pakai appendChild bukan innerHTML = '' agar form tidak hilang
-// =============================
-function sortPengeluaran(type) {
-    const container = document.getElementById('pengeluaranContainer');
-    if (!container) return;
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('#sortBtn') && !e.target.closest('#sortMenu')) {
+        document.getElementById('sortMenu')?.classList.add('hidden');
+    }
+});
 
-    const items = Array.from(container.querySelectorAll('.pengeluaran-item'));
-
-    const labels = {
-        'terbaru': 'Terbaru',
-        'terlama': 'Terlama',
-        'nominal-tertinggi': 'Nominal Tertinggi',
-        'nominal-terendah': 'Nominal Terendah'
-    };
-    document.getElementById('sortLabel').textContent = labels[type] || 'Terbaru';
-
-    items.sort(function (a, b) {
-        switch (type) {
-            case 'terbaru':
-                return new Date(b.dataset.tanggal) - new Date(a.dataset.tanggal);
-            case 'terlama':
-                return new Date(a.dataset.tanggal) - new Date(b.dataset.tanggal);
-            case 'nominal-tertinggi':
-                return parseFloat(b.dataset.nominal) - parseFloat(a.dataset.nominal);
-            case 'nominal-terendah':
-                return parseFloat(a.dataset.nominal) - parseFloat(b.dataset.nominal);
-            default:
-                return 0;
-        }
-    });
-
-    // Pindahkan node langsung tanpa hapus DOM
-    items.forEach(item => container.appendChild(item));
-
-    document.getElementById('sortMenu').classList.add('hidden');
-}
-
-// =============================
 // SEARCH
-// =============================
 const searchInput          = document.getElementById('searchInput');
 const emptySearch          = document.getElementById('emptySearch');
 const pengeluaranContainer = document.getElementById('pengeluaranContainer');
 
 if (searchInput) {
     searchInput.addEventListener('input', function () {
-        const keyword    = this.value.toLowerCase().trim();
-        let hasResults   = false;
+        const keyword  = this.value.toLowerCase().trim();
+        let hasResults = false;
 
         document.querySelectorAll('.pengeluaran-item').forEach(function (item) {
             const match = item.dataset.nama.includes(keyword);
@@ -316,109 +200,36 @@ if (searchInput) {
 
         const showEmpty = !hasResults && keyword !== '';
         pengeluaranContainer?.classList.toggle('hidden', showEmpty);
-        emptySearch.classList.toggle('hidden', !showEmpty);
+        emptySearch?.classList.toggle('hidden', !showEmpty);
     });
 }
 
-// =============================
-// CONFIRM DELETE
-// =============================
-function confirmDelete(id, nama, nominal, tanggal) {
-    Swal.fire({
-        title: 'Hapus Pengeluaran?',
-        html: `
-            <div class="text-left">
-                <p class="text-gray-600 mb-3">Anda akan menghapus pengeluaran berikut:</p>
-                <div class="border-2 border-red-200 rounded-2xl p-4 my-4 bg-red-50">
-                    <div class="space-y-2">
-                        <div class="flex items-start gap-2">
-                            <i class="bi bi-tag-fill text-red-600 text-lg mt-0.5"></i>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Nama Pengeluaran</p>
-                                <p class="font-bold text-gray-800">${nama}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <i class="bi bi-calendar3 text-blue-600 text-lg mt-0.5"></i>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Tanggal</p>
-                                <p class="font-semibold text-gray-700">${tanggal}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <i class="bi bi-cash-coin text-yellow-600 text-lg mt-0.5"></i>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Nominal</p>
-                                <p class="font-bold text-yellow-700 text-lg">Rp ${nominal}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <i class="bi bi-exclamation-circle me-1"></i>
-                    Data yang sudah dihapus tidak dapat dikembalikan.
-                </p>
-            </div>
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor:  '#6b7280',
-        confirmButtonText:  '<i class="bi bi-trash-fill me-2"></i>Ya, Hapus!',
-        cancelButtonText:   '<i class="bi bi-x-circle me-2"></i>Batal',
-        reverseButtons: true,
-        width: '520px',
-        customClass: {
-            popup:         'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold',
-            cancelButton:  'rounded-xl px-6 py-3 font-bold'
-        }
-    }).then(function (result) {
-        if (!result.isConfirmed) return;
+// SORT
+function sortPengeluaran(type) {
+    const container = document.getElementById('pengeluaranContainer');
+    if (!container) return;
 
-        Swal.fire({
-            title: 'Menghapus...',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading()
-        });
+    const items = Array.from(container.querySelectorAll('.pengeluaran-item'));
+    const labels = {
+        'terbaru'          : 'Terbaru',
+        'terlama'          : 'Terlama',
+        'nominal-tertinggi': 'Nominal Tertinggi',
+        'nominal-terendah' : 'Nominal Terendah'
+    };
+    document.getElementById('sortLabel').textContent = labels[type] || 'Terbaru';
 
-        const form = document.getElementById('deleteForm' + id);
-        if (form) {
-            form.submit();
-        } else {
-            Swal.fire('Error', 'Form tidak ditemukan!', 'error');
+    items.sort(function (a, b) {
+        switch (type) {
+            case 'terbaru'          : return new Date(b.dataset.tanggal) - new Date(a.dataset.tanggal);
+            case 'terlama'          : return new Date(a.dataset.tanggal) - new Date(b.dataset.tanggal);
+            case 'nominal-tertinggi': return parseFloat(b.dataset.nominal) - parseFloat(a.dataset.nominal);
+            case 'nominal-terendah' : return parseFloat(a.dataset.nominal) - parseFloat(b.dataset.nominal);
+            default: return 0;
         }
     });
+
+    items.forEach(item => container.appendChild(item));
+    document.getElementById('sortMenu').classList.add('hidden');
 }
 
-// =============================
-// FLASH MESSAGE
-// =============================
-@if(session('success'))
-    Swal.fire({
-        icon: 'success',
-        title: 'Berhasil!',
-        text: @json(session('success')),
-        showConfirmButton: false,
-        timer: 2000,
-        customClass: { popup: 'rounded-2xl' }
-    });
-@endif
-
-@if(session('error'))
-    Swal.fire({
-        icon: 'error',
-        title: 'Gagal!',
-        text: @json(session('error')),
-        confirmButtonColor: '#dc2626',
-        customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold'
-        }
-    });
-@endif
 </script>
-
-@endsection
