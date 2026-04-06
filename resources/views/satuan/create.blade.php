@@ -18,7 +18,10 @@
         <input type="hidden" name="id_layanan" value="{{ request('id_layanan') }}">
         <input type="hidden" name="id_jenis" value="{{ request('id_jenis') }}">  {{-- HARUS ADA --}}
 
-
+         {{-- ERROR MESSAGE --}}
+        @error('nama_satuan')
+            <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+        @enderror
 
         <label class="block font-bold mb-2 text-lg">Nama Satuan</label>
         <input type="text" name="nama_satuan"

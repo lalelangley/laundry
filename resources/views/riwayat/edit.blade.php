@@ -1,13 +1,21 @@
+{{-- ============================================================
+     HALAMAN: EDIT TRANSAKSI
+     Deskripsi: Menampilkan form edit detail layanan dalam transaksi.
+     Admin dapat mengubah qty dan parfum per item layanan,
+     menghapus item layanan, atau menambah layanan baru.
+     Role: Admin
+============================================================ --}}
 @extends('layouts.master')
-
 @section('content')
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 @php
+    # Ambil data transaksi induk dari detail pertama untuk menentukan konteks asal halaman
     $riwayat = $detail->first()?->transaksi;
-    $from = request('from');
+    $from    = request('from');
 
+    # Tentukan URL kembali berdasarkan konteks asal halaman
     if ($from === 'pesanan_online') {
         $backUrl = route('pesanan.online.index');
     } elseif ($riwayat) {
@@ -17,10 +25,12 @@
     }
 @endphp
 
-
 <div class="min-h-screen bg-gray-50 pb-32">
 
-    {{-- HEADER --}}
+    {{-- ========================================
+         HEADER
+         Tombol kembali dan judul halaman
+    ======================================== --}}
     <div class="bg-yellow-400 px-6 py-5 rounded-b-3xl flex items-center gap-4 shadow-lg sticky top-0 z-10">
         <a href="{{ $backUrl }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
             <i class="bi bi-arrow-left"></i>
@@ -28,10 +38,13 @@
         <span class="text-2xl font-bold">Edit Transaksi</span>
     </div>
 
-    {{-- CARD PELANGGAN --}}
+    {{-- ========================================
+         KARTU DATA PELANGGAN
+         Foto, nama, dan nomor HP pelanggan
+    ======================================== --}}
     <div class="mx-6 mt-6">
         <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
-            {{-- Foto Pelanggan --}}
+            {{-- Foto profil pelanggan dengan fallback ke ikon default --}}
             <div class="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0 shadow-md">
                 @if(!empty($pelanggan->gambar))
                     <img src="{{ asset('images/' . $pelanggan->gambar) }}"
@@ -43,7 +56,7 @@
                 @endif
             </div>
             
-            {{-- Info Pelanggan --}}
+            {{-- Info teks pelanggan --}}
             <div class="flex-1">
                 <p class="text-xl font-bold text-gray-800 leading-tight">
                     {{ $pelanggan->nama_pelanggan ?? 'Pelanggan Umum' }}
@@ -56,7 +69,10 @@
         </div>
     </div>
 
-    {{-- HEADER DETAIL ORDER --}}
+    {{-- ========================================
+         HEADER DETAIL ORDER + FORM EDIT
+         Berisi list layanan yang dapat diedit qty & parfumnya
+    ======================================== --}}
     <div class="mx-6 mt-6">
         <div class="bg-white rounded-3xl shadow-xl p-5">
             <div class="flex items-center justify-between mb-5">
@@ -65,6 +81,7 @@
                     <span class="text-xl font-semibold text-gray-800">Detail Order</span>
                 </div>
 
+                {{-- Tombol tambah layanan baru ke transaksi --}}
                 @if($riwayat)
                     <a href="{{ route('riwayat.add_layanan_page', $riwayat->id_transaksi) }}"
                        class="bg-yellow-400 hover:bg-yellow-500 px-5 py-3 rounded-2xl font-bold text-black shadow-md hover:shadow-lg transition-all">
@@ -73,7 +90,11 @@
                 @endif
             </div>
 
-            {{-- LIST LAYANAN --}}
+            {{-- ========================================
+                 LIST LAYANAN DALAM FORM UPDATE
+                 Setiap item berisi hidden input qty & parfum
+                 yang akan disubmit ke riwayat.update
+            ======================================== --}}
             @if($riwayat)
                 <form action="{{ route('riwayat.update', $riwayat->id_transaksi) }}" method="POST" id="formUpdate">
                     @csrf
@@ -81,11 +102,14 @@
 
                     <div class="space-y-4" id="layananList">
                         @php
+                            # Cek apakah ada item baru yang baru saja ditambahkan
                             $isNewItem = request('highlight') === 'new';
                         @endphp
                         
+                        # Urutkan dari yang terbaru (ID terbesar) ke atas
                         @foreach ($detail->sortByDesc('id_detail_transaksi') as $index => $d)
-                        <div class="group bg-gray-100 rounded-3xl p-5 shadow hover:shadow-xl transition-all layanan-item {{ $isNewItem && $index === 0 ? 'ring-4 ring-green-500 animate-pulse' : '' }}"
+                        <div class="group bg-gray-100 rounded-3xl p-5 shadow hover:shadow-xl transition-all layanan-item 
+                                    {{ $isNewItem && $index === 0 ? 'ring-4 ring-green-500 animate-pulse' : '' }}"
                             data-id="{{ $d->id_detail_transaksi }}"
                             data-nama="{{ $d->jenis->nama_jenis ?? 'Layanan' }}"
                             data-qty="{{ $d->qty }}"
@@ -94,7 +118,7 @@
                             data-satuan="{{ $d->jenis->satuan->nama_satuan ?? 'Pcs' }}">
 
                             <div class="flex gap-4">
-                                {{-- Gambar Jenis Layanan --}}
+                                {{-- Gambar jenis layanan --}}
                                 <div class="w-20 h-20 rounded-2xl overflow-hidden bg-white border-2 border-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:border-yellow-400 transition-colors">
                                     @if(!empty($d->jenis->gambar))
                                         <img src="{{ asset('storage/' . $d->jenis->gambar) }}"
@@ -106,39 +130,41 @@
                                     @endif
                                 </div>
 
-                                {{-- Detail --}}
+                                {{-- Detail layanan (klik untuk buka modal edit) --}}
                                 <div class="flex-1 cursor-pointer" onclick="openModalLayanan(event, this.closest('.layanan-item'))">
-                                    {{-- Nama Layanan Utama --}}
+                                    {{-- Nama layanan utama (kategori) --}}
                                     <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">
                                         {{ $d->jenis->layanan->nama_layanan ?? '-' }}
                                     </p>
-                                    
-                                    {{-- Nama Jenis Layanan --}}
+                                    {{-- Nama jenis layanan --}}
                                     <p class="font-bold text-lg text-gray-800 leading-tight">
                                         {{ $d->jenis->nama_jenis ?? '-' }}
                                     </p>
-                                    
+                                    {{-- Harga per satuan --}}
                                     <p class="text-sm text-gray-600 mt-1">
                                         Rp{{ number_format($d->harga, 0, ',', '.') }} / 
                                         {{ $d->jenis->satuan->nama_satuan ?? 'Pcs' }}
                                     </p>
-                                    
-                                    {{-- Parfum Display --}}
+                                    {{-- Parfum (tersembunyi jika tidak ada) --}}
                                     <p class="parfum-display text-sm text-gray-600 flex items-center gap-1 mt-1 {{ !$d->id_parfum ? 'hidden' : '' }}">
                                         <i class="bi bi-bag-heart-fill text-red-500"></i>
                                         <span class="parfum-name">{{ $d->parfum->nama_parfum ?? 'Tanpa parfum' }}</span>
                                     </p>
-
+                                    {{-- SubTotal item --}}
                                     <p class="font-semibold text-green-600 mt-2 subtotal">
                                         SubTotal: Rp{{ number_format($d->qty * $d->harga, 0, ',', '.') }}
                                     </p>
 
-                                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][qty]" value="{{ $d->qty }}" class="qty-input">
-                                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][id_parfum]" value="{{ $d->id_parfum ?? '' }}" class="parfum-input">
+                                    {{-- Hidden input untuk submit form --}}
+                                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][qty]"
+                                           value="{{ $d->qty }}" class="qty-input">
+                                    <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][id_parfum]"
+                                           value="{{ $d->id_parfum ?? '' }}" class="parfum-input">
                                 </div>
 
-                                {{-- QTY & Actions --}}
+                                {{-- Qty dan tombol aksi (edit & hapus) --}}
                                 <div class="flex flex-col items-end justify-between">
+                                    {{-- Tampilan qty saat ini --}}
                                     <div class="text-center">
                                         <p class="text-sm font-semibold text-gray-700">Qty</p>
                                         <p class="text-lg font-bold text-gray-800 qty-display">
@@ -146,16 +172,15 @@
                                         </p>
                                     </div>
 
-                                    {{-- Actions (muncul saat hover) --}}
+                                    {{-- Tombol aksi (muncul saat hover kartu) --}}
                                     <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {{-- Edit Button --}}
+                                        {{-- Tombol edit qty & parfum --}}
                                         <button type="button" 
                                                 onclick="openModalLayanan(event, this.closest('.layanan-item'))"
                                                 class="p-2 bg-yellow-400 hover:bg-yellow-500 rounded-lg transition-colors">
                                             <i class="bi bi-pencil-fill text-white"></i>
                                         </button>
-                                        
-                                        {{-- Delete Button --}}
+                                        {{-- Tombol hapus item layanan --}}
                                         <button type="button" 
                                                 onclick="confirmDelete(event, '{{ $d->id_detail_transaksi }}', '{{ $d->jenis->nama_jenis ?? "Layanan" }}')"
                                                 class="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors">
@@ -172,12 +197,16 @@
         </div>
     </div>
 
-    {{-- BOTTOM BAR --}}
+    {{-- ========================================
+         BOTTOM BAR FIXED
+         Menampilkan total harga terkini dan tombol Simpan
+    ======================================== --}}
     <div class="fixed bottom-0 left-0 right-0 bg-yellow-400 px-6 py-5 flex justify-between items-center shadow-2xl z-50">
         <div>
             <p class="text-sm text-gray-700">Total Harga</p>
+            {{-- Total dihitung ulang via JavaScript saat qty berubah --}}
             <p class="text-2xl font-bold text-gray-900" id="totalHarga">
-                Rp{{ number_format($detail->sum(fn($d) => $d->qty * $d->harga),0,',','.') }}
+                Rp{{ number_format($detail->sum(fn($d) => $d->qty * $d->harga), 0, ',', '.') }}
             </p>
         </div>
 
@@ -189,18 +218,20 @@
     </div>
 </div>
 
-{{-- MODAL EDIT LAYANAN --}}
+{{-- ========================================
+     MODAL EDIT LAYANAN
+     Muncul saat klik tombol edit atau klik area detail layanan.
+     Admin dapat mengubah qty dan parfum.
+======================================== --}}
 <div id="modalLayanan"
      class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[999] px-4">
     <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate__animated animate__fadeInUp">
-        {{-- Header Modal --}}
         <div class="bg-yellow-400 p-6">
             <h2 id="modalTitle" class="text-2xl font-bold text-gray-900"></h2>
         </div>
 
-        {{-- Body Modal --}}
         <div class="p-6 space-y-5">
-            {{-- Qty Input --}}
+            {{-- Input Qty --}}
             <div>
                 <label class="block font-bold text-gray-700 mb-2">
                     <i class="bi bi-123 text-yellow-500"></i>
@@ -211,12 +242,14 @@
                     <input id="qtyInput" 
                            type="number" 
                            step="0.01"
+                           min="0.01"
                            class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition-all text-lg font-semibold"
                            placeholder="Masukkan qty...">
                 </div>
+                <p class="text-xs text-gray-500 mt-1 ml-1">Minimal qty: 0.01</p>
             </div>
 
-            {{-- Parfum Select --}}
+            {{-- Dropdown Parfum --}}
             <div>
                 <label class="block font-bold text-gray-700 mb-2">
                     <i class="bi bi-bag-heart-fill text-red-500"></i>
@@ -236,7 +269,7 @@
             </div>
         </div>
 
-        {{-- Footer Modal --}}
+        {{-- Tombol aksi modal --}}
         <div class="p-6 bg-gray-50 flex gap-3">
             <button onclick="closeModal()" 
                     class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition-all">
@@ -251,10 +284,12 @@
     </div>
 </div>
 
-{{-- MODAL KONFIRMASI HAPUS --}}
+{{-- ========================================
+     MODAL KONFIRMASI HAPUS ITEM
+     Dialog konfirmasi sebelum menghapus item layanan
+======================================== --}}
 <div id="modalDelete" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-[9999] px-4">
     <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate__animated animate__zoomIn">
-        {{-- Header --}}
         <div class="bg-gradient-to-r from-red-500 to-red-600 p-6">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center flex-shrink-0">
@@ -267,11 +302,8 @@
             </div>
         </div>
 
-        {{-- Body --}}
         <div class="p-6">
-            <p class="text-gray-700 text-lg mb-2">
-                Anda akan menghapus layanan:
-            </p>
+            <p class="text-gray-700 text-lg mb-2">Anda akan menghapus layanan:</p>
             <div class="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6">
                 <p id="deleteItemName" class="font-bold text-red-700 text-xl"></p>
             </div>
@@ -281,7 +313,6 @@
             </p>
         </div>
 
-        {{-- Footer --}}
         <div class="p-6 bg-gray-50 flex gap-3">
             <button onclick="closeDeleteModal()"
                     class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold transition-all">
@@ -301,20 +332,29 @@
 
 @section('scripts')
 <script>
-let currentCard = null;
+// =============================
+// VARIABEL GLOBAL
+// currentCard = kartu layanan yang sedang diedit
+// deleteDetailId = ID detail yang akan dihapus
+// =============================
+let currentCard    = null;
 let deleteDetailId = null;
 
-const modalLayanan = document.getElementById('modalLayanan');
-const modalTitle = document.getElementById('modalTitle');
-const qtyInput = document.getElementById('qtyInput');
-const parfumSelect = document.getElementById('parfumSelect');
-const btnSave = document.getElementById('btnSave');
-const totalHarga = document.getElementById('totalHarga');
-
-const modalDelete = document.getElementById('modalDelete');
+// Referensi elemen DOM yang sering digunakan
+const modalLayanan   = document.getElementById('modalLayanan');
+const modalTitle     = document.getElementById('modalTitle');
+const qtyInput       = document.getElementById('qtyInput');
+const parfumSelect   = document.getElementById('parfumSelect');
+const btnSave        = document.getElementById('btnSave');
+const totalHarga     = document.getElementById('totalHarga');
+const modalDelete    = document.getElementById('modalDelete');
 const deleteItemName = document.getElementById('deleteItemName');
 const btnConfirmDelete = document.getElementById('btnConfirmDelete');
 
+// =============================
+// BUKA MODAL EDIT LAYANAN
+// Mengisi form modal dengan data dari kartu yang diklik
+// =============================
 function openModalLayanan(event, card) {
     event.stopPropagation();
     currentCard = card;
@@ -323,24 +363,27 @@ function openModalLayanan(event, card) {
     modalTitle.innerText = card.dataset.nama;
     qtyInput.value = card.dataset.qty;
     
-    // Set parfum value
+    // Set nilai parfum jika ada
     const parfumValue = card.dataset.parfum;
-    if (parfumValue && parfumValue !== '' && parfumValue !== 'null') {
-        parfumSelect.value = parfumValue;
-    } else {
-        parfumSelect.value = '';
-    }
+    parfumSelect.value = (parfumValue && parfumValue !== '' && parfumValue !== 'null')
+        ? parfumValue
+        : '';
     
     qtyInput.focus();
 }
 
+// =============================
+// TUTUP MODAL EDIT
+// =============================
 function closeModal() {
     modalLayanan.classList.add('hidden');
     modalLayanan.classList.remove('flex');
     currentCard = null;
 }
 
-// Confirm Delete
+// =============================
+// BUKA MODAL KONFIRMASI HAPUS
+// =============================
 function confirmDelete(event, detailId, itemName) {
     event.stopPropagation();
     deleteDetailId = detailId;
@@ -349,16 +392,23 @@ function confirmDelete(event, detailId, itemName) {
     modalDelete.classList.add('flex');
 }
 
+// =============================
+// TUTUP MODAL HAPUS
+// =============================
 function closeDeleteModal() {
     modalDelete.classList.add('hidden');
     modalDelete.classList.remove('flex');
     deleteDetailId = null;
 }
 
-// Execute Delete
-btnConfirmDelete.onclick = function() {
+// =============================
+// EKSEKUSI HAPUS ITEM LAYANAN
+// Kirim request DELETE ke endpoint deleteDetail via fetch
+// =============================
+btnConfirmDelete.onclick = function () {
     if (!deleteDetailId) return;
 
+    // Tampilkan loading pada tombol
     btnConfirmDelete.disabled = true;
     btnConfirmDelete.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i> Menghapus...';
 
@@ -370,19 +420,25 @@ btnConfirmDelete.onclick = function() {
             'Content-Type': 'application/json'
         }
     })
-    .then(res => res.json())
+    .then(res => {
+        // Cek apakah response berhasil
+        if (!res.ok) throw new Error('HTTP error ' + res.status);
+        return res.json();
+    })
     .then(data => {
         if (data.success) {
+            // Animasi hilang sebelum elemen dihapus dari DOM
             const card = document.querySelector(`[data-id="${deleteDetailId}"]`);
             if (card) {
                 card.style.transition = 'all 0.3s ease';
-                card.style.opacity = '0';
+                card.style.opacity   = '0';
                 card.style.transform = 'scale(0.9)';
                 
                 setTimeout(() => {
                     card.remove();
                     updateTotal();
-                    
+
+                    // Tampilkan pesan kosong jika tidak ada layanan tersisa
                     if (document.querySelectorAll('.layanan-item').length === 0) {
                         document.getElementById('layananList').innerHTML = `
                             <div class="text-center py-16">
@@ -403,16 +459,20 @@ btnConfirmDelete.onclick = function() {
         }
     })
     .catch(err => {
-        console.error('Error:', err);
+        console.error('Error hapus layanan:', err);
         alert('Terjadi kesalahan saat menghapus layanan');
     })
     .finally(() => {
+        // Reset tombol setelah proses selesai
         btnConfirmDelete.disabled = false;
         btnConfirmDelete.innerHTML = '<i class="bi bi-trash-fill"></i> Ya, Hapus';
     });
 };
 
-// Show Notification
+// =============================
+// FUNGSI NOTIFIKASI TOAST
+// Menampilkan notifikasi sementara di pojok kanan atas
+// =============================
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `fixed top-20 right-6 z-[9999] px-6 py-4 rounded-2xl shadow-2xl transform translate-x-full transition-all duration-300 ${
@@ -424,65 +484,78 @@ function showNotification(message, type = 'success') {
             <span>${message}</span>
         </div>
     `;
-    
     document.body.appendChild(notification);
-    
+
+    // Animasi masuk
+    setTimeout(() => { notification.style.transform = 'translateX(0)'; }, 10);
+    // Animasi keluar dan hapus dari DOM
     setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 10);
-    
-    setTimeout(() => {
-        notification.style.opacity = '0';
+        notification.style.opacity   = '0';
         notification.style.transform = 'translateX(100%)';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
 
-// Close modals
-modalLayanan.addEventListener('click', function(e) {
+// =============================
+// EVENT LISTENER: TUTUP MODAL SAAT KLIK BACKDROP
+// =============================
+modalLayanan.addEventListener('click', function (e) {
     if (e.target === modalLayanan) closeModal();
 });
 
-modalDelete.addEventListener('click', function(e) {
+modalDelete.addEventListener('click', function (e) {
     if (e.target === modalDelete) closeDeleteModal();
 });
 
-document.addEventListener('keydown', function(e) {
+// Tutup modal dengan tombol Escape
+document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         if (!modalLayanan.classList.contains('hidden')) closeModal();
         if (!modalDelete.classList.contains('hidden')) closeDeleteModal();
     }
 });
 
-btnSave.onclick = () => {
-    const qty = parseFloat(qtyInput.value);
+// =============================
+// TOMBOL SIMPAN DI MODAL EDIT
+// Validasi qty, update data di kartu, dan hitung ulang total
+// =============================
+btnSave.onclick = function () {
+    const qty    = parseFloat(qtyInput.value);
     const parfum = parfumSelect.value;
-    const harga = parseFloat(currentCard.dataset.harga);
+    const harga  = parseFloat(currentCard.dataset.harga);
 
+    // Validasi qty wajib diisi dan lebih dari 0
     if (!qty || qty <= 0) {
-        alert('Qty harus diisi dan lebih dari 0!');
+        qtyInput.classList.add('border-red-500');
         qtyInput.focus();
+        alert('Qty harus diisi dan lebih dari 0!');
         return;
     }
+    qtyInput.classList.remove('border-red-500');
 
-    currentCard.dataset.qty = qty;
+    // Update data pada atribut kartu
+    currentCard.dataset.qty    = qty;
     currentCard.dataset.parfum = parfum;
     
-    currentCard.querySelector('.qty-input').value = qty;
+    // Update hidden input untuk form submit
+    currentCard.querySelector('.qty-input').value    = qty;
     currentCard.querySelector('.parfum-input').value = parfum || '';
     
+    // Update tampilan qty
     currentCard.querySelector('.qty-display').innerText =
         qty + ' ' + currentCard.dataset.satuan;
     
+    // Update tampilan subtotal
     currentCard.querySelector('.subtotal').innerText =
         'SubTotal: Rp' + (qty * harga).toLocaleString('id-ID');
 
+    // Update tampilan parfum
     const parfumDisplay = currentCard.querySelector('.parfum-display');
     if (parfumDisplay) {
         if (parfum && parfum !== '' && parfum !== 'null') {
             const selectedOption = parfumSelect.options[parfumSelect.selectedIndex];
-            const parfumName = selectedOption ? selectedOption.text : 'Tanpa parfum';
-            parfumDisplay.querySelector('.parfum-name').innerText = parfumName;
+            parfumDisplay.querySelector('.parfum-name').innerText =
+                selectedOption ? selectedOption.text : 'Tanpa parfum';
             parfumDisplay.classList.remove('hidden');
         } else {
             parfumDisplay.classList.add('hidden');
@@ -494,20 +567,30 @@ btnSave.onclick = () => {
     showNotification('Data berhasil diperbarui', 'success');
 };
 
-function updateTotal(){
+// =============================
+// FUNGSI HITUNG ULANG TOTAL
+// Menjumlahkan semua subtotal dari kartu layanan yang masih ada
+// =============================
+function updateTotal() {
     let total = 0;
-    document.querySelectorAll('.layanan-item').forEach(c => {
+    document.querySelectorAll('.layanan-item').forEach(function (c) {
         total += parseFloat(c.dataset.qty) * parseFloat(c.dataset.harga);
     });
     totalHarga.innerText = 'Rp' + total.toLocaleString('id-ID');
 }
 
+{{-- =============================
+     SCROLL KE ITEM BARU
+     Jika ada parameter highlight=new di URL,
+     scroll otomatis ke item pertama dan hapus highlight setelah 3 detik
+============================= --}}
 @if(request('highlight') === 'new')
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const firstItem = document.querySelector('.layanan-item');
     if (firstItem) {
         firstItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
+        // Hapus animasi highlight setelah 3 detik
         setTimeout(() => {
             firstItem.classList.remove('ring-4', 'ring-green-500', 'animate-pulse');
         }, 3000);

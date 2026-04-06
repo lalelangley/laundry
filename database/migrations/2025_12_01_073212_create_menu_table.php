@@ -8,8 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('menu', function (Blueprint $table) {
+       Schema::create('menu', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('role_id')->nullable();
             $table->string('nama_menu', 100);
             $table->string('icon', 100)->nullable();
             $table->string('route', 150)->nullable();

@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
     protected function composeMenus(): void
     {
         try {
-            View::composer(['layouts.sidebar', 'layouts.master'], function ($view) {
+            View::composer(['layouts.sidebar'], function ($view) {
                 $menus = collect();
                 $roleId = null;
                 $guardType = null;

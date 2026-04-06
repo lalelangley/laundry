@@ -13,14 +13,17 @@ class JenisLayanan extends Model
     protected $primaryKey = 'id_jenis_layanan';
 
     protected $fillable = [
+        'id_transaksi',
         'id_layanan',
+        'id_jenis_layanan',
+        'id_parfum',
         'nama_jenis',
-        'id_satuan',     
         'harga',
-        'lama',
-        'lama_satuan',
-        'gambar',
+        'qty',
+        'subtotal',     
         'keterangan',
+        'id_satuan',
+        'gambar',
     ];
 
     // Relasi balik ke Layanan

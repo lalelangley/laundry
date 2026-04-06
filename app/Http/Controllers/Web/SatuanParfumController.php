@@ -53,6 +53,11 @@ class SatuanParfumController extends Controller
 
     public function satuanStore(Request $request)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+            'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
         // ✅ CHECK PERMISSION ADD
         requirePermission('satuan', 'add');
         
@@ -95,6 +100,12 @@ class SatuanParfumController extends Controller
 
     public function satuanUpdate(Request $request, $id)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+           'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION EDIT
         requirePermission('satuan', 'edit');
         
@@ -157,6 +168,12 @@ class SatuanParfumController extends Controller
 
     public function parfumStore(Request $request)
     {
+         $request->validate([
+            'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION ADD
         requirePermission('parfum', 'add');
         
@@ -178,6 +195,12 @@ class SatuanParfumController extends Controller
 
     public function parfumUpdate(Request $request, $id)
     {
+        $request->validate([
+        'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+        
         // ✅ CHECK PERMISSION EDIT
         requirePermission('parfum', 'edit');
         
@@ -240,6 +263,12 @@ class SatuanParfumController extends Controller
 
     public function satuanStoreKasir(Request $request)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+            'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION ADD
         requirePermission('satuan', 'add');
         
@@ -283,6 +312,12 @@ class SatuanParfumController extends Controller
 
     public function satuanUpdateKasir(Request $request, $id)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+           'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION EDIT
         requirePermission('satuan', 'edit');
         
@@ -345,6 +380,13 @@ class SatuanParfumController extends Controller
 
     public function parfumStoreKasir(Request $request)
     {
+
+         $request->validate([
+            'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+        
         // ✅ CHECK PERMISSION ADD
         requirePermission('parfum', 'add');
         
@@ -371,6 +413,12 @@ class SatuanParfumController extends Controller
 
     public function parfumUpdateKasir(Request $request, $id)
     {
+        $request->validate([
+        'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+        
         // ✅ CHECK PERMISSION EDIT
         requirePermission('parfum', 'edit');
         
@@ -433,6 +481,12 @@ class SatuanParfumController extends Controller
 
     public function parfumStoreAdmin2(Request $request)
     {
+        $request->validate([
+            'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION ADD
         requirePermission('parfum', 'add');
         
@@ -459,6 +513,12 @@ class SatuanParfumController extends Controller
 
     public function parfumUpdateAdmin2(Request $request, $id)
     {
+        $request->validate([
+        'nama_parfum' => 'required',
+        ], [
+            'nama_parfum.required' => 'Nama Parfum tidak boleh kosong.',
+        ]);
+        
         // ✅ CHECK PERMISSION EDIT
         requirePermission('parfum', 'edit');
         
@@ -525,6 +585,11 @@ class SatuanParfumController extends Controller
 
     public function satuanStoreAdmin2(Request $request)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+            'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
         // ✅ CHECK PERMISSION ADD
         requirePermission('satuan', 'add');
         
@@ -568,6 +633,12 @@ class SatuanParfumController extends Controller
 
     public function satuanUpdateAdmin2(Request $request, $id)
     {
+        $request->validate([
+            'nama_satuan' => 'required',
+        ], [
+           'nama_satuan.required' => 'Nama Satuan tidak boleh kosong.',
+        ]);
+
         // ✅ CHECK PERMISSION EDIT
         requirePermission('satuan', 'edit');
         

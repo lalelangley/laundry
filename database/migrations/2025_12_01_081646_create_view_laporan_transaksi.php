@@ -19,7 +19,6 @@ return new class extends Migration
                 mb.nama_metode_bayar,
                 t.total_harga,
                 t.diskon,
-                t.tipe_diskon,
                 t.total_bayar,
                 t.status_bayar,
                 t.status_transaksi,

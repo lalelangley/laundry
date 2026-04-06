@@ -15,6 +15,7 @@
     {{-- Google Font --}}
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite('resources/css/app.css')
+    @stack('styles')   {{-- ← TAMBAH INI --}}
     <style>
         body { 
             font-family: 'Poppins', sans-serif;
@@ -68,6 +69,7 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-100">
     {{-- 🔄 GLOBAL LOADING --}}
     <div class="loading-overlay" id="loading">
