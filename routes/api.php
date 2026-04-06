@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\LaundryOrderController;
 use App\Http\Controllers\Api\ProfilePelanggansController;
 use App\Http\Controllers\Api\DriverTaskController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\TransaksiShareController;
 use App\Http\Controllers\FcmTokenController;
 
 
@@ -37,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/invoice/{id}', [LaundryOrderController::class, 'getInvoice']);
     Route::post('/transaksi/{id}/bayar', [PaymentController::class, 'bayar']);
     Route::post('/transaksi/{id_transaksi}/pilih-metode', [LaundryOrderController::class, 'pilihMetodePengambilan']);
+    Route::post('/transaksi/share', [TransaksiShareController::class, 'share']);
 
     Route::prefix('driver')->group(function () {
         Route::get('/{id_driver}/history', [DriverTaskController::class, 'getDriverHistory']);

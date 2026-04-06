@@ -48,6 +48,9 @@
             Pilih Foto
             <input id="fotoInput" type="file" name="gambar" class="hidden" accept="image/*">
         </label>
+        <p class="text-xs text-gray-500 mt-2 text-center">
+            Format gambar JPG, JPEG, PNG. Maksimal 2 MB.
+        </p>
     </div>
 
     {{-- FORM CARD --}}

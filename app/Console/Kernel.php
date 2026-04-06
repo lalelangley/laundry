@@ -12,11 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // ✅ TAMBAHKAN INI: Cek pesanan terlambat setiap 15 menit
         $schedule->command('pesanan:check-terlambat')
-                 ->everyFifteenMinutes()
-                 ->withoutOverlapping()
-                 ->runInBackground();
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**
@@ -24,7 +23,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

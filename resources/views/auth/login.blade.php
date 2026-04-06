@@ -141,7 +141,8 @@
                                 onchange="onRoleChange(this.value)"
                                 class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 appearance-none bg-white">
                                 <option value="">-- Pilih role pengguna --</option>
-                                <option value="admin"  {{ old('login_type') == 'admin'  ? 'selected' : '' }}>Admin / Super Admin</option>
+                                <option value="super_admin" {{ old('login_type') == 'super_admin' ? 'selected' : '' }}>Super Admin</option>
+                                <option value="admin"  {{ old('login_type') == 'admin'  ? 'selected' : '' }}>Admin</option>
                                 <option value="kasir"  {{ old('login_type') == 'kasir'  ? 'selected' : '' }}>Kasir</option>
                             </select>
                             <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -251,11 +252,11 @@
             resetErrors();
             hideAlert();
 
-            if (role === 'admin') {
+            if (role === 'super_admin' || role === 'admin') {
                 formAdmin.classList.remove('hidden');
                 formAdmin.classList.add('slide-in');
                 formKasir.classList.add('hidden');
-                btnLabel.textContent = 'LOGIN ADMIN';
+                btnLabel.textContent = role === 'super_admin' ? 'LOGIN SUPER ADMIN' : 'LOGIN ADMIN';
             } else if (role === 'kasir') {
                 formKasir.classList.remove('hidden');
                 formKasir.classList.add('slide-in');
@@ -294,7 +295,7 @@
                 isValid = false;
             }
 
-            if (role === 'admin') {
+            if (role === 'super_admin' || role === 'admin') {
                 const email    = document.getElementById('input-email');
                 const password = document.getElementById('input-password-admin');
                 if (!email.value.trim()) {

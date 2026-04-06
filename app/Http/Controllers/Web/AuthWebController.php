@@ -119,15 +119,15 @@ class AuthWebController extends Controller
     // Syarat: Validasi form sesuai kebutuhan
     // Syarat: Validasi akses setiap role berfungsi dengan baik
     // ============================================================
-    // Memproses login berdasarkan role (admin/kasir).
-    // Admin menggunakan email + password,
-    // Kasir menggunakan no_hp + password.
+        // Memproses login berdasarkan role (super_admin/admin/kasir).
+        // Super Admin dan Admin menggunakan email + password,
+        // Kasir menggunakan no_hp + password.
     // ============================================================
     public function processLogin(Request $request)
     {
         // ------------------------------------------------------------
         // Syarat: Terdapat kode program untuk proses percabangan
-        // Ambil login_type dari form (admin/kasir)
+        // Ambil login_type dari form (super_admin/admin/kasir)
         // ------------------------------------------------------------
         $type = $request->login_type;
 
@@ -136,16 +136,16 @@ class AuthWebController extends Controller
         // Syarat: Terdapat kode program yang mengidentifikasi data array
         // Array role yang diizinkan login ke sistem
         // ------------------------------------------------------------
-        $roleYangDiizinkan = ['admin', 'kasir'];
+        $roleYangDiizinkan = ['super_admin', 'admin', 'kasir'];
         if (!in_array($type, $roleYangDiizinkan)) {
             return back()->with('error', 'Role pengguna tidak valid.');
         }
 
-        if ($type === 'admin') {
+        if (in_array($type, ['super_admin', 'admin'], true)) {
             // ------------------------------------------------------------
             // Syarat: Validasi form sesuai kebutuhan
             // Syarat: Terdapat penanganan error/galat pada kode program
-            // Validasi input server-side untuk login admin
+            // Validasi input server-side untuk login admin/super admin
             // ------------------------------------------------------------
             $request->validate([
                 'email'          => 'required|email',
@@ -169,6 +169,16 @@ class AuthWebController extends Controller
                     ->withInput(['email' => $request->email, 'login_type' => $type]);
             }
 
+            if ($type === 'super_admin' && (int) $admin->role_id !== 1) {
+                return back()->with('error', 'Akun ini bukan Super Admin.')
+                    ->withInput(['email' => $request->email, 'login_type' => $type]);
+            }
+
+            if ($type === 'admin' && (int) $admin->role_id !== 2) {
+                return back()->with('error', 'Akun ini bukan Admin.')
+                    ->withInput(['email' => $request->email, 'login_type' => $type]);
+            }
+
             // Percabangan: cek status aktif admin sebelum diizinkan masuk
             if ($admin->status !== 'aktif') {
                 return back()->with('error', 'Akun Anda tidak aktif. Hubungi super admin.')
@@ -179,8 +189,8 @@ class AuthWebController extends Controller
             Auth::guard('admin')->login($admin);
             $request->session()->regenerate();
 
-            // Percabangan: arahkan ke dashboard sesuai role_id
-            $dashboardRoute = $admin->role_id == 1 ? 'admin.dashboard' : 'admin2.dashboard';
+            // Percabangan: arahkan ke dashboard sesuai role yang dipilih
+            $dashboardRoute = $type === 'super_admin' ? 'admin.dashboard' : 'admin2.dashboard';
             return redirect()->route($dashboardRoute)
                 ->with('success', 'Selamat datang, ' . $admin->nama . '!');
         }

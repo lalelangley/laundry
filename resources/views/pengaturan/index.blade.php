@@ -44,6 +44,9 @@
                 </button>
             </div>
             <input type="file" id="inputFotoOutlet" accept="image/*" class="hidden">
+            <p class="text-xs text-gray-500 mt-3 text-center">
+                Format gambar JPG, JPEG, PNG. Maksimal 2 MB.
+            </p>
         </div>
     </div>
 
