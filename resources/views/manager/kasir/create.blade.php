@@ -31,65 +31,132 @@
             <div class="px-12 py-12">
                 <form action="{{ route('manager.kasir.store') }}" method="POST">
                     @csrf
-                    
+
+                    {{-- ===== ALERT ERROR GLOBAL (duplikat / validasi gagal) ===== --}}
+                    @if ($errors->any())
+                    <div class="mb-8 bg-red-50 border-2 border-red-300 rounded-xl p-5 flex items-start gap-4">
+                        <i class="bi bi-exclamation-triangle-fill text-red-500 text-xl flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold text-red-700 mb-2">Data tidak dapat disimpan!</p>
+                            <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- ===== ALERT SUCCESS (opsional, jika ada session success) ===== --}}
+                    @if (session('success'))
+                    <div class="mb-8 bg-green-50 border-2 border-green-300 rounded-xl p-5 flex items-start gap-4">
+                        <i class="bi bi-check-circle-fill text-green-500 text-xl flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-semibold text-green-700">{{ session('success') }}</p>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                        {{-- Nama Kasir --}}
+
+                        {{-- ===== NAMA KASIR ===== --}}
                         <div class="lg:col-span-3">
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 Nama Lengkap <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-person text-gray-400 text-lg"></i>
+                                    <i class="bi bi-person text-lg
+                                        {{ $errors->has('nama_kasir') ? 'text-red-400' : 'text-gray-400' }}"></i>
                                 </div>
-                                <input type="text" 
+                                <input type="text"
                                        name="nama_kasir"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none" 
+                                       value="{{ old('nama_kasir') }}"
+                                       class="w-full border-2 rounded-xl pl-14 pr-6 py-4 transition outline-none
+                                              {{ $errors->has('nama_kasir')
+                                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                 : 'border-gray-300 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
                                        placeholder="Contoh: Budi Santoso"
                                        required>
                             </div>
+                            @error('nama_kasir')
+                                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
-                        {{-- No Telepon --}}
+                        {{-- ===== NO TELEPON ===== --}}
                         <div class="lg:col-span-2">
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                No. Telepon <span class="text-gray-400 text-xs"></span>
+                                No. Telepon <span class="text-gray-400 text-xs">(Opsional)</span>
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-telephone-fill text-gray-400 text-lg"></i>
+                                    <i class="bi bi-telephone-fill text-lg
+                                        {{ $errors->has('no_hp') ? 'text-red-400' : 'text-gray-400' }}"></i>
                                 </div>
-                                <input type="text" 
-                                    name="no_hp"
-                                    class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none"
-                                    placeholder="Contoh: 08xxxxxxxxxx">
+                                <input type="text"
+                                       name="no_hp"
+                                       value="{{ old('no_hp') }}"
+                                       class="w-full border-2 rounded-xl pl-14 pr-6 py-4 transition outline-none
+                                              {{ $errors->has('no_hp')
+                                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                 : 'border-gray-300 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                       placeholder="Contoh: 08xxxxxxxxxx">
                             </div>
+                            @error('no_hp')
+                                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
-                        {{-- Password --}}
+                        {{-- ===== PASSWORD ===== --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 Password <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
+                                    <i class="bi bi-lock-fill text-lg
+                                        {{ $errors->has('password') ? 'text-red-400' : 'text-gray-400' }}"></i>
                                 </div>
-                                <input type="password" 
+                                <input type="password"
                                        name="password"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none"
+                                       id="passwordInput"
+                                       class="w-full border-2 rounded-xl pl-14 pr-14 py-4 transition outline-none
+                                              {{ $errors->has('password')
+                                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                 : 'border-gray-300 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
                                        placeholder="Minimal 6 karakter"
                                        required>
+                                {{-- Toggle show/hide password --}}
+                                <button type="button"
+                                        onclick="togglePassword()"
+                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
+                                    <i class="bi bi-eye-fill text-lg" id="eyeIcon"></i>
+                                </button>
                             </div>
+                            @error('password')
+                                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
                         </div>
 
-                        {{-- Info Text --}}
+                        {{-- Info password --}}
                         <div class="lg:col-span-3 bg-gray-50 rounded-xl p-6 border border-gray-200">
                             <p class="text-sm text-gray-600">
                                 <i class="bi bi-info-circle-fill text-gray-400 me-2"></i>
-                                Gunakan kombinasi huruf, angka, dan simbol untuk keamanan password yang lebih baik
+                                Gunakan kombinasi huruf, angka, dan simbol untuk keamanan password yang lebih baik.
+                                Password minimal <strong>6 karakter</strong>.
                             </p>
                         </div>
+
                     </div>
 
                     {{-- Card Footer / Buttons --}}
@@ -105,6 +172,7 @@
                             <span>Simpan Kasir</span>
                         </button>
                     </div>
+
                 </form>
             </div>
         </div>
@@ -114,9 +182,26 @@
             <i class="bi bi-info-circle-fill text-blue-600 text-xl flex-shrink-0 mt-1"></i>
             <div class="text-sm text-blue-800">
                 <p class="font-semibold mb-2">Informasi Penting</p>
-                <p>Kasir yang ditambahkan akan mendapatkan akses ke sistem sesuai dengan hak akses yang telah ditentukan. Pastikan data yang dimasukkan sudah benar sebelum menyimpan.</p>
+                <p>Kasir yang ditambahkan akan mendapatkan akses ke sistem sesuai dengan hak akses yang telah ditentukan.
+                   Pastikan <strong>nama kasir</strong> dan <strong>nomor HP</strong> belum terdaftar di sistem sebelum menyimpan.</p>
             </div>
         </div>
+
     </div>
 </div>
+
+{{-- Script toggle password --}}
+<script>
+    function togglePassword() {
+        const input = document.getElementById('passwordInput');
+        const icon  = document.getElementById('eyeIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+        }
+    }
+</script>
 @endsection

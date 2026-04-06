@@ -3,19 +3,28 @@
 @section('content')
 
 @php
-    // Hitung subtotal dari detail transaksi
-    $subtotal = $detail->sum('total_harga'); 
+    // FIX: Subtotal dari detail dengan fallback ke total_harga transaksi
+    // Ini menangani kasus d.harga = 0/NULL di database
+    $subtotal = $detail->sum('total_harga');
+    if ($subtotal <= 0) {
+        $subtotal = $transaksi->total_harga ?? 0;
+    }
+
     $diskon = $transaksi->diskon ?? 0;
-    $totalTagihan = $subtotal - $diskon;
+
+    // FIX: Pastikan totalTagihan tidak negatif
+    $totalTagihan = max(0, $subtotal - $diskon);
 
     // Ambil total bayar / DP terbaru
     $dp = $transaksi->total_bayar ?? 0;
-    $sisaBayar = $totalTagihan - $dp;
+
+    // FIX: Pastikan sisaBayar tidak negatif
+    $sisaBayar = max(0, $totalTagihan - $dp);
 
     // Tentukan status pembayaran
-    if($sisaBayar <= 0){
+    if ($sisaBayar <= 0) {
         $statusBayar = 'lunas';
-    } elseif($dp > 0){
+    } elseif ($dp > 0) {
         $statusBayar = 'DP';
     } else {
         $statusBayar = 'belum bayar';
@@ -97,6 +106,11 @@
                     {{-- LIST LAYANAN --}}
                     <div class="space-y-4">
                         @foreach($detail as $item)
+                        @php
+                            // FIX: gunakan harga_efektif dari controller, fallback ke harga_jenis
+                            $hargaItem = $item->harga_efektif ?? ($item->harga > 0 ? $item->harga : $item->harga_jenis);
+                            $subtotalItem = $item->total_harga > 0 ? $item->total_harga : ($item->qty * $hargaItem);
+                        @endphp
                             <div class="flex justify-between items-center gap-4 p-5 bg-yellow-50 rounded-xl hover:bg-yellow-100 transition-all border border-yellow-200">
                                 <div class="flex-1 space-y-2">
                                     <p class="font-bold text-lg text-gray-800">
@@ -105,11 +119,11 @@
                                     </p>
                                     <p class="text-gray-600 text-sm flex items-center gap-2">
                                         <i class="bi bi-tag-fill text-orange-500"></i>
-                                        Rp {{ number_format($item->harga_jenis,0,',','.') }} / {{ $item->satuan }}
+                                        Rp {{ number_format($hargaItem, 0, ',', '.') }} / {{ $item->satuan }}
                                     </p>
                                     <div class="bg-orange-50 px-3 py-2 rounded-lg inline-block border border-orange-200">
                                         <p class="font-semibold text-orange-700">
-                                            SubTotal: Rp {{ number_format($item->total_harga,0,',','.') }}
+                                            SubTotal: Rp {{ number_format($subtotalItem, 0, ',', '.') }}
                                         </p>
                                     </div>
                                 </div>
@@ -206,19 +220,20 @@
                         </div>
                         <div class="flex justify-between items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                             <span class="text-gray-600 font-medium text-sm">SubTotal</span>
-                            <span class="font-bold text-gray-800">Rp {{ number_format($subtotal,0,',','.') }}</span>
+                            <span class="font-bold text-gray-800">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
                         </div>
                         <div id="dpDisplay" class="flex justify-between items-center p-4 bg-orange-50 rounded-xl border-l-4 border-orange-400 {{ $dp > 0 ? '' : 'hidden' }}">
                             <span class="text-gray-600 font-medium text-sm">DP</span>
-                            <span class="font-bold text-orange-700" id="dpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
+                            <span class="font-bold text-orange-700" id="dpAmount">Rp {{ number_format($dp, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-200">
                             <span class="text-gray-600 font-medium text-sm">Diskon</span>
-                            <span class="font-bold text-red-600">- Rp {{ number_format($diskon,0,',','.') }}</span>
+                            <span class="font-bold text-red-600">- Rp {{ number_format($diskon, 0, ',', '.') }}</span>
                         </div>
+                        {{-- FIX: Total Harga tidak akan negatif karena pakai max(0,...) --}}
                         <div class="flex justify-between items-center p-5 bg-yellow-400 rounded-xl shadow-sm mt-4 border border-yellow-300">
                             <span class="font-bold text-lg text-gray-900">Total Harga</span>
-                            <span class="font-bold text-2xl text-gray-900">Rp {{ number_format($totalTagihan,0,',','.') }}</span>
+                            <span class="font-bold text-2xl text-gray-900">Rp {{ number_format($totalTagihan, 0, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -233,7 +248,7 @@
                         </a>
                     @endif
 
-                    {{-- Tombol Selesaikan --}}
+                    {{-- Tombol Siap Diambil --}}
                     @if($transaksi->status_transaksi == 'proses')
                         <a href="{{ route('kasir.riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
                         class="bg-orange-400 hover:bg-orange-500 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
@@ -241,7 +256,7 @@
                         </a>
                     @endif
 
-                    {{-- Tombol Siap Diambil --}}
+                    {{-- Tombol Selesai --}}
                     @if($transaksi->status_transaksi == 'selesai' || $transaksi->status_transaksi == 'siap_di_ambil')
                         <a href="{{ route('kasir.riwayat.selesai', $transaksi->id_transaksi) }}" 
                         class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
@@ -303,19 +318,19 @@
             <div class="space-y-3 text-gray-700">
                 <div class="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-200">
                     <span class="font-medium">SubTotal:</span>
-                    <span class="font-bold">Rp {{ number_format($subtotal,0,',','.') }}</span>
+                    <span class="font-bold">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
                 </div>
                 <div id="modalDpDisplay" class="flex justify-between items-center p-4 bg-orange-50 rounded-xl border-l-4 border-orange-400 {{ $dp > 0 ? '' : 'hidden' }}">
                     <span class="font-medium text-gray-700">DP Terbayar:</span>
-                    <span class="font-bold text-orange-700" id="modalDpAmount">Rp {{ number_format($dp,0,',','.') }}</span>
+                    <span class="font-bold text-orange-700" id="modalDpAmount">Rp {{ number_format($dp, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex justify-between items-center p-4 bg-red-50 rounded-xl border border-red-200">
                     <span class="font-medium text-gray-700">Diskon:</span>
-                    <span class="font-bold text-red-600">- Rp {{ number_format($diskon,0,',','.') }}</span>
+                    <span class="font-bold text-red-600">- Rp {{ number_format($diskon, 0, ',', '.') }}</span>
                 </div>
                 <div class="flex justify-between items-center p-5 bg-orange-500 rounded-xl shadow-sm">
                     <span class="font-bold text-white text-lg">Sisa Bayar:</span>
-                    <span class="font-bold text-white text-2xl" id="sisaBayarDisplay">Rp {{ number_format($sisaBayar,0,',','.') }}</span>
+                    <span class="font-bold text-white text-2xl" id="sisaBayarDisplay">Rp {{ number_format($sisaBayar, 0, ',', '.') }}</span>
                 </div>
             </div>
 
@@ -359,14 +374,14 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // Data PHP untuk JavaScript
-const subtotal = {{ $subtotal }};
-const diskon = {{ $diskon }};
-const totalTagihan = {{ $totalTagihan }};
-let dpTerbayar = {{ $dp }};
-let sisaBayar = {{ $sisaBayar }};
-let currentStatusBayar = '{{ $statusBayar }}';
-let currentStatusTransaksi = '{{ $transaksi->status_transaksi }}';
-const bolehDP = {{ $bolehDP ? 'true' : 'false' }};
+const subtotal      = {{ $subtotal }};
+const diskon        = {{ $diskon }};
+const totalTagihan  = {{ $totalTagihan }};
+let dpTerbayar      = {{ $dp }};
+let sisaBayar       = {{ $sisaBayar }};
+let currentStatusBayar      = '{{ $statusBayar }}';
+let currentStatusTransaksi  = '{{ $transaksi->status_transaksi }}';
+const bolehDP        = {{ $bolehDP ? 'true' : 'false' }};
 const harusPelunasan = {{ $harusPelunasan ? 'true' : 'false' }};
 
 // Format angka ke Rupiah
@@ -389,15 +404,13 @@ document.getElementById('jumlahBayarDisplay').addEventListener('input', function
 });
 
 function openModalBayar() {
-    // Update informasi modal berdasarkan status transaksi
     const infoModePembayaran = document.getElementById('infoModePembayaran');
-    const modalTitle = document.getElementById('modalTitle');
-    const labelNominal = document.getElementById('labelNominal');
-    const infoPembayaran = document.getElementById('infoPembayaran');
+    const modalTitle         = document.getElementById('modalTitle');
+    const labelNominal       = document.getElementById('labelNominal');
+    const infoPembayaran     = document.getElementById('infoPembayaran');
     
     if (harusPelunasan) {
-        // Status: Siap Diambil / Selesai - Harus Pelunasan
-        modalTitle.textContent = 'Pelunasan Pembayaran';
+        modalTitle.textContent  = 'Pelunasan Pembayaran';
         labelNominal.textContent = 'Nominal Pelunasan (Wajib Lunas)';
         
         infoModePembayaran.className = 'p-4 rounded-xl border-2 bg-orange-50 border-orange-400';
@@ -416,13 +429,11 @@ function openModalBayar() {
             Masukkan nominal sesuai sisa bayar untuk melunasi transaksi
         `;
         
-        // Set nilai default ke sisa bayar
         document.getElementById('jumlahBayarDisplay').value = formatRupiah(sisaBayar);
         document.getElementById('jumlahBayar').value = sisaBayar;
         
     } else if (bolehDP) {
-        // Status: Antrian / Proses - Boleh DP
-        modalTitle.textContent = 'Pembayaran (DP/Lunas)';
+        modalTitle.textContent  = 'Pembayaran (DP/Lunas)';
         labelNominal.textContent = 'Masukkan Nominal Pembayaran';
         
         infoModePembayaran.className = 'p-4 rounded-xl border-2 bg-blue-50 border-blue-400';
@@ -455,37 +466,28 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
     
     const jumlahBayar = parseInt(document.getElementById('jumlahBayar').value) || 0;
     
-    // Validasi nominal negatif
     if (jumlahBayar < 0) {
         Swal.fire({
             icon: 'error',
             title: 'Nominal Tidak Valid',
             text: 'Nominal pembayaran tidak boleh negatif!',
             confirmButtonColor: '#ef4444',
-            customClass: {
-                popup: 'rounded-2xl',
-                confirmButton: 'rounded-xl px-6 py-3 font-bold'
-            }
+            customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
         });
         return;
     }
     
-    // Validasi melebihi sisa bayar
     if (jumlahBayar > sisaBayar) {
         Swal.fire({
             icon: 'warning',
             title: 'Nominal Melebihi Tagihan',
             html: `<div class="text-gray-600">Sisa bayar: <strong>Rp ${formatRupiah(sisaBayar)}</strong><br>Nominal yang Anda masukkan melebihi sisa tagihan!</div>`,
             confirmButtonColor: '#f59e0b',
-            customClass: {
-                popup: 'rounded-2xl',
-                confirmButton: 'rounded-xl px-6 py-3 font-bold'
-            }
+            customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
         });
         return;
     }
     
-    // Validasi khusus untuk status "Siap Diambil" / "Selesai"
     if (harusPelunasan && jumlahBayar < sisaBayar) {
         Swal.fire({
             icon: 'error',
@@ -498,15 +500,11 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
                 </div>
             `,
             confirmButtonColor: '#f59e0b',
-            customClass: {
-                popup: 'rounded-2xl',
-                confirmButton: 'rounded-xl px-6 py-3 font-bold'
-            }
+            customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
         });
         return;
     }
     
-    // Konfirmasi jika nominal = 0 dan boleh DP
     if (jumlahBayar === 0 && bolehDP) {
         Swal.fire({
             title: 'Konfirmasi',
@@ -518,11 +516,7 @@ document.getElementById('formBayar').addEventListener('submit', function(e) {
             confirmButtonText: 'Ya, Lanjutkan',
             cancelButtonText: 'Batal',
             reverseButtons: true,
-            customClass: {
-                popup: 'rounded-2xl',
-                confirmButton: 'rounded-xl px-6 py-3 font-bold',
-                cancelButton: 'rounded-xl px-6 py-3 font-bold'
-            }
+            customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold', cancelButton: 'rounded-xl px-6 py-3 font-bold' }
         }).then((result) => {
             if (result.isConfirmed) {
                 prosesSubmitPembayaran(jumlahBayar);
@@ -540,9 +534,7 @@ function prosesSubmitPembayaran(jumlahBayar) {
         html: 'Mohon tunggu sebentar',
         allowOutsideClick: false,
         allowEscapeKey: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        didOpen: () => { Swal.showLoading(); }
     });
     
     const formData = new FormData(document.getElementById('formBayar'));
@@ -556,17 +548,15 @@ function prosesSubmitPembayaran(jumlahBayar) {
         }
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
     })
     .then(data => {
         Swal.close();
         
         if (data.success) {
-            dpTerbayar = data.dp_terbayar || (dpTerbayar + jumlahBayar);
-            sisaBayar = data.sisa_bayar || (totalTagihan - dpTerbayar);
+            dpTerbayar         = data.dp_terbayar || (dpTerbayar + jumlahBayar);
+            sisaBayar          = data.sisa_bayar !== undefined ? data.sisa_bayar : Math.max(0, totalTagihan - dpTerbayar);
             currentStatusBayar = data.status_bayar || currentStatusBayar;
             
             updatePaymentUI();
@@ -590,10 +580,7 @@ function prosesSubmitPembayaran(jumlahBayar) {
                     `,
                     confirmButtonText: 'OK',
                     confirmButtonColor: '#6b7280',
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl px-6 py-3 font-bold'
-                    }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
                 });
             } else {
                 Swal.fire({
@@ -621,14 +608,9 @@ function prosesSubmitPembayaran(jumlahBayar) {
                     `,
                     confirmButtonText: 'OK',
                     confirmButtonColor: '#f97316',
-                    customClass: {
-                        popup: 'rounded-2xl',
-                        confirmButton: 'rounded-xl px-6 py-3 font-bold'
-                    }
+                    customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
                 }).then(() => {
-                    if (sisaBayar <= 0) {
-                        location.reload();
-                    }
+                    if (sisaBayar <= 0) location.reload();
                 });
             }
         } else {
@@ -637,10 +619,7 @@ function prosesSubmitPembayaran(jumlahBayar) {
                 title: 'Pembayaran Gagal',
                 text: data.message || 'Terjadi kesalahan saat memproses pembayaran',
                 confirmButtonColor: '#ef4444',
-                customClass: {
-                    popup: 'rounded-2xl',
-                    confirmButton: 'rounded-xl px-6 py-3 font-bold'
-                }
+                customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold' }
             });
         }
     })
@@ -662,35 +641,29 @@ function prosesSubmitPembayaran(jumlahBayar) {
             cancelButtonText: 'Tutup',
             confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
-            customClass: {
-                popup: 'rounded-2xl',
-                confirmButton: 'rounded-xl px-6 py-3 font-bold',
-                cancelButton: 'rounded-xl px-6 py-3 font-bold'
-            }
+            customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold', cancelButton: 'rounded-xl px-6 py-3 font-bold' }
         }).then((result) => {
-            if (result.isConfirmed) {
-                location.reload();
-            }
+            if (result.isConfirmed) location.reload();
         });
     });
 }
 
 function updatePaymentUI() {
-    const dpDisplay = document.getElementById('dpDisplay');
-    const dpAmount = document.getElementById('dpAmount');
+    const dpDisplay      = document.getElementById('dpDisplay');
+    const dpAmount       = document.getElementById('dpAmount');
     const modalDpDisplay = document.getElementById('modalDpDisplay');
-    const modalDpAmount = document.getElementById('modalDpAmount');
+    const modalDpAmount  = document.getElementById('modalDpAmount');
     
     if (dpTerbayar > 0) {
         dpDisplay.classList.remove('hidden');
         modalDpDisplay.classList.remove('hidden');
-        dpAmount.textContent = 'Rp ' + formatRupiah(dpTerbayar);
+        dpAmount.textContent      = 'Rp ' + formatRupiah(dpTerbayar);
         modalDpAmount.textContent = 'Rp ' + formatRupiah(dpTerbayar);
     }
     
-    document.getElementById('sisaBayarDisplay').textContent = 'Rp ' + formatRupiah(sisaBayar);
-    document.getElementById('jumlahBayarDisplay').value = formatRupiah(sisaBayar);
-    document.getElementById('jumlahBayar').value = sisaBayar;
+    document.getElementById('sisaBayarDisplay').textContent    = 'Rp ' + formatRupiah(sisaBayar);
+    document.getElementById('jumlahBayarDisplay').value        = formatRupiah(sisaBayar);
+    document.getElementById('jumlahBayar').value               = sisaBayar;
     
     const statusBayarDisplay = document.getElementById('statusBayarDisplay');
     statusBayarDisplay.className = 'inline-block px-5 py-3 rounded-xl capitalize font-bold w-full text-center';
@@ -719,11 +692,7 @@ function confirmBatal() {
         confirmButtonText: '<i class="bi bi-x-lg"></i> Ya, Batalkan!',
         cancelButtonText: 'Tidak',
         reverseButtons: true,
-        customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
-            cancelButton: 'rounded-xl px-6 py-3 font-bold'
-        }
+        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg', cancelButton: 'rounded-xl px-6 py-3 font-bold' }
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
@@ -731,9 +700,7 @@ function confirmBatal() {
                 html: 'Mohon tunggu sebentar',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
             document.getElementById('formBatal').submit();
         }
@@ -751,11 +718,7 @@ function confirmHapus() {
         confirmButtonText: '<i class="bi bi-trash-fill"></i> Ya, Hapus!',
         cancelButtonText: 'Batal',
         reverseButtons: true,
-        customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg',
-            cancelButton: 'rounded-xl px-6 py-3 font-bold'
-        }
+        customClass: { popup: 'rounded-2xl', confirmButton: 'rounded-xl px-6 py-3 font-bold shadow-lg', cancelButton: 'rounded-xl px-6 py-3 font-bold' }
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
@@ -763,9 +726,7 @@ function confirmHapus() {
                 html: 'Mohon tunggu sebentar',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                didOpen: () => { Swal.showLoading(); }
             });
             document.getElementById('formHapus').submit();
         }

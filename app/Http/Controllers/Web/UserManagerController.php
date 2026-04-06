@@ -203,19 +203,26 @@ class UserManagerController extends Controller
     }
 
 
+    // =============================
+    // TAMBAH KASIR - SUPER ADMIN
+    // Validasi: nama_kasir & no_hp unik
+    // =============================
     public function storeKasir(Request $request)
     {
         $request->validate([
-            'nama_kasir' => 'required|string|max:100',
-            'no_hp'      => 'nullable|string|max:20',
+            'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir',
+            'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp',
             'password'   => 'required|string|min:6',
+        ], [
+            'nama_kasir.unique' => 'Nama kasir sudah terdaftar, gunakan nama lain.',
+            'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
-        $kasir = Kasir::create([
+        Kasir::create([
             'nama_kasir' => $request->nama_kasir,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
-           'role_id' => 3,
+            'role_id'    => 3,
         ]);
 
         return redirect()
@@ -280,261 +287,243 @@ class UserManagerController extends Controller
     }
 
     public function hakRole()
-{
-    $admin = auth('admin')->user();
-    if (!$admin || $admin->role_id != 1) abort(403);
+    {
+        $admin = auth('admin')->user();
+        if (!$admin || $admin->role_id != 1) abort(403);
 
-    $selectedRoleId = request('role_id') ?? 1;
+        $selectedRoleId = request('role_id') ?? 1;
 
-    $roles = Role::orderBy('id')->get();
+        $roles = Role::orderBy('id')->get();
 
-    $menus = Menu::where('role_id', $selectedRoleId)
-        ->where('status', 1)
-        ->whereNull('parent_id')
-        ->with(['children' => function ($q) use ($selectedRoleId) {
-            $q->where('status', 1)
-              ->where('role_id', $selectedRoleId)
-              ->orderBy('urutan');
-        }])
-        ->orderBy('urutan')
-        ->get();
+        $menus = Menu::where('role_id', $selectedRoleId)
+            ->where('status', 1)
+            ->whereNull('parent_id')
+            ->with(['children' => function ($q) use ($selectedRoleId) {
+                $q->where('status', 1)
+                  ->where('role_id', $selectedRoleId)
+                  ->orderBy('urutan');
+            }])
+            ->orderBy('urutan')
+            ->get();
 
-    $permissions = MenuRole::where('role_id', $selectedRoleId)
-        ->get()
-        ->keyBy('menu_id');
+        $permissions = MenuRole::where('role_id', $selectedRoleId)
+            ->get()
+            ->keyBy('menu_id');
 
-    // ✅ PERBAIKAN: Tambahkan semua permission actions
-    $menuActions = [
-        'layanan'         => ['view','add','edit','delete'],
-        'satuan'          => ['view','add','edit','delete'],
-        'parfum'          => ['view','add','edit','delete'],
-        'pelanggan'       => ['view','add','edit','delete'],
-        'pengeluaran'     => ['view','add','edit','delete'],
-        'transaksi'       => ['view','edit','delete'],
-        'pesanan_online'  => ['view','edit','delete'],
-         'riwayat'         => ['view','add','edit','delete'], // ✅ TAMBAHKAN 'add'
-        'metode_bayar'    => ['view','add','delete'],
-        'laporan'         => ['view'],
-        'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'], // ✅ LENGKAP!
-        'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
-        'user_manager'    => ['view','add','edit','delete'],
-    ];
+        $menuActions = [
+            'layanan'         => ['view','add','edit','delete'],
+            'satuan'          => ['view','add','edit','delete'],
+            'parfum'          => ['view','add','edit','delete'],
+            'pelanggan'       => ['view','add','edit','delete'],
+            'pengeluaran'     => ['view','add','edit','delete'],
+            'transaksi'       => ['view','edit','delete'],
+            'pesanan_online'  => ['view','edit','delete'],
+            'riwayat'         => ['view','add','edit','delete'],
+            'metode_bayar'    => ['view','add','delete'],
+            'laporan'         => ['view'],
+            'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'],
+            'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
+            'user_manager'    => ['view','add','edit','delete'],
+        ];
 
-    return view('manager.menu-role.hak', compact(
-        'roles',
-        'menus',
-        'permissions',
-        'selectedRoleId',
-        'menuActions'
-    ));
-}
-
-
-// ✅ PERBAIKAN: Ganti method hakRoleAdmin2() dengan ini
-
-public function hakRoleAdmin2()
-{
-    $admin = auth('admin')->user();
-    
-    // ✅ FIX: Izinkan Admin2 (role_id = 2) akses halaman ini
-    if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
-        abort(403, 'Akses ditolak. Hanya Super Admin dan Admin2 yang dapat mengatur hak akses.');
-    }
-    
-    // Default ke role kasir (id = 3)
-    $selectedRoleId = request('role_id') ?? 3;
-    
-    $roles = Role::orderBy('id')->get();
-    
-    // ✅ Tambahkan variable $role untuk view
-    $role = Role::findOrFail($selectedRoleId);
-    
-    // ✅ PERBAIKAN: Filter menu berdasarkan role_id yang dipilih (kasir = 3)
-    $menus = Menu::where('role_id', $selectedRoleId)
-        ->where('status', 1)
-        ->whereNull('parent_id')
-        ->with(['children' => function ($q) use ($selectedRoleId) {
-            $q->where('status', 1)
-                ->where('role_id', $selectedRoleId)
-                ->orderBy('urutan');
-        }])
-        ->orderBy('urutan')
-        ->get();
-    
-    $permissions = MenuRole::where('role_id', $selectedRoleId)
-        ->get()
-        ->keyBy('menu_id');
-    
-    // ✅ PERBAIKAN: Tambahkan semua permission untuk pengaturan
-    $menuActions = [
-        'layanan'         => ['view','add','edit','delete'],
-        'satuan'          => ['view','add','edit','delete'],
-        'parfum'          => ['view','add','edit','delete'],
-        'pelanggan'       => ['view','add','edit','delete'],
-        'pengeluaran'     => ['view','add','edit','delete'],
-        'transaksi'       => ['view','edit','delete'],
-        'pesanan_online'  => ['view','edit','delete'],
-        'riwayat'         => ['view','add','edit','delete'], // ✅ TAMBAHKAN 'add'
-        'metode_bayar'    => ['view','add','delete'],
-        'laporan'         => ['view'],
-        'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'], // ✅ LENGKAP!
-        'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
-    ];
-    
-    return view('admin2.manager.menu-role.hak', compact(
-        'role',
-        'roles',
-        'menus',
-        'permissions',
-        'selectedRoleId',
-        'menuActions'
-    ));
-}
-
-
-  public function saveHakRole(Request $request)
-{
-    $admin = auth('admin')->user();
-    
-    // ✅ Security check - Hanya Super Admin
-    if (!$admin || (int)$admin->role_id !== 1) {
-        abort(403, 'Hanya Super Admin yang dapat mengubah hak akses');
+        return view('manager.menu-role.hak', compact(
+            'roles',
+            'menus',
+            'permissions',
+            'selectedRoleId',
+            'menuActions'
+        ));
     }
 
-    $request->validate([
-        'role_id' => 'required|exists:roles,id',
-        'menus' => 'array',
-    ]);
 
-    $roleId = $request->role_id;
+    public function hakRoleAdmin2()
+    {
+        $admin = auth('admin')->user();
+        
+        if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+            abort(403, 'Akses ditolak. Hanya Super Admin dan Admin2 yang dapat mengatur hak akses.');
+        }
+        
+        $selectedRoleId = request('role_id') ?? 3;
+        
+        $roles = Role::orderBy('id')->get();
+        
+        $role = Role::findOrFail($selectedRoleId);
+        
+        $menus = Menu::where('role_id', $selectedRoleId)
+            ->where('status', 1)
+            ->whereNull('parent_id')
+            ->with(['children' => function ($q) use ($selectedRoleId) {
+                $q->where('status', 1)
+                    ->where('role_id', $selectedRoleId)
+                    ->orderBy('urutan');
+            }])
+            ->orderBy('urutan')
+            ->get();
+        
+        $permissions = MenuRole::where('role_id', $selectedRoleId)
+            ->get()
+            ->keyBy('menu_id');
+        
+        $menuActions = [
+            'layanan'         => ['view','add','edit','delete'],
+            'satuan'          => ['view','add','edit','delete'],
+            'parfum'          => ['view','add','edit','delete'],
+            'pelanggan'       => ['view','add','edit','delete'],
+            'pengeluaran'     => ['view','add','edit','delete'],
+            'transaksi'       => ['view','edit','delete'],
+            'pesanan_online'  => ['view','edit','delete'],
+            'riwayat'         => ['view','add','edit','delete'],
+            'metode_bayar'    => ['view','add','delete'],
+            'laporan'         => ['view'],
+            'pengaturan'      => ['view','edit','add','delete','restore','hapus_backup','password','logout'],
+            'data'            => ['view','edit','delete','restore','hapus_backup','password','logout'],
+        ];
+        
+        return view('admin2.manager.menu-role.hak', compact(
+            'role',
+            'roles',
+            'menus',
+            'permissions',
+            'selectedRoleId',
+            'menuActions'
+        ));
+    }
 
-    // ✅ Hapus semua permission role ini dulu
-    MenuRole::where('role_id', $roleId)->delete();
 
-    // ✅ Ambil SEMUA menu (parent + child) yang sesuai dengan role
-    $allMenus = Menu::where('role_id', $roleId)
-        ->where('status', 1)
-        ->get();
+    public function saveHakRole(Request $request)
+    {
+        $admin = auth('admin')->user();
+        
+        if (!$admin || (int)$admin->role_id !== 1) {
+            abort(403, 'Hanya Super Admin yang dapat mengubah hak akses');
+        }
 
-    foreach ($allMenus as $menu) {
-        $menuId = $menu->id;
-        $menuData = $request->menus[$menuId] ?? null;
+        $request->validate([
+            'role_id' => 'required|exists:roles,id',
+            'menus' => 'array',
+        ]);
 
-        // ✅ Default inactive jika tidak ada data
-        if (!$menuData) {
+        $roleId = $request->role_id;
+
+        MenuRole::where('role_id', $roleId)->delete();
+
+        $allMenus = Menu::where('role_id', $roleId)
+            ->where('status', 1)
+            ->get();
+
+        foreach ($allMenus as $menu) {
+            $menuId = $menu->id;
+            $menuData = $request->menus[$menuId] ?? null;
+
+            if (!$menuData) {
+                MenuRole::create([
+                    'role_id'    => $roleId,
+                    'menu_id'    => $menuId,
+                    'is_active'  => false,
+                    'can_view'   => false,
+                    'can_add'    => false,
+                    'can_edit'   => false,
+                    'can_delete' => false,
+                    'can_cancel' => false,
+                    'can_change_password' => false,
+                    'can_restore_data' => false,
+                    'show_delete_backup' => false,
+                    'show_logout' => false,
+                    'can_access_settings' => false,
+                ]);
+                continue;
+            }
+
+            $isActive = isset($menuData['active']) && $menuData['active'] == 1;
+            $perms = $menuData['permissions'] ?? [];
+
             MenuRole::create([
                 'role_id'    => $roleId,
                 'menu_id'    => $menuId,
-                'is_active'  => false,
-                'can_view'   => false,
-                'can_add'    => false,
-                'can_edit'   => false,
-                'can_delete' => false,
-                'can_cancel' => false,
-                'can_change_password' => false,
-                'can_restore_data' => false,
-                'show_delete_backup' => false,
-                'show_logout' => false,
-                'can_access_settings' => false,
+                'is_active'  => $isActive,
+                'can_view'   => in_array('view', $perms),
+                'can_add'    => in_array('add', $perms),
+                'can_edit'   => in_array('edit', $perms),
+                'can_delete' => in_array('delete', $perms),
+                'can_cancel' => in_array('cancel', $perms),
+                'can_change_password' => in_array('password', $perms),
+                'can_restore_data' => in_array('restore', $perms),
+                'show_delete_backup' => in_array('hapus_backup', $perms),
+                'show_logout' => in_array('logout', $perms),
+                'can_access_settings' => in_array('view', $perms),
             ]);
-            continue;
         }
 
-        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
-        $perms = $menuData['permissions'] ?? [];
+        return back()->with('success', 'Hak akses role berhasil disimpan');
+    }
 
-        // ✅ PERBAIKAN: Handle semua permission termasuk special permissions
-        MenuRole::create([
-            'role_id'    => $roleId,
-            'menu_id'    => $menuId,
-            'is_active'  => $isActive,
-            'can_view'   => in_array('view', $perms),
-            'can_add'    => in_array('add', $perms),
-            'can_edit'   => in_array('edit', $perms),
-            'can_delete' => in_array('delete', $perms),
-            'can_cancel' => in_array('cancel', $perms),
-            'can_change_password' => in_array('password', $perms),
-            'can_restore_data' => in_array('restore', $perms),
-            'show_delete_backup' => in_array('hapus_backup', $perms),
-            'show_logout' => in_array('logout', $perms),
-            'can_access_settings' => in_array('view', $perms),
+
+    public function saveHakRoleAdmin2(Request $request)
+    {
+        $admin = auth('admin')->user();
+        
+        if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+            abort(403, 'Anda tidak memiliki izin untuk mengubah hak akses kasir');
+        }
+
+        $request->validate([
+            'menus' => 'array',
         ]);
-    }
 
-    return back()->with('success', 'Hak akses role berhasil disimpan');
-}
+        $roleId = 3;
 
+        MenuRole::where('role_id', $roleId)->delete();
 
-public function saveHakRoleAdmin2(Request $request)
-{
-    $admin = auth('admin')->user();
-    
-    // ✅ Security check - Admin2 (role_id = 2)
-    if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
-        abort(403, 'Anda tidak memiliki izin untuk mengubah hak akses kasir');
-    }
+        $allMenus = Menu::where('role_id', $roleId)
+            ->where('status', 1)
+            ->get();
 
-    $request->validate([
-        'menus' => 'array',
-    ]);
+        foreach ($allMenus as $menu) {
+            $menuId = $menu->id;
+            $menuData = $request->menus[$menuId] ?? null;
 
-    // ✅ Admin2 hanya bisa edit kasir (role_id = 3)
-    $roleId = 3;
+            if (!$menuData) {
+                MenuRole::create([
+                    'role_id'    => $roleId,
+                    'menu_id'    => $menuId,
+                    'is_active'  => false,
+                    'can_view'   => false,
+                    'can_add'    => false,
+                    'can_edit'   => false,
+                    'can_delete' => false,
+                    'can_cancel' => false,
+                    'can_change_password' => false,
+                    'can_restore_data' => false,
+                    'show_delete_backup' => false,
+                    'show_logout' => false,
+                    'can_access_settings' => false,
+                ]);
+                continue;
+            }
 
-    // Hapus semua permission kasir
-    MenuRole::where('role_id', $roleId)->delete();
+            $isActive = isset($menuData['active']) && $menuData['active'] == 1;
+            $perms = $menuData['permissions'] ?? [];
 
-    // Ambil semua menu kasir
-    $allMenus = Menu::where('role_id', $roleId)
-        ->where('status', 1)
-        ->get();
-
-    foreach ($allMenus as $menu) {
-        $menuId = $menu->id;
-        $menuData = $request->menus[$menuId] ?? null;
-
-        if (!$menuData) {
             MenuRole::create([
                 'role_id'    => $roleId,
                 'menu_id'    => $menuId,
-                'is_active'  => false,
-                'can_view'   => false,
-                'can_add'    => false,
-                'can_edit'   => false,
-                'can_delete' => false,
-                'can_cancel' => false,
-                'can_change_password' => false,
-                'can_restore_data' => false,
-                'show_delete_backup' => false,
-                'show_logout' => false,
-                'can_access_settings' => false,
+                'is_active'  => $isActive,
+                'can_view'   => in_array('view', $perms),
+                'can_add'    => in_array('add', $perms),
+                'can_edit'   => in_array('edit', $perms),
+                'can_delete' => in_array('delete', $perms),
+                'can_cancel' => in_array('cancel', $perms),
+                'can_change_password' => in_array('password', $perms),
+                'can_restore_data' => in_array('restore', $perms),
+                'show_delete_backup' => in_array('hapus_backup', $perms),
+                'show_logout' => in_array('logout', $perms),
+                'can_access_settings' => in_array('view', $perms),
             ]);
-            continue;
         }
 
-        $isActive = isset($menuData['active']) && $menuData['active'] == 1;
-        $perms = $menuData['permissions'] ?? [];
-
-        // ✅ PERBAIKAN: Handle special permissions untuk pengaturan
-        MenuRole::create([
-            'role_id'    => $roleId,
-            'menu_id'    => $menuId,
-            'is_active'  => $isActive,
-            'can_view'   => in_array('view', $perms),
-            'can_add'    => in_array('add', $perms),
-            'can_edit'   => in_array('edit', $perms),
-            'can_delete' => in_array('delete', $perms),
-            'can_cancel' => in_array('cancel', $perms),
-            'can_change_password' => in_array('password', $perms),
-            'can_restore_data' => in_array('restore', $perms),
-            'show_delete_backup' => in_array('hapus_backup', $perms),
-            'show_logout' => in_array('logout', $perms),
-            'can_access_settings' => in_array('view', $perms),
-        ]);
+        return back()->with('success', 'Hak akses kasir berhasil disimpan');
     }
-
-    return back()->with('success', 'Hak akses kasir berhasil disimpan');
-}
 
     public function aksesUser($type, $id)
     {
@@ -589,6 +578,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('admin2.manager.kasir.create');
     }
 
+    // =============================
+    // TAMBAH KASIR - ADMIN2
+    // Validasi: nama_kasir & no_hp unik
+    // =============================
     public function storeKasirAdmin2(Request $request)
     {
         $admin = auth('admin')->user();
@@ -598,9 +591,12 @@ public function saveHakRoleAdmin2(Request $request)
         }
 
         $request->validate([
-            'nama_kasir' => 'required|string|max:100',
-            'no_hp'      => 'nullable|string|max:20',
+            'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir',
+            'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp',
             'password'   => 'required|string|min:6',
+        ], [
+            'nama_kasir.unique' => 'Nama kasir sudah terdaftar, gunakan nama lain.',
+            'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         Kasir::create([
@@ -796,7 +792,8 @@ public function saveHakRoleAdmin2(Request $request)
         $kasir = Kasir::findOrFail($id);
         $roleId = 3;
         $role = Role::findOrFail($roleId);
-            $menus = Menu::where('role_id', $roleId)
+
+        $menus = Menu::where('role_id', $roleId)
             ->where('status', 1)
             ->whereNull('parent_id')
             ->with(['children' => function ($q) use ($roleId) {
@@ -882,6 +879,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('manager.driver.create');
     }
 
+    // =============================
+    // TAMBAH DRIVER - SUPER ADMIN
+    // Validasi: nama_driver & no_telp unik
+    // =============================
     public function storeDriver(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -891,17 +892,20 @@ public function saveHakRoleAdmin2(Request $request)
         }
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp',
+            'password'    => 'required|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah terdaftar, gunakan nama lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         Driver::create([
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'password' => bcrypt($request->password),
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'password'    => bcrypt($request->password),
+            'status'      => $request->status,
         ]);
 
         return redirect()
@@ -922,6 +926,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('manager.driver.edit', compact('driver'));
     }
 
+    // =============================
+    // EDIT DRIVER - SUPER ADMIN
+    // Validasi: nama_driver & no_telp unik (ignore diri sendiri)
+    // =============================
     public function updateDriver(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -933,16 +941,19 @@ public function saveHakRoleAdmin2(Request $request)
         $driver = Driver::findOrFail($id);
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'nullable|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver,' . $driver->id_driver . ',id_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp,' . $driver->id_driver . ',id_driver',
+            'password'    => 'nullable|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah digunakan oleh driver lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         $updateData = [
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'status'      => $request->status,
         ];
 
         if ($request->filled('password')) {
@@ -997,8 +1008,8 @@ public function saveHakRoleAdmin2(Request $request)
 
         $request->validate([
             'user_type' => 'required|in:admin,kasir,driver',
-            'user_id' => 'required',
-            'status' => 'required|in:aktif,nonaktif'
+            'user_id'   => 'required',
+            'status'    => 'required|in:aktif,nonaktif'
         ]);
 
         if ($request->user_type === 'admin') {
@@ -1025,6 +1036,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('kasir.manager.driver.create');
     }
 
+    // =============================
+    // TAMBAH DRIVER - KASIR VIEW (SUPER ADMIN)
+    // Validasi: nama_driver & no_telp unik
+    // =============================
     public function storeDriverKasir(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -1034,17 +1049,20 @@ public function saveHakRoleAdmin2(Request $request)
         }
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp',
+            'password'    => 'required|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah terdaftar, gunakan nama lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         Driver::create([
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'password' => bcrypt($request->password),
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'password'    => bcrypt($request->password),
+            'status'      => $request->status,
         ]);
 
         return redirect()
@@ -1065,6 +1083,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('kasir.manager.driver.edit', compact('driver'));
     }
 
+    // =============================
+    // EDIT DRIVER - KASIR VIEW (SUPER ADMIN)
+    // Validasi: nama_driver & no_telp unik (ignore diri sendiri)
+    // =============================
     public function updateDriverKasir(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1076,16 +1098,19 @@ public function saveHakRoleAdmin2(Request $request)
         $driver = Driver::findOrFail($id);
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'nullable|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver,' . $driver->id_driver . ',id_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp,' . $driver->id_driver . ',id_driver',
+            'password'    => 'nullable|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah digunakan oleh driver lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         $updateData = [
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'status'      => $request->status,
         ];
 
         if ($request->filled('password')) {
@@ -1126,6 +1151,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('admin2.manager.driver.create');
     }
 
+    // =============================
+    // TAMBAH DRIVER - ADMIN2
+    // Validasi: nama_driver & no_telp unik
+    // =============================
     public function storeDriverAdmin2(Request $request)
     {
         $admin = auth()->guard('admin')->user();
@@ -1135,17 +1164,20 @@ public function saveHakRoleAdmin2(Request $request)
         }
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'required|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp',
+            'password'    => 'required|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah terdaftar, gunakan nama lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         Driver::create([
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'password' => bcrypt($request->password),
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'password'    => bcrypt($request->password),
+            'status'      => $request->status,
         ]);
 
         return redirect()
@@ -1166,6 +1198,10 @@ public function saveHakRoleAdmin2(Request $request)
         return view('admin2.manager.driver.edit', compact('driver'));
     }
 
+    // =============================
+    // EDIT DRIVER - ADMIN2
+    // Validasi: nama_driver & no_telp unik (ignore diri sendiri)
+    // =============================
     public function updateDriverAdmin2(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1177,16 +1213,19 @@ public function saveHakRoleAdmin2(Request $request)
         $driver = Driver::findOrFail($id);
 
         $request->validate([
-            'nama_driver' => 'required|string|max:255',
-            'no_telp' => 'required|string|max:20',
-            'password' => 'nullable|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_driver' => 'required|string|max:255|unique:driver,nama_driver,' . $driver->id_driver . ',id_driver',
+            'no_telp'     => 'required|string|max:20|unique:driver,no_telp,' . $driver->id_driver . ',id_driver',
+            'password'    => 'nullable|string|min:6',
+            'status'      => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_driver.unique' => 'Nama driver sudah digunakan oleh driver lain.',
+            'no_telp.unique'     => 'Nomor telepon sudah digunakan oleh driver lain.',
         ]);
 
         $updateData = [
             'nama_driver' => $request->nama_driver,
-            'no_telp' => $request->no_telp,
-            'status' => $request->status,
+            'no_telp'     => $request->no_telp,
+            'status'      => $request->status,
         ];
 
         if ($request->filled('password')) {
@@ -1225,15 +1264,15 @@ public function saveHakRoleAdmin2(Request $request)
         }
 
         $adminData = Admin::findOrFail($id);
-
         $roles = Role::whereIn('id', [1, 2])->get();
 
         return view('manager.admin.edit', compact('adminData', 'roles'));
     }
 
-    // ===============================
-    // ADMIN - UPDATE ✅ FIXED
-    // ===============================
+    // =============================
+    // EDIT ADMIN - SUPER ADMIN
+    // Validasi: nama & email unik (ignore diri sendiri)
+    // =============================
     public function updateAdmin(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1244,20 +1283,22 @@ public function saveHakRoleAdmin2(Request $request)
 
         $adminData = Admin::findOrFail($id);
 
-        // ✅ FIXED: ganti 'admins' jadi 'admin'
         $request->validate([
-            'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:admin,email,' . $id . ',id_admin',
+            'nama'     => 'required|string|max:255|unique:admin,nama,' . $id . ',id_admin',
+            'email'    => 'required|email|unique:admin,email,' . $id . ',id_admin',
             'password' => 'nullable|string|min:6',
-            'role_id' => 'required|in:1,2',
-            'status' => 'required|in:aktif,nonaktif',
+            'role_id'  => 'required|in:1,2',
+            'status'   => 'required|in:aktif,nonaktif',
+        ], [
+            'nama.unique'  => 'Nama admin sudah digunakan oleh admin lain.',
+            'email.unique' => 'Email sudah digunakan oleh admin lain.',
         ]);
 
         $updateData = [
-            'nama' => $request->nama,
-            'email' => $request->email,
+            'nama'    => $request->nama,
+            'email'   => $request->email,
             'role_id' => $request->role_id,
-            'status' => $request->status,
+            'status'  => $request->status,
         ];
 
         if ($request->filled('password')) {
@@ -1292,46 +1333,56 @@ public function saveHakRoleAdmin2(Request $request)
             abort(403, 'Anda tidak memiliki izin untuk mengedit kasir');
         }
 
-
         $kasir = Kasir::findOrFail($id);
 
         return view('admin2.manager.kasir.edit', compact('kasir'));
     }
 
+    // =============================
+    // EDIT KASIR - ADMIN2
+    // Validasi: nama_kasir & no_hp unik (ignore diri sendiri)
+    // =============================
     public function updateKasirAdmin2(Request $request, $id)
-{
-    $admin = auth()->guard('admin')->user();
+    {
+        $admin = auth()->guard('admin')->user();
 
-    if (!$admin || !in_array($admin->role_id, [1, 2])) {
-        abort(403, 'Anda tidak memiliki izin untuk mengupdate kasir');
+        if (!$admin || !in_array($admin->role_id, [1, 2])) {
+            abort(403, 'Anda tidak memiliki izin untuk mengupdate kasir');
+        }
+
+        $kasir = Kasir::findOrFail($id);
+
+        $request->validate([
+            'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir,' . $kasir->id_kasir . ',id_kasir',
+            'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp,' . $kasir->id_kasir . ',id_kasir',
+            'password'   => 'nullable|string|min:6',
+            'status'     => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_kasir.unique' => 'Nama kasir sudah digunakan oleh kasir lain.',
+            'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
+        ]);
+
+        $updateData = [
+            'nama_kasir' => $request->nama_kasir,
+            'no_hp'      => $request->no_hp,
+            'status'     => $request->status,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        $kasir->update($updateData);
+
+        return redirect()
+            ->route('admin2.manager.index')
+            ->with('success', 'Data kasir berhasil diupdate');
     }
 
-    $kasir = Kasir::findOrFail($id);
-
-    $request->validate([
-        'nama_kasir' => 'required|string|max:100',
-        'no_hp' => 'nullable|string|max:20',
-        'password' => 'nullable|string|min:6',
-        'status' => 'required|in:aktif,nonaktif',
-    ]);
-
-    $updateData = [
-        'nama_kasir' => $request->nama_kasir,
-        'no_hp' => $request->no_hp,
-        'status' => $request->status,
-    ];
-
-    if ($request->filled('password')) {
-        $updateData['password'] = Hash::make($request->password);
-    }
-
-    $kasir->update($updateData);
-
-    return redirect()
-        ->route('admin2.manager.index')
-        ->with('success', 'Data kasir berhasil diupdate');
-}
-
+    // =============================
+    // EDIT KASIR - SUPER ADMIN
+    // Validasi: nama_kasir & no_hp unik (ignore diri sendiri)
+    // =============================
     public function updateKasir(Request $request, $id)
     {
         $admin = auth()->guard('admin')->user();
@@ -1343,16 +1394,19 @@ public function saveHakRoleAdmin2(Request $request)
         $kasir = Kasir::findOrFail($id);
 
         $request->validate([
-            'nama_kasir' => 'required|string|max:100',
-            'no_hp' => 'nullable|string|max:20',
-            'password' => 'nullable|string|min:6',
-            'status' => 'required|in:aktif,nonaktif',
+            'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir,' . $kasir->id_kasir . ',id_kasir',
+            'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp,' . $kasir->id_kasir . ',id_kasir',
+            'password'   => 'nullable|string|min:6',
+            'status'     => 'required|in:aktif,nonaktif',
+        ], [
+            'nama_kasir.unique' => 'Nama kasir sudah digunakan oleh kasir lain.',
+            'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         $updateData = [
             'nama_kasir' => $request->nama_kasir,
-            'no_hp' => $request->no_hp,
-            'status' => $request->status,
+            'no_hp'      => $request->no_hp,
+            'status'     => $request->status,
         ];
 
         if ($request->filled('password')) {
@@ -1367,169 +1421,164 @@ public function saveHakRoleAdmin2(Request $request)
     }
     
     private function checkAdminRole($roleId)
-{
-    $admin = auth('admin')->user();
-    if (!$admin || $admin->role_id != $roleId) abort(403);
-    return $admin;
-    
-}
-
-// =============================
-// QUICK SAVE HAK ROLE - SUPER ADMIN
-// =============================
-public function quickSaveHakRole(Request $request)
-{
-    try {
+    {
         $admin = auth('admin')->user();
-        
-        // ✅ Security check - Hanya Super Admin
-        if (!$admin || (int)$admin->role_id !== 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak. Hanya Super Admin yang dapat mengubah hak akses.'
-            ], 403);
-        }
+        if (!$admin || $admin->role_id != $roleId) abort(403);
+        return $admin;
+    }
 
-        $request->validate([
-            'role_id' => 'required|exists:roles,id',
-            'menus' => 'required|array',
-        ]);
+    // =============================
+    // QUICK SAVE HAK ROLE - SUPER ADMIN
+    // =============================
+    public function quickSaveHakRole(Request $request)
+    {
+        try {
+            $admin = auth('admin')->user();
+            
+            if (!$admin || (int)$admin->role_id !== 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak. Hanya Super Admin yang dapat mengubah hak akses.'
+                ], 403);
+            }
 
-        $roleId = $request->role_id;
-        
-        \Log::info('Quick Save Request (Super Admin):', [
-            'admin_id' => $admin->id_admin,
-            'role_id' => $roleId,
-            'menus' => $request->menus
-        ]);
-
-        foreach ($request->menus as $menuId => $data) {
-            $isActive = isset($data['active']) && $data['active'] == 1;
-            $permissions = $data['permissions'] ?? [];
-
-            \Log::info("Processing menu {$menuId}:", [
-                'is_active' => $isActive,
-                'permissions' => $permissions
+            $request->validate([
+                'role_id' => 'required|exists:roles,id',
+                'menus'   => 'required|array',
             ]);
 
-            // ✅ FIXED: Ganti 'menu_role_permissions' ke 'menu_role'
-            \DB::table('menu_role')->updateOrInsert(
-                [
-                    'role_id' => $roleId,
-                    'menu_id' => $menuId
-                ],
-                [
-                    'is_active' => $isActive,
-                    'can_view' => in_array('view', $permissions),
-                    'can_add' => in_array('add', $permissions),
-                    'can_edit' => in_array('edit', $permissions),
-                    'can_delete' => in_array('delete', $permissions),
-                    'can_cancel' => in_array('cancel', $permissions),
-                    'can_change_password' => in_array('password', $permissions),
-                    'can_restore_data' => in_array('restore', $permissions),
-                    'show_delete_backup' => in_array('hapus_backup', $permissions),
-                    'show_logout' => in_array('logout', $permissions),
-                    'can_access_settings' => in_array('view', $permissions),
-                    'updated_at' => now()
-                ]
-            );
-        }
-
-        \Log::info('Quick save successful (Super Admin)');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Hak akses berhasil disimpan'
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Quick save error (Super Admin):', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-
-// =============================
-// QUICK SAVE HAK ROLE - ADMIN2
-// =============================
-public function quickSaveHakRoleAdmin2(Request $request)
-{
-    try {
-        $admin = auth('admin')->user();
-        
-        // ✅ Security check - Admin2 atau Super Admin
-        if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Akses ditolak'
-            ], 403);
-        }
-
-        // Admin2 hanya bisa edit kasir (role_id = 3)
-        $roleId = 3;
-        
-        \Log::info('Quick Save Request (Admin2):', [
-            'admin_id' => $admin->id_admin,
-            'role_id' => $roleId,
-            'menus' => $request->menus
-        ]);
-
-        foreach ($request->menus as $menuId => $data) {
-            $isActive = isset($data['active']) && $data['active'] == 1;
-            $permissions = $data['permissions'] ?? [];
-
-            \Log::info("Processing menu {$menuId}:", [
-                'is_active' => $isActive,
-                'permissions' => $permissions
+            $roleId = $request->role_id;
+            
+            \Log::info('Quick Save Request (Super Admin):', [
+                'admin_id' => $admin->id_admin,
+                'role_id'  => $roleId,
+                'menus'    => $request->menus
             ]);
 
-            // ✅ FIXED: Ganti 'menu_role_permissions' ke 'menu_role'
-            \DB::table('menu_role')->updateOrInsert(
-                [
-                    'role_id' => $roleId,
-                    'menu_id' => $menuId
-                ],
-                [
-                    'is_active' => $isActive,
-                    'can_view' => in_array('view', $permissions),
-                    'can_add' => in_array('add', $permissions),
-                    'can_edit' => in_array('edit', $permissions),
-                    'can_delete' => in_array('delete', $permissions),
-                    'can_cancel' => in_array('cancel', $permissions),
-                    'can_change_password' => in_array('password', $permissions),
-                    'can_restore_data' => in_array('restore', $permissions),
-                    'show_delete_backup' => in_array('hapus_backup', $permissions),
-                    'show_logout' => in_array('logout', $permissions),
-                    'can_access_settings' => in_array('view', $permissions),
-                    'updated_at' => now()
-                ]
-            );
+            foreach ($request->menus as $menuId => $data) {
+                $isActive    = isset($data['active']) && $data['active'] == 1;
+                $permissions = $data['permissions'] ?? [];
+
+                \Log::info("Processing menu {$menuId}:", [
+                    'is_active'   => $isActive,
+                    'permissions' => $permissions
+                ]);
+
+                \DB::table('menu_role')->updateOrInsert(
+                    [
+                        'role_id' => $roleId,
+                        'menu_id' => $menuId
+                    ],
+                    [
+                        'is_active'            => $isActive,
+                        'can_view'             => in_array('view', $permissions),
+                        'can_add'              => in_array('add', $permissions),
+                        'can_edit'             => in_array('edit', $permissions),
+                        'can_delete'           => in_array('delete', $permissions),
+                        'can_cancel'           => in_array('cancel', $permissions),
+                        'can_change_password'  => in_array('password', $permissions),
+                        'can_restore_data'     => in_array('restore', $permissions),
+                        'show_delete_backup'   => in_array('hapus_backup', $permissions),
+                        'show_logout'          => in_array('logout', $permissions),
+                        'can_access_settings'  => in_array('view', $permissions),
+                        'updated_at'           => now()
+                    ]
+                );
+            }
+
+            \Log::info('Quick save successful (Super Admin)');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hak akses berhasil disimpan'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Quick save error (Super Admin):', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
-
-        \Log::info('Quick save successful (Admin2)');
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Hak akses kasir berhasil disimpan'
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('Quick save error (Admin2):', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-        ], 500);
     }
-}
-}
+
+
+    // =============================
+    // QUICK SAVE HAK ROLE - ADMIN2
+    // =============================
+    public function quickSaveHakRoleAdmin2(Request $request)
+    {
+        try {
+            $admin = auth('admin')->user();
+            
+            if (!$admin || !in_array((int)$admin->role_id, [1, 2])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akses ditolak'
+                ], 403);
+            }
+
+            // Admin2 hanya bisa edit kasir (role_id = 3)
+            $roleId = 3;
+            
+            \Log::info('Quick Save Request (Admin2):', [
+                'admin_id' => $admin->id_admin,
+                'role_id'  => $roleId,
+                'menus'    => $request->menus
+            ]);
+
+            foreach ($request->menus as $menuId => $data) {
+                $isActive    = isset($data['active']) && $data['active'] == 1;
+                $permissions = $data['permissions'] ?? [];
+
+                \Log::info("Processing menu {$menuId}:", [
+                    'is_active'   => $isActive,
+                    'permissions' => $permissions
+                ]);
+
+                \DB::table('menu_role')->updateOrInsert(
+                    [
+                        'role_id' => $roleId,
+                        'menu_id' => $menuId
+                    ],
+                    [
+                        'is_active'            => $isActive,
+                        'can_view'             => in_array('view', $permissions),
+                        'can_add'              => in_array('add', $permissions),
+                        'can_edit'             => in_array('edit', $permissions),
+                        'can_delete'           => in_array('delete', $permissions),
+                        'can_cancel'           => in_array('cancel', $permissions),
+                        'can_change_password'  => in_array('password', $permissions),
+                        'can_restore_data'     => in_array('restore', $permissions),
+                        'show_delete_backup'   => in_array('hapus_backup', $permissions),
+                        'show_logout'          => in_array('logout', $permissions),
+                        'can_access_settings'  => in_array('view', $permissions),
+                        'updated_at'           => now()
+                    ]
+                );
+            }
+
+            \Log::info('Quick save successful (Admin2)');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hak akses kasir berhasil disimpan'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Quick save error (Admin2):', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}   
