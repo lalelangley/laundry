@@ -10,11 +10,6 @@
             </a>
             <h1 class="text-lg font-bold">Laporan Satuan</h1>
         </div>
-        {{-- ✅ TOMBOL EXPORT --}}
-        <a href="{{ route('kasir.laporan.satuan.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir]) }}" 
-           class="text-sm font-semibold bg-white px-4 py-2 rounded-full hover:bg-gray-100 transition flex items-center gap-2">
-            <i class="bi bi-file-earmark-excel"></i> Export
-        </a>
     </div>
 
 {{-- FILTER TANGGAL --}}
@@ -57,6 +52,12 @@
         </div>
         @endforelse
     </div>
+
+    @if(method_exists($data, 'links'))
+    <div class="px-5 pb-6">
+        {{ $data->links() }}
+    </div>
+    @endif
 </div>
 @endsection
 

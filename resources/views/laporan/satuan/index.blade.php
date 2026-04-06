@@ -2,22 +2,32 @@
 @section('title', 'Laporan Satuan')
 @section('content')
 <div class="min-h-screen bg-gray-100 pb-24">
-{{-- HEADER --}}
-    <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center justify-between sticky top-0 z-20">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('laporan.index') }}" class="text-2xl font-bold">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h1 class="text-lg font-bold">Laporan Satuan</h1>
+
+    {{-- HEADER --}}
+    <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl sticky top-0 z-20">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="{{ route('laporan.index') }}" class="text-2xl font-bold">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h1 class="text-lg font-bold">Laporan Satuan</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('laporan.satuan.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir]) }}"
+                   class="text-sm font-semibold bg-white px-3 py-2 rounded-full hover:bg-gray-100 transition flex items-center gap-1">
+                    <i class="bi bi-file-earmark-excel text-green-600"></i>
+                    <span>Excel</span>
+                </a>
+                <a href="{{ route('laporan.satuan.pdf', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
+                   class="text-sm font-semibold bg-white px-3 py-2 rounded-full hover:bg-gray-100 transition flex items-center gap-1">
+                    <i class="bi bi-file-earmark-pdf text-red-500"></i>
+                    <span>PDF</span>
+                </a>
+            </div>
         </div>
-        {{-- ✅ TOMBOL EXPORT --}}
-        <a href="{{ route('laporan.satuan.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir]) }}" 
-           class="text-sm font-semibold bg-white px-4 py-2 rounded-full hover:bg-gray-100 transition flex items-center gap-2">
-            <i class="bi bi-file-earmark-excel"></i> Export
-        </a>
     </div>
 
-{{-- FILTER TANGGAL --}}
+    {{-- FILTER TANGGAL --}}
     <form method="GET" class="px-5 mt-5 flex items-center gap-3">
         <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3">
             <p class="text-xs">Tanggal Awal</p>
@@ -32,31 +42,94 @@
         </div>
     </form>
 
-{{-- SUMMARY CARD --}}
+    {{-- SUMMARY CARD --}}
     <div class="px-5 mt-5">
         <div class="bg-white rounded-xl p-4 shadow">
             <p class="text-sm text-gray-600">Total Qty Keseluruhan</p>
-            <p class="text-2xl font-bold text-yellow-500">{{ number_format($data->sum('total_qty')) }}</p>
+            <p class="text-2xl font-bold text-yellow-500">
+                {{ number_format($totalQty) }}
+            </p>
         </div>
     </div>
 
-{{-- LIST SATUAN --}}
-    <div class="mt-6 space-y-4 px-5">
+    {{-- INFO PAGINATION --}}
+    @if ($data->total() > 0)
+    <div class="px-5 mt-4">
+        <p class="text-xs text-gray-500">
+            Menampilkan {{ $data->firstItem() }}–{{ $data->lastItem() }}
+            dari {{ $data->total() }} satuan
+        </p>
+    </div>
+    @endif
+
+    {{-- LIST SATUAN --}}
+    <div class="mt-3 space-y-4 px-5">
         @forelse ($data as $item)
-        <div class="bg-white rounded-xl px-4 py-4 flex justify-between items-center shadow">
-            <div class="flex items-center gap-3">
-                <div class="w-1 h-8 bg-yellow-400 rounded-full"></div>
-                <span class="font-bold text-lg">{{ $item->nama_satuan }}</span>
+            <div class="bg-white rounded-xl px-4 py-4 flex justify-between items-center shadow">
+                <div class="flex items-center gap-3">
+                    <div class="w-1 h-8 bg-yellow-400 rounded-full"></div>
+                    <span class="font-bold text-lg">{{ $item->nama_satuan }}</span>
+                </div>
+                <span class="font-bold text-lg text-yellow-500">
+                    {{ number_format($item->total_qty) }}
+                </span>
             </div>
-            <span class="font-bold text-lg text-yellow-500">{{ number_format($item->total_qty) }}</span>
-        </div>
         @empty
-        <div class="bg-white rounded-xl px-4 py-8 text-center shadow">
-            <i class="bi bi-inbox text-4xl text-gray-400"></i>
-            <p class="text-gray-500 mt-2">Tidak ada data satuan</p>
-        </div>
+            <div class="bg-white rounded-xl px-4 py-8 text-center shadow">
+                <i class="bi bi-inbox text-4xl text-gray-400"></i>
+                <p class="text-gray-500 mt-2">Tidak ada data satuan</p>
+            </div>
         @endforelse
     </div>
+
+   {{-- PAGINATION --}}
+@if ($data->hasPages())
+<div class="px-6 mt-4 pb-4">
+    <div class="px-5 mt-6 flex items-center justify-center gap-2">
+        <p class="text-sm text-gray-500 font-semibold">
+            Menampilkan {{ $data->firstItem() }}–{{ $data->lastItem() }}
+            dari {{ $data->total() }} satuan
+        </p>
+        <div class="flex items-center gap-2">
+            {{-- Prev --}}
+            @if ($data->onFirstPage())
+                <span class="px-3 py-2 rounded-full bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed">
+                    <i class="bi bi-chevron-left"></i>
+                </span>
+            @else
+                <a href="{{ $data->previousPageUrl() }}&dari={{ $tglAwal }}&sampai={{ $tglAkhir }}"
+                   class="px-3 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold transition-all">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            @endif
+
+            {{-- Page Numbers --}}
+            @foreach ($data->getUrlRange(max(1, $data->currentPage()-2), min($data->lastPage(), $data->currentPage()+2)) as $page => $url)
+                <a href="{{ $url }}&dari={{ $tglAwal }}&sampai={{ $tglAkhir }}"
+                   class="w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold transition-all
+                          {{ $page == $data->currentPage()
+                             ? 'bg-yellow-400 text-gray-900 shadow'
+                             : 'bg-white hover:bg-yellow-50 text-gray-600 shadow-sm' }}">
+                    {{ $page }}
+                </a>
+            @endforeach
+
+            {{-- Next --}}
+            @if ($data->hasMorePages())
+                <a href="{{ $data->nextPageUrl() }}&dari={{ $tglAwal }}&sampai={{ $tglAkhir }}"
+                   class="px-3 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold transition-all">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            @else
+                <span class="px-3 py-2 rounded-full bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed">
+                    <i class="bi bi-chevron-right"></i>
+                </span>
+            @endif
+        </div>
+    </div>
+</div>
+@endif
+
 </div>
 @endsection
 

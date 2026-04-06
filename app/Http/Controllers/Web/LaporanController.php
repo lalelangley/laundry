@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Pengeluaran;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TransaksiExport;
 use Illuminate\Support\Facades\Auth;
@@ -68,7 +69,9 @@ class LaporanController extends Controller
         requirePermission('pengeluaran', 'view');
 
         // [OBJECT + METHOD] Memanggil method orderBy dan get dari class Pengeluaran (Eloquent Model)
-        $pengeluaran = Pengeluaran::orderBy('id_pengeluaran', 'DESC')->get();
+        $pengeluaran = Pengeluaran::orderBy('id_pengeluaran', 'DESC')
+            ->paginate(10)
+            ->withQueryString();
 
         return view('pengeluaran.index', compact('pengeluaran'));
     }
@@ -226,7 +229,8 @@ class LaporanController extends Controller
 
         $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('kasir.pengeluaran.index', compact('pengeluaran'));
     }
@@ -370,7 +374,8 @@ class LaporanController extends Controller
 
         $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin2.pengeluaran.index', compact('pengeluaran'));
     }
@@ -955,8 +960,15 @@ class LaporanController extends Controller
 
         // [METHOD + PERULANGAN] sortByDesc() mengurutkan Collection berdasarkan nilai field
         $data = $data->sortByDesc('total_pendapatan')->values();
+        $topKasir = $data->first();
+        $summary = [
+            'total_kasir' => $data->count(),
+            'total_transaksi' => $data->sum('total_transaksi'),
+            'total_pendapatan' => $data->sum('total_pendapatan'),
+        ];
+        $data = $this->paginateCollection($data, 10);
 
-        return view('laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir'));
+        return view('laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir', 'topKasir', 'summary'));
     }
 
     /**
@@ -1005,8 +1017,15 @@ class LaporanController extends Controller
         });
 
         $data = $data->sortByDesc('total_pendapatan')->values();
+        $topKasir = $data->first();
+        $summary = [
+            'total_kasir' => $data->count(),
+            'total_transaksi' => $data->sum('total_transaksi'),
+            'total_pendapatan' => $data->sum('total_pendapatan'),
+        ];
+        $data = $this->paginateCollection($data, 10);
 
-        return view('admin2.laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir'));
+        return view('admin2.laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir', 'topKasir', 'summary'));
     }
 
     // =========================================
@@ -1042,7 +1061,7 @@ class LaporanController extends Controller
          * leftJoin() → semua metode bayar tampil meski belum digunakan.
          * COUNT() dengan alias → menghitung jumlah transaksi per metode bayar.
          */
-        $data = DB::table('metode_bayar')
+        $query = DB::table('metode_bayar')
             ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
                 $join->on('metode_bayar.id_metode_bayar', '=', 'transaksi.id_metode_bayar')
                     ->where('transaksi.status_transaksi', 'selesai')
@@ -1057,10 +1076,12 @@ class LaporanController extends Controller
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan') // fungsi agregat SQL
             )
             ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar')
-            ->get();
+            ->orderBy('metode_bayar.id_metode_bayar');
 
-        return view('laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
+        $data = $query->paginate(10)->withQueryString();
+
+        return view('laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir', 'totalPenggunaan'));
     }
 
     /**
@@ -1077,7 +1098,7 @@ class LaporanController extends Controller
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $data = DB::table('metode_bayar')
+        $query = DB::table('metode_bayar')
             ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
                 $join->on('metode_bayar.id_metode_bayar', '=', 'transaksi.id_metode_bayar')
                     ->where('transaksi.status_transaksi', 'selesai')
@@ -1092,10 +1113,12 @@ class LaporanController extends Controller
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan')
             )
             ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar')
-            ->get();
+            ->orderBy('metode_bayar.id_metode_bayar');
 
-        return view('kasir.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
+        $data = $query->paginate(10)->withQueryString();
+
+        return view('kasir.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir', 'totalPenggunaan'));
     }
 
     /**
@@ -1112,7 +1135,7 @@ class LaporanController extends Controller
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        $data = DB::table('metode_bayar')
+        $query = DB::table('metode_bayar')
             ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
                 $join->on('metode_bayar.id_metode_bayar', '=', 'transaksi.id_metode_bayar')
                     ->where('transaksi.status_transaksi', 'selesai')
@@ -1127,10 +1150,12 @@ class LaporanController extends Controller
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan')
             )
             ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar')
-            ->get();
+            ->orderBy('metode_bayar.id_metode_bayar');
 
-        return view('admin2.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
+        $data = $query->paginate(10)->withQueryString();
+
+        return view('admin2.laporan.bayar.index', compact('data', 'tglAwal', 'tglAkhir', 'totalPenggunaan'));
     }
 
     // =========================================
@@ -1150,27 +1175,32 @@ class LaporanController extends Controller
      * @return \Illuminate\View\View
      */
     public function pengeluaranIndex(Request $request)
-    {
-        requirePermission('laporan', 'view');
+{
+    requirePermission('laporan', 'view');
 
-        // [OBJECT + METHOD] Memulai query builder dari Eloquent Model Pengeluaran
-        $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
+    $tglAwal  = $request->dari ?? null;
+    $tglAkhir = $request->sampai ?? null;
 
-        /**
-         * [PERCABANGAN - if] Filter tanggal hanya diterapkan jika KEDUA parameter tersedia.
-         * Menggunakan filled() untuk memastikan nilai tidak kosong/null.
-         */
-        if ($request->filled('dari') && $request->filled('sampai')) {
-            $query->whereBetween('tanggal_pengeluaran', [
-                $request->dari,
-                $request->sampai
-            ]);
-        }
+    $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
-        $pengeluaran = $query->get();
-
-        return view('laporan.pengeluaran.index', compact('pengeluaran'));
+    if ($request->filled('dari') && $request->filled('sampai')) {
+        $query->whereBetween('tanggal_pengeluaran', [$tglAwal, $tglAkhir]);
     }
+
+    if ($request->filled('q')) {
+        $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+    }
+
+    // Hitung total dari SEMUA data (bukan hanya halaman aktif)
+    $totalNominal = (clone $query)->sum('nominal');
+    $totalItem    = (clone $query)->count();
+
+    $pengeluaran = $query->paginate(10)->withQueryString();
+
+    return view('laporan.pengeluaran.index', compact(
+        'pengeluaran', 'tglAwal', 'tglAkhir', 'totalNominal', 'totalItem'
+    ));
+}
 
     /**
      * [METHOD] pengeluaranIndexKasir()
@@ -1183,6 +1213,9 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
+        $tglAwal  = $request->dari ?? null;
+        $tglAkhir = $request->sampai ?? null;
+
         $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
         // [PERCABANGAN] Filter tanggal jika kedua parameter tersedia
@@ -1193,9 +1226,21 @@ class LaporanController extends Controller
             ]);
         }
 
-        $pengeluaran = $query->get();
+        if ($request->filled('q')) {
+            $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+        }
 
-        return view('kasir.laporan.pengeluaran.index', compact('pengeluaran'));
+        $totalNominal = (clone $query)->sum('nominal');
+        $totalItem = (clone $query)->count();
+        $pengeluaran = $query->paginate(10)->withQueryString();
+
+        return view('kasir.laporan.pengeluaran.index', compact(
+            'pengeluaran',
+            'tglAwal',
+            'tglAkhir',
+            'totalNominal',
+            'totalItem'
+        ));
     }
 
     /**
@@ -1209,6 +1254,9 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
+        $tglAwal  = $request->dari ?? null;
+        $tglAkhir = $request->sampai ?? null;
+
         $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
 
         // [PERCABANGAN] Filter tanggal jika kedua parameter tersedia
@@ -1219,9 +1267,21 @@ class LaporanController extends Controller
             ]);
         }
 
-        $pengeluaran = $query->get();
+        if ($request->filled('q')) {
+            $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
+        }
 
-        return view('admin2.laporan.pengeluaran.index', compact('pengeluaran'));
+        $totalNominal = (clone $query)->sum('nominal');
+        $totalItem = (clone $query)->count();
+        $pengeluaran = $query->paginate(10)->withQueryString();
+
+        return view('admin2.laporan.pengeluaran.index', compact(
+            'pengeluaran',
+            'tglAwal',
+            'tglAkhir',
+            'totalNominal',
+            'totalItem'
+        ));
     }
 
     // =========================================
@@ -1304,8 +1364,15 @@ class LaporanController extends Controller
         }
 
         $data = $query->get();
+        $topPelanggan = $data->first();
+        $summary = [
+            'total_pelanggan' => $data->count(),
+            'total_transaksi' => $data->sum('total_transaksi'),
+            'total_belanja' => $data->sum('total_belanja'),
+        ];
+        $data = $this->paginateCollection($data, 10);
 
-        return view('laporan.pelanggan.index', compact('data'));
+        return view('laporan.pelanggan.index', compact('data', 'topPelanggan', 'summary'));
     }
 
     /**
@@ -1361,8 +1428,15 @@ class LaporanController extends Controller
         }
 
         $data = $query->get();
+        $topPelanggan = $data->first();
+        $summary = [
+            'total_pelanggan' => $data->count(),
+            'total_transaksi' => $data->sum('total_transaksi'),
+            'total_belanja' => $data->sum('total_belanja'),
+        ];
+        $data = $this->paginateCollection($data, 10);
 
-        return view('kasir.laporan.pelanggan.index', compact('data'));
+        return view('kasir.laporan.pelanggan.index', compact('data', 'topPelanggan', 'summary'));
     }
 
     /**
@@ -1417,8 +1491,15 @@ class LaporanController extends Controller
         }
 
         $data = $query->get();
+        $topPelanggan = $data->first();
+        $summary = [
+            'total_pelanggan' => $data->count(),
+            'total_transaksi' => $data->sum('total_transaksi'),
+            'total_belanja' => $data->sum('total_belanja'),
+        ];
+        $data = $this->paginateCollection($data, 10);
 
-        return view('admin2.laporan.pelanggan.index', compact('data'));
+        return view('admin2.laporan.pelanggan.index', compact('data', 'topPelanggan', 'summary'));
     }
 
     // =========================================
@@ -1448,7 +1529,6 @@ class LaporanController extends Controller
         // [PERCABANGAN] Default tanggal
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
-
         /**
          * [OBJECT + METHOD] Double LEFT JOIN:
          * 1. satuan → detail_transaksi  : ambil detail yang menggunakan satuan ini
@@ -1475,9 +1555,11 @@ class LaporanController extends Controller
             )
             ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
             ->orderBy('satuan.nama_satuan')
-            ->get();
+            ->paginate(10);
 
-        return view('laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalQty = $data->sum('total_qty');
+
+        return view('laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir', 'totalQty'));
     }
 
     /**
@@ -1511,9 +1593,11 @@ class LaporanController extends Controller
             )
             ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
             ->orderBy('satuan.nama_satuan')
-            ->get();
+            ->paginate(10);
 
-        return view('kasir.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalQty = $data->sum('total_qty');
+
+        return view('kasir.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir', 'totalQty'));
     }
 
     /**
@@ -1547,9 +1631,11 @@ class LaporanController extends Controller
             )
             ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
             ->orderBy('satuan.nama_satuan')
-            ->get();
+            ->paginate(10);
 
-        return view('admin2.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir'));
+        $totalQty = $data->sum('total_qty');
+
+        return view('admin2.laporan.satuan.index', compact('data', 'tglAwal', 'tglAkhir', 'totalQty'));
     }
 
     // =========================================
@@ -1632,6 +1718,8 @@ class LaporanController extends Controller
             'total_proses'       => $data->sum('dalam_proses'),      // jumlah dalam proses
         ];
 
+        $data = $this->paginateCollection($data, 10);
+
         return view('laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
     }
 
@@ -1679,6 +1767,8 @@ class LaporanController extends Controller
             'total_proses'       => $data->sum('dalam_proses'),
         ];
 
+        $data = $this->paginateCollection($data, 10);
+
         return view('kasir.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
     }
 
@@ -1725,6 +1815,8 @@ class LaporanController extends Controller
             'total_gagal'        => $data->sum('gagal'),
             'total_proses'       => $data->sum('dalam_proses'),
         ];
+
+        $data = $this->paginateCollection($data, 10);
 
         return view('admin2.laporan.driver.index', compact('data', 'stats', 'tglAwal', 'tglAkhir'));
     }
@@ -2832,6 +2924,10 @@ class LaporanController extends Controller
 
         $data = $data->sortByDesc('total_pendapatan')->values();
 
+        if ($request->format === 'pdf') {
+            return $this->exportKasirPdf($data, $tglAwal, $tglAkhir);
+        }
+
         // [OBJECT] Buat spreadsheet Excel baru
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -3017,6 +3113,10 @@ class LaporanController extends Controller
             ->orderBy('metode_bayar.id_metode_bayar')
             ->get();
 
+        if ($request->format === 'pdf') {
+            return $this->exportBayarPdf($data, $tglAwal, $tglAkhir);
+        }
+
         // [OBJECT] Buat spreadsheet baru
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -3152,18 +3252,13 @@ class LaporanController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return void
      */
-    public function exportSatuan(Request $request)
+   public function exportSatuan(Request $request)
     {
         requirePermission('laporan', 'view');
 
-        // [PERCABANGAN] Default tanggal
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
-        /**
-         * [OBJECT + METHOD] Double LEFT JOIN + COALESCE untuk menghindari NULL.
-         * Satuan tanpa transaksi tetap muncul dengan total_qty = 0.
-         */
         $data = DB::table('satuan')
             ->leftJoin('detail_transaksi', 'satuan.id_satuan', '=', 'detail_transaksi.id_satuan')
             ->leftJoin('transaksi', function ($join) use ($tglAwal, $tglAkhir) {
@@ -3177,13 +3272,18 @@ class LaporanController extends Controller
             ->select(
                 'satuan.id_satuan',
                 'satuan.nama_satuan',
-                DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty') // NULL → 0
+                DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty')
             )
             ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
             ->orderBy('satuan.nama_satuan')
             ->get();
 
-        // [OBJECT] Buat spreadsheet baru
+        // [PERCABANGAN] Cek format DULU sebelum bikin spreadsheet
+        if ($request->format === 'pdf') {
+            return $this->exportSatuanPdf($data, $tglAwal, $tglAkhir);
+        }
+
+        // ── EXCEL ──
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -3211,12 +3311,9 @@ class LaporanController extends Controller
         );
 
         $row = 5;
-
-        // [ARRAY] Header kolom tabel
         $headers = ['No', 'Nama Satuan', 'Total Qty'];
         $col = 'A';
 
-        // [PERULANGAN - foreach] Render header
         foreach ($headers as $header) {
             $sheet->setCellValue($col . $row, $header);
             $sheet->getStyle($col . $row)->getFill()
@@ -3233,7 +3330,6 @@ class LaporanController extends Controller
         $no = 1;
         $totalQty = 0;
 
-        // [PERULANGAN - foreach] Tulis data satuan ke Excel
         foreach ($data as $item) {
             $sheet->setCellValue('A' . $row, $no++);
             $sheet->setCellValue('B' . $row, $item->nama_satuan);
@@ -3244,11 +3340,10 @@ class LaporanController extends Controller
             $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(
                 \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
             );
-            $totalQty += $item->total_qty; // Akumulasi
+            $totalQty += $item->total_qty;
             $row++;
         }
 
-        // Baris total
         $sheet->setCellValue('B' . $row, 'TOTAL');
         $sheet->setCellValue('C' . $row, $totalQty);
         $sheet->getStyle('B' . $row . ':C' . $row)->getFont()->setBold(true);
@@ -3258,7 +3353,6 @@ class LaporanController extends Controller
         $sheet->getStyle('A5:C' . $row)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
-        // [PERULANGAN + ARRAY] Auto-size kolom A s/d C
         foreach (range('A', 'C') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
@@ -3272,6 +3366,27 @@ class LaporanController extends Controller
         exit;
     }
 
+    /**
+     * [PRIVATE METHOD] exportSatuanPdf()
+     * Menghasilkan file PDF laporan satuan menggunakan DomPDF.
+     *
+     * @param  \Illuminate\Support\Collection  $data
+     * @param  string  $tglAwal
+     * @param  string  $tglAkhir
+     * @return \Illuminate\Http\Response
+     */
+    private function exportSatuanPdf($data, $tglAwal, $tglAkhir)
+    {
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('laporan.satuan.satuan-pdf', [
+            'data'     => $data,
+            'tglAwal'  => $tglAwal,
+            'tglAkhir' => $tglAkhir,
+        ])->setPaper('a4', 'portrait');
+
+        $fileName = 'Laporan_Satuan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
+    }
     /**
      * [METHOD] exportSatuanKasir()
      * Export satuan untuk Kasir — mendelegasikan ke exportSatuan().
@@ -3297,7 +3412,6 @@ class LaporanController extends Controller
         requirePermission('laporan', 'view');
         return $this->exportSatuan($request); // [METHOD CALL] Delegasi
     }
-
     // =========================================
     // EXPORT DRIVER (Excel)
     // =========================================
@@ -3348,6 +3462,10 @@ class LaporanController extends Controller
             ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
             ->orderByDesc('total_pengiriman')
             ->get();
+
+        if ($request->format === 'pdf') {
+            return $this->exportDriverPdf($data, $tglAwal, $tglAkhir);
+        }
 
         // [OBJECT] Buat spreadsheet baru
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -3474,5 +3592,71 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
         return $this->exportDriver($request); // [METHOD CALL] Delegasi
+    }
+
+    private function exportKasirPdf($data, $tglAwal, $tglAkhir)
+    {
+        $pdf = Pdf::loadView('laporan.kasir.pdf', [
+            'data' => $data,
+            'tglAwal' => $tglAwal,
+            'tglAkhir' => $tglAkhir,
+            'tanggal_cetak' => Carbon::now()->format('d/m/Y H:i:s'),
+            'totalPendapatan' => $data->sum('total_pendapatan'),
+            'totalTransaksi' => $data->sum('total_transaksi'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('Laporan_Kasir_' . Carbon::now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    private function exportBayarPdf($data, $tglAwal, $tglAkhir)
+    {
+        $pdf = Pdf::loadView('laporan.bayar.pdf', [
+            'data' => $data,
+            'tglAwal' => $tglAwal,
+            'tglAkhir' => $tglAkhir,
+            'tanggal_cetak' => Carbon::now()->format('d/m/Y H:i:s'),
+            'totalPenggunaan' => $data->sum('total_penggunaan'),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('Laporan_Metode_Bayar_' . Carbon::now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    private function exportDriverPdf($data, $tglAwal, $tglAkhir)
+    {
+        $pdf = Pdf::loadView('laporan.driver.pdf', [
+            'data' => $data,
+            'tglAwal' => $tglAwal,
+            'tglAkhir' => $tglAkhir,
+            'tanggal_cetak' => Carbon::now()->format('d/m/Y H:i:s'),
+            'stats' => [
+                'total_driver_aktif' => $data->count(),
+                'total_pengiriman' => $data->sum('total_pengiriman'),
+                'total_pickup' => $data->sum('total_pickup'),
+                'total_antar' => $data->sum('total_antar'),
+                'total_terkirim' => $data->sum('terkirim'),
+                'total_gagal' => $data->sum('gagal'),
+                'total_proses' => $data->sum('dalam_proses'),
+            ],
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('Laporan_Driver_' . Carbon::now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    private function paginateCollection($items, $perPage = 10)
+    {
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $collection = collect($items);
+        $results = $collection->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $results,
+            $collection->count(),
+            $perPage,
+            $page,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'query' => request()->query(),
+            ]
+        );
     }
 }

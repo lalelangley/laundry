@@ -24,6 +24,8 @@ use App\Http\Middleware\AuthenticateAdmin; // middleware khusus admin
 use App\Http\Middleware\SuperAdmin;        // middleware khusus super admin
 use App\Http\Middleware\SuperAdminOnly;    // ← TAMBAH: middleware super admin baru
 use App\Http\Middleware\CheckPermission;   // ← TAMBAH: middleware check permission
+use App\Http\Middleware\BlockAdminTransactionAccess;
+use App\Http\Middleware\BlockKasirReportExport;
 use App\Http\Middleware\RedirectIfAuthenticated;
 
 class Kernel extends HttpKernel
@@ -71,6 +73,8 @@ class Kernel extends HttpKernel
         'super.admin' => \App\Http\Middleware\SuperAdmin::class,       // middleware super admin (existing)
         'superadmin' => \App\Http\Middleware\SuperAdminOnly::class,    // ← TAMBAH: middleware super admin (new - cleaner)
         'permission' => \App\Http\Middleware\CheckPermission::class,   // ← TAMBAH: middleware check permission (CRUD access control)
+        'block.admin.transaksi' => \App\Http\Middleware\BlockAdminTransactionAccess::class,
+        'block.kasir.laporan.export' => \App\Http\Middleware\BlockKasirReportExport::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,

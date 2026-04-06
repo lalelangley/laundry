@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use App\Models\Pelanggan;
 use App\Models\Layanan;
@@ -37,8 +39,9 @@ class TransaksiController extends Controller
     // ==========================
     public function create()
     {
-        // ✅ CHECK PERMISSION ADD
-        requirePermission('transaksi', 'add');
+        // Halaman awal transaksi cukup butuh akses view.
+        // Aksi perubahan data tetap dijaga oleh endpoint yang memakai permission:add.
+        requirePermission('transaksi', 'view');
         
         return view('transaksi.create', [
             'pelanggan'  => session('pelanggan'),
@@ -58,7 +61,9 @@ class TransaksiController extends Controller
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+            ->paginate(10)
+            ->withQueryString();
         return view('transaksi.pelanggan', compact('pelanggan'));
     }
 
@@ -82,10 +87,9 @@ class TransaksiController extends Controller
         return redirect()->route('transaksi.create');
     }
 
-    public function setPelangganKasir($id)
+public function setPelangganKasir($id)
 {
-    // ✅ CHECK PERMISSION ADD
-    requirePermission('transaksi', 'add');
+    requirePermission('transaksi', 'view');
     
     $p = Pelanggan::find($id);
     if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
@@ -95,6 +99,7 @@ class TransaksiController extends Controller
             'id_pelanggan'   => $p->id_pelanggan,
             'nama_pelanggan' => $p->nama_pelanggan,
             'no_hp'          => $p->no_hp,
+            'email'          => $p->email,
             'foto'           => $p->gambar 
                 ? (str_starts_with($p->gambar, 'pelanggan/') 
                     ? $p->gambar 
@@ -106,9 +111,8 @@ class TransaksiController extends Controller
     return redirect()->route('kasir.transaksi.create');
 }
     public function setPelangganAdmin2($id)
-    {
-        // ✅ CHECK PERMISSION ADD
-        requirePermission('transaksi', 'add');
+{
+    requirePermission('transaksi', 'view');
         
         $p = Pelanggan::find($id);
         if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
@@ -410,10 +414,12 @@ public function bayar(Request $request)
 
         return response()->json([
             'success'      => true,
+            'id_transaksi' => $trans->id_transaksi,
             'total'        => $totalAkhir,
             'bayar'        => $totalBayar,
             'nama'         => $pelanggan['nama_pelanggan'],
             'hp'           => $pelanggan['no_hp'],
+            'email'        => $pelanggan['email'] ?? null,
             'status_bayar' => $statusBayar,
             'diskon'       => $diskon,
             'total_bayar'  => $totalBayar,
@@ -439,8 +445,9 @@ public function bayar(Request $request)
     // ==========================
     public function createKasir()
 {
-    // ✅ CHECK PERMISSION ADD
-    requirePermission('transaksi', 'add');
+    // Halaman awal transaksi cukup butuh akses view.
+    // Aksi perubahan data tetap dijaga oleh endpoint yang memakai permission:add.
+    requirePermission('transaksi', 'view');
     
     return view('kasir.transaksi.create', [
         'pelanggan'  => session('pelanggan_kasir'),  // ✅ FIX
@@ -460,7 +467,9 @@ public function bayar(Request $request)
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+            ->paginate(10)
+            ->withQueryString();
         return view('kasir.transaksi.pelanggan', compact('pelanggan'));
     }
 
@@ -574,10 +583,12 @@ public function bayarKasir(Request $request)
 
         return response()->json([
             'success'      => true,
+            'id_transaksi' => $trans->id_transaksi,
             'total'        => $totalAkhir,
             'bayar'        => $totalBayar,
             'nama'         => $pelanggan['nama_pelanggan'],
             'hp'           => $pelanggan['no_hp'],
+            'email'        => $pelanggan['email'] ?? null,
             'status_bayar' => $statusBayar,
             'diskon'       => $diskon,
             'total_bayar'  => $totalBayar,
@@ -604,8 +615,9 @@ public function bayarKasir(Request $request)
     // ==========================
     public function createAdmin2()
     {
-        // ✅ CHECK PERMISSION ADD
-        requirePermission('transaksi', 'add');
+        // Halaman awal transaksi cukup butuh akses view.
+        // Aksi perubahan data tetap dijaga oleh endpoint yang memakai permission:add.
+        requirePermission('transaksi', 'view');
         
         return view('admin2.transaksi.create', [
             'pelanggan'  => session('pelanggan_transaksi'),
@@ -626,7 +638,9 @@ public function bayarKasir(Request $request)
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+            ->paginate(10)
+            ->withQueryString();
         return view('admin2.transaksi.pelanggan', compact('pelanggan'));
     }
 
@@ -1138,7 +1152,7 @@ public function confirmAdmin2()
         ));
     }
 
-    public function confirmKasir()
+public function confirmKasir()
 {
     // ✅ CHECK PERMISSION VIEW
     requirePermission('transaksi', 'view');
@@ -1179,6 +1193,163 @@ public function confirmAdmin2()
         'metode_bayar'
     ));
 }
+
+    public function shareKasir(Request $request)
+    {
+        requirePermission('transaksi', 'view');
+
+        $validated = $request->validate([
+            'id_transaksi' => 'required|exists:transaksi,id_transaksi',
+            'channel' => 'required|in:email,telegram',
+            'recipient' => 'nullable|string|max:255',
+        ], [
+            'id_transaksi.required' => 'ID transaksi wajib dikirim.',
+            'id_transaksi.exists' => 'Transaksi tidak ditemukan.',
+            'channel.required' => 'Channel pengiriman wajib dipilih.',
+            'channel.in' => 'Channel pengiriman tidak valid.',
+        ]);
+
+        $transaksi = Transaksi::with(['detail.layanan', 'detail.jenis', 'pelanggan'])
+            ->where('id_transaksi', $validated['id_transaksi'])
+            ->firstOrFail();
+
+        $message = $this->buildShareMessage($transaksi);
+
+        if ($validated['channel'] === 'email') {
+            $recipient = trim((string) ($validated['recipient'] ?? ''));
+
+            if ($recipient === '') {
+                $recipient = (string) ($transaksi->pelanggan?->email ?? '');
+            }
+
+            if ($recipient === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email tujuan belum diisi.'
+                ], 422);
+            }
+
+            if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Format email tujuan tidak valid.'
+                ], 422);
+            }
+
+            try {
+                Mail::send('emails.transaksi-share', [
+                    'transaksi' => $transaksi,
+                ], function ($mail) use ($recipient, $transaksi) {
+                    $mail->to($recipient)
+                        ->subject('Ringkasan Pembayaran Transaksi #' . $transaksi->id_transaksi);
+                });
+            } catch (\Throwable $e) {
+                Log::error('Gagal mengirim share transaksi via email', [
+                    'id_transaksi' => $transaksi->id_transaksi,
+                    'recipient' => $recipient,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengirim ke email. Periksa konfigurasi mailer.'
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ringkasan pembayaran berhasil dikirim ke email.'
+            ]);
+        }
+
+        $botToken = config('services.telegram.bot_token');
+        $chatId = trim((string) ($validated['recipient'] ?? config('services.telegram.default_chat_id')));
+
+        if (empty($botToken)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'TELEGRAM_BOT_TOKEN belum dikonfigurasi.'
+            ], 422);
+        }
+
+        if ($chatId === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Chat ID Telegram belum diisi.'
+            ], 422);
+        }
+
+        try {
+            $response = Http::asForm()
+                ->timeout(15)
+                ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => $message,
+                ]);
+        } catch (\Throwable $e) {
+            Log::error('Gagal mengirim share transaksi ke Telegram', [
+                'id_transaksi' => $transaksi->id_transaksi,
+                'chat_id' => $chatId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Koneksi ke Telegram gagal. Coba lagi sebentar.'
+            ], 500);
+        }
+
+        if (!$response->successful()) {
+            Log::warning('Telegram API menolak pengiriman share transaksi', [
+                'id_transaksi' => $transaksi->id_transaksi,
+                'chat_id' => $chatId,
+                'response' => $response->json(),
+            ]);
+
+            $telegramDescription = (string) data_get($response->json(), 'description', '');
+            $message = 'Gagal mengirim ke Telegram.';
+
+            if (str_contains(strtolower($telegramDescription), 'chat not found')) {
+                $message = 'Chat Telegram tidak ditemukan. Untuk chat pribadi, kirim pesan dulu ke bot lalu gunakan chat ID numerik dari getUpdates.';
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'telegram_response' => $response->json(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ringkasan pembayaran berhasil dikirim ke Telegram.'
+        ]);
+    }
+
+    private function buildShareMessage(Transaksi $transaksi): string
+    {
+        $detailLines = $transaksi->detail->map(function ($item) {
+            $subtotal = (float) $item->harga * (float) $item->qty;
+            $layanan = $item->layanan?->nama_layanan ?? 'Layanan';
+            $jenis = $item->jenis?->nama_jenis ? ' (' . $item->jenis->nama_jenis . ')' : '';
+
+            return '- ' . $layanan . $jenis . ': ' .
+                $item->qty . ' x Rp' . number_format((float) $item->harga, 0, ',', '.') .
+                ' = Rp' . number_format($subtotal, 0, ',', '.');
+        })->implode("\n");
+
+        return "Halo {$transaksi->nama_pelanggan},\n\n" .
+            "Pembayaran transaksi laundry Anda berhasil dicatat.\n" .
+            "ID Transaksi: {$transaksi->id_transaksi}\n" .
+            "Tanggal: " . \Carbon\Carbon::parse($transaksi->tgl_transaksi)->format('d/m/Y H:i') . "\n" .
+            "Status Bayar: " . strtoupper((string) $transaksi->status_bayar) . "\n" .
+            "Total Harga: Rp" . number_format((float) $transaksi->total_harga, 0, ',', '.') . "\n" .
+            "Diskon: Rp" . number_format((float) $transaksi->diskon, 0, ',', '.') . "\n" .
+            "Total Bayar: Rp" . number_format((float) $transaksi->total_bayar, 0, ',', '.') . "\n" .
+            (!empty($transaksi->tgl_estimasi) ? "Estimasi Selesai: " . \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i') . "\n" : '') .
+            (!empty($detailLines) ? "\nDetail Layanan:\n{$detailLines}\n" : '') .
+            "\nTerima kasih telah menggunakan layanan kami.";
+    }
 
     // ==========================
     // UPDATE KETERANGAN METHODS

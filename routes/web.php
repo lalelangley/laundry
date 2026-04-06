@@ -16,9 +16,12 @@ use App\Http\Controllers\Web\ChangePasswordController;
 use App\Http\Controllers\Web\PesananOnlineController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\TelegramWebhookController;
 use App\Models\Satuan;
 
 Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
+Route::view('/privacy-policy/telegram-bot', 'privacy.telegram-bot')->name('privacy.telegram-bot');
+Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
 /*
 |--------------------------------------------------------------------------
@@ -87,8 +90,16 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         
         // Add/Create - butuh permission:add untuk membuat transaksi baru
         Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganKasir'])
-            ->middleware('permission:add')
+            ->middleware('permission:view')
             ->name('setPelanggan');
+
+        Route::get('/pelanggan/create', [AuthWebController::class, 'createKasir'])
+            ->middleware('permission:view')
+            ->name('pelanggan.create');
+
+        Route::post('/pelanggan/store', [AuthWebController::class, 'storeKasir'])
+            ->middleware('permission:view')
+            ->name('pelanggan.store');
         
         Route::post('/checkout', [TransaksiController::class, 'checkoutKasir'])
             ->middleware('permission:add')
@@ -97,6 +108,10 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
         Route::post('/bayar', [TransaksiController::class, 'bayarKasir'])
             ->middleware('permission:add')
             ->name('bayar');
+
+        Route::post('/share', [TransaksiController::class, 'shareKasir'])
+            ->middleware('permission:view')
+            ->name('share');
         
         Route::post('/add-layanan/{id}', [TransaksiController::class, 'addLayananKasir'])
             ->middleware('permission:add')
@@ -429,7 +444,9 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
             ->name('destroy');
 
         Route::get('/pengeluaran', [LaporanController::class, 'pengeluaranIndexKasir'])->name('pengeluaran.index');
-        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])->name('pengeluaran.export'); // ← TAMBAH INI
+        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('pengeluaran.export'); // ← TAMBAH INI
         
     });
 
@@ -464,8 +481,9 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
             ->middleware('permission:view')
             ->name('kasir.index');
 
-        Route::get('/bayar/export', [LaporanController::class, 'exportBayar']) // ✅ TAMBAHKAN INI
-        ->name('bayar.export');
+        Route::get('/bayar/export', [LaporanController::class, 'exportBayar'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('bayar.export');
         Route::get('/bayar/index', [LaporanController::class, 'bayarIndexKasir'])
             ->middleware('permission:view')
             ->name('bayar.index');
@@ -487,22 +505,35 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
             ->name('driver.index');
 
         // ✅ Export Excel
-        Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiKasir'])->name('transaksi.export');
+        Route::post('/transaksi/export', [LaporanController::class, 'exportTransaksiKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('transaksi.export');
         
             // Satuan
         Route::get('/satuan/index', [LaporanController::class, 'satuanIndexKasir'])->name('satuan.index');
-        Route::get('/satuan/export', [LaporanController::class, 'exportSatuanKasir'])->name('satuan.export');
+        Route::get('/satuan/export', [LaporanController::class, 'exportSatuanKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('satuan.export');
+        Route::get('/satuan/pdf', [LaporanController::class, 'exportSatuanKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('satuan.pdf'); 
         
         // Pelanggan
         Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexKasir'])->name('pelanggan.index');
-        Route::get('/pelanggan/export', [LaporanController::class, 'exportPelangganKasir'])->name('pelanggan.export');
+        Route::get('/pelanggan/export', [LaporanController::class, 'exportPelangganKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('pelanggan.export');
         
         // Driver
         Route::get('/driver/index', [LaporanController::class, 'driverKasir'])->name('driver.index');
-        Route::get('/driver/export', [LaporanController::class, 'exportDriverKasir'])->name('driver.export');
+        Route::get('/driver/export', [LaporanController::class, 'exportDriverKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('driver.export');
 
           Route::get('/pengeluaran', [LaporanController::class, 'pengeluaranIndexKasir'])->name('pengeluaran.index');
-        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])->name('pengeluaran.export'); // ← TAMBAH INI
+        Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaranKasir'])
+            ->middleware('block.kasir.laporan.export')
+            ->name('pengeluaran.export'); // ← TAMBAH INI
         });
 
     // ================= CHANGE PASSWORD (No Permission) =================
@@ -616,7 +647,7 @@ Route::prefix('admin')->middleware('auth:admin')->group(function () {
     });
 
     // ================= TRANSAKSI (ADMIN) - WITH PERMISSION =================
-    Route::prefix('transaksi')->name('transaksi.')->group(function () {
+    Route::prefix('transaksi')->name('transaksi.')->middleware('block.admin.transaksi')->group(function () {
         // View - butuh permission:view untuk akses halaman transaksi
         Route::get('/pelanggan', [TransaksiController::class, 'pilihPelanggan'])
             ->middleware('permission:view')
@@ -1057,7 +1088,15 @@ Route::prefix('laporan')->name('laporan.')->group(function () {
     Route::get('/pengeluaran/export', [LaporanController::class, 'exportPengeluaran'])
         ->name('pengeluaran.export');
     
-    Route::get('/satuan/export', [LaporanController::class, 'exportSatuanKasir'])->name('satuan.export');
+    // Satuan
+    Route::get('/satuan/index', [LaporanController::class, 'satuanIndex'])
+        ->middleware('permission:view')
+        ->name('satuan.index');
+    Route::get('/satuan/export', [LaporanController::class, 'exportSatuan'])
+        ->name('satuan.export');
+    Route::get('/satuan/pdf', [LaporanController::class, 'exportSatuan'])
+        ->name('satuan.pdf');
+
     // Satuan
     Route::get('/satuan/index', [LaporanController::class, 'satuanIndex'])
         ->middleware('permission:view')
@@ -1138,7 +1177,7 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
     });
 
     // ================= TRANSAKSI (ADMIN2) - WITH PERMISSION =================
-    Route::prefix('transaksi')->name('admin2.transaksi.')->group(function () {
+    Route::prefix('transaksi')->name('admin2.transaksi.')->middleware('block.admin.transaksi')->group(function () {
         // View - butuh permission:view untuk akses halaman transaksi
         Route::get('/pelanggan', [TransaksiController::class, 'pelangganAdmin2'])
             ->middleware('permission:view')
@@ -1159,9 +1198,17 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         
         // Add/Create - butuh permission:add untuk membuat transaksi baru
         Route::get('/set-pelanggan/{id}', [TransaksiController::class, 'setPelangganAdmin2'])
-            ->middleware('permission:add')
+            ->middleware('permission:view')
             ->whereNumber('id')
             ->name('setPelanggan');
+
+        Route::get('/pelanggan/create', [AuthWebController::class, 'createAdmin2'])
+            ->middleware('permission:view')
+            ->name('pelanggan.create');
+
+        Route::post('/pelanggan/store', [AuthWebController::class, 'storeAdmin2'])
+            ->middleware('permission:view')
+            ->name('pelanggan.store');
         
         Route::post('/checkout', [TransaksiController::class, 'checkoutAdmin2'])
             ->middleware('permission:add')
@@ -1557,6 +1604,7 @@ Route::prefix('laporan')->name('admin2.laporan.')->group(function () {
     // Satuan
     Route::get('/satuan/index', [LaporanController::class, 'satuanIndexAdmin2'])->name('satuan.index');
     Route::get('/satuan/export', [LaporanController::class, 'exportSatuanAdmin2'])->name('satuan.export');
+    Route::get('/satuan/pdf', [LaporanController::class, 'exportSatuanAdmin2'])->name('satuan.pdf'); // ← tambah ini
     
     // Pelanggan
     Route::get('/pelanggan/index', [LaporanController::class, 'pelangganIndexAdmin2'])->name('pelanggan.index');

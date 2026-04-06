@@ -58,24 +58,41 @@
         <div>
             <label class="font-semibold text-gray-700">Nama Pelanggan</label>
             <input type="text" name="nama_pelanggan"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none @error('nama_pelanggan') border-2 border-red-500 bg-red-50 @enderror"
                 placeholder="Nama pelanggan..." value="{{ old('nama_pelanggan', $pelanggan->nama_pelanggan) }}">
+            @error('nama_pelanggan')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
         {{-- No HP --}}
         <div>
             <label class="font-semibold text-gray-700">No Handphone</label>
             <input type="text" name="no_hp"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('no_hp') border-2 border-red-500 bg-red-50 @enderror"
                 placeholder="08xxxxxxxxxx" value="{{ old('no_hp', $pelanggan->no_hp) }}">
+            <p class="text-xs text-gray-500 mt-1">Nomor telepon harus unik dan belum pernah dipakai pelanggan lain.</p>
+            @error('no_hp')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
         {{-- Email --}}
         <div>
             <label class="font-semibold text-gray-700">Email</label>
             <input type="email" name="email"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('email') border-2 border-red-500 bg-red-50 @enderror"
                 placeholder="Email pelanggan..." value="{{ old('email', $pelanggan->email) }}">
+            <p class="text-xs text-gray-500 mt-1">Email opsional, tetapi kalau diisi tidak boleh sama dengan pelanggan lain.</p>
+            @error('email')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
        {{-- Gender --}}
@@ -97,6 +114,11 @@
                     <span>Wanita</span>
                 </label>
             </div>
+            @error('jk')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
 
@@ -104,17 +126,16 @@
         <div>
             <label class="font-semibold text-gray-700">Alamat</label>
             <textarea name="alamat" rows="3"
-                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400"
+                class="mt-2 w-full bg-gray-100 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 @error('alamat') border-2 border-red-500 bg-red-50 @enderror"
                 placeholder="Alamat pelanggan...">{{ old('alamat', $pelanggan->alamat) }}</textarea>
+            @error('alamat')
+                <p class="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <i class="bi bi-exclamation-circle"></i> {{ $message }}
+                </p>
+            @enderror
         </div>
 
     </div>
-
-    @if ($errors->any())
-        <div class="bg-red-300 text-red-900 p-3 rounded-xl mb-4">
-            {{ $errors->first() }}
-        </div>
-    @endif
 
     {{-- BUTTON --}}
     <button type="submit"

@@ -598,7 +598,9 @@ class AuthWebController extends Controller
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+            ->paginate(10)
+            ->withQueryString();
         return view('pelanggan.index', compact('pelanggan'));
     }
 
@@ -607,7 +609,9 @@ class AuthWebController extends Controller
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+            ->paginate(10)
+            ->withQueryString();
         return view('kasir.pelanggan.index', compact('pelanggan'));
     }
 
@@ -616,7 +620,9 @@ class AuthWebController extends Controller
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')->get();
+        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+            ->paginate(10)
+            ->withQueryString();
         return view('admin2.pelanggan.index', compact('pelanggan'));
     }
 
@@ -635,18 +641,24 @@ class AuthWebController extends Controller
     }
 
     // Form tambah pelanggan untuk Kasir
-    public function createKasir()
+    public function createKasir(Request $request)
     {
-        // Cek permission add pelanggan
-        requirePermission('pelanggan', 'add');
+        if ($request->get('from') === 'transaksi') {
+            requirePermission('transaksi', 'view');
+        } else {
+            requirePermission('pelanggan', 'add');
+        }
         return view('kasir.pelanggan.create');
     }
 
     // Form tambah pelanggan untuk Admin Biasa
-    public function createAdmin2()
+    public function createAdmin2(Request $request)
     {
-        // Cek permission add pelanggan
-        requirePermission('pelanggan', 'add');
+        if ($request->get('from') === 'transaksi') {
+            requirePermission('transaksi', 'view');
+        } else {
+            requirePermission('pelanggan', 'add');
+        }
         return view('admin2.pelanggan.create');
     }
 
@@ -664,16 +676,24 @@ class AuthWebController extends Controller
     // TC-11: No HP hanya angka, 10-15 digit
     // TC-12: Format email harus valid
     // ============================================================
-    private function validatePelanggan(Request $request): void
+    private function validatePelanggan(Request $request, ?int $ignoreId = null): void
     {
+        $noHpRule = 'required|string|min:10|max:15|regex:/^[0-9]+$/|unique:pelanggan,no_hp';
+        $emailRule = 'nullable|email|unique:pelanggan,email';
+
+        if ($ignoreId) {
+            $noHpRule .= ',' . $ignoreId . ',id_pelanggan';
+            $emailRule .= ',' . $ignoreId . ',id_pelanggan';
+        }
+
         // ------------------------------------------------------------
         // Syarat: Terdapat kode program yang mengidentifikasi data array
         // Array rules validasi form pelanggan
         // ------------------------------------------------------------
         $rules = [
             'nama_pelanggan' => 'required|string|max:255',
-            'no_hp'          => 'required|string|min:10|max:15|regex:/^[0-9]+$/',
-            'email'          => 'nullable|email',
+            'no_hp'          => $noHpRule,
+            'email'          => $emailRule,
             'jk'             => 'required|in:L,P',
             'alamat'         => 'required|string',
             'gambar'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
@@ -687,7 +707,9 @@ class AuthWebController extends Controller
             'no_hp.min'               => 'No Handphone minimal 10 digit.',            // TC-11
             'no_hp.max'               => 'No Handphone maksimal 15 digit.',           // TC-11
             'no_hp.regex'             => 'No Handphone hanya boleh berisi angka.',    // TC-11
+            'no_hp.unique'            => 'No Handphone sudah digunakan pelanggan lain.',
             'email.email'             => 'Format Email tidak valid.',                  // TC-12
+            'email.unique'            => 'Email sudah digunakan pelanggan lain.',
             'jk.required'             => 'Jenis Kelamin wajib dipilih.',
             'alamat.required'         => 'Alamat tidak boleh kosong.',
             'gambar.image'            => 'File harus berupa gambar.',
@@ -745,7 +767,7 @@ class AuthWebController extends Controller
         requirePermission('pelanggan', 'add');
 
         // Jalankan validasi form (TC-09 s/d TC-12)
-        $this->validatePelanggan($request);
+        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
 
         // Proses upload gambar jika ada
         $gambarPath = $this->uploadGambar($request);
@@ -776,7 +798,11 @@ class AuthWebController extends Controller
     // Simpan pelanggan baru oleh Kasir
     public function storeKasir(Request $request)
     {
-        requirePermission('pelanggan', 'add');
+        if ($request->input('from') === 'transaksi') {
+            requirePermission('transaksi', 'view');
+        } else {
+            requirePermission('pelanggan', 'add');
+        }
         $this->validatePelanggan($request);
         $gambarPath = $this->uploadGambar($request);
 
@@ -801,7 +827,11 @@ class AuthWebController extends Controller
     // Simpan pelanggan baru oleh Admin Biasa
     public function storeAdmin2(Request $request)
     {
-        requirePermission('pelanggan', 'add');
+        if ($request->input('from') === 'transaksi') {
+            requirePermission('transaksi', 'view');
+        } else {
+            requirePermission('pelanggan', 'add');
+        }
         $this->validatePelanggan($request);
         $gambarPath = $this->uploadGambar($request);
 
@@ -867,7 +897,7 @@ class AuthWebController extends Controller
     {
         requirePermission('pelanggan', 'edit');
         $pelanggan  = Pelanggan::findOrFail($id);
-        $this->validatePelanggan($request);
+        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
         $gambarPath = $this->uploadGambar($request, $pelanggan->gambar);
 
         // Array data yang akan diupdate ke database
@@ -888,7 +918,7 @@ class AuthWebController extends Controller
     {
         requirePermission('pelanggan', 'edit');
         $pelanggan  = Pelanggan::findOrFail($id);
-        $this->validatePelanggan($request);
+        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
         $gambarPath = $this->uploadGambar($request, $pelanggan->gambar);
 
         $pelanggan->update([
@@ -908,7 +938,7 @@ class AuthWebController extends Controller
     {
         requirePermission('pelanggan', 'edit');
         $pelanggan  = Pelanggan::findOrFail($id);
-        $this->validatePelanggan($request);
+        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
         $gambarPath = $this->uploadGambar($request, $pelanggan->gambar);
 
         $pelanggan->update([
@@ -1058,27 +1088,7 @@ class AuthWebController extends Controller
         // Syarat: Validasi form sesuai kebutuhan
         // Array rules validasi dengan tambahan unique email
         // ------------------------------------------------------------
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'no_hp'          => 'required|string|min:10|max:15|regex:/^[0-9]+$/',
-            'email'          => 'nullable|email|unique:pelanggan,email',
-            'jk'             => 'required|in:L,P',
-            'alamat'         => 'required|string',
-            'gambar'         => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ], [
-            'nama_pelanggan.required' => 'Nama Pelanggan tidak boleh kosong.',
-            'no_hp.required'          => 'No Handphone tidak boleh kosong.',
-            'no_hp.min'               => 'No Handphone minimal 10 digit.',
-            'no_hp.max'               => 'No Handphone maksimal 15 digit.',
-            'no_hp.regex'             => 'No Handphone hanya boleh berisi angka.',
-            'email.email'             => 'Format Email tidak valid.',
-            'email.unique'            => 'Email sudah digunakan pelanggan lain.',
-            'jk.required'             => 'Jenis Kelamin wajib dipilih.',
-            'alamat.required'         => 'Alamat tidak boleh kosong.',
-            'gambar.image'            => 'File harus berupa gambar.',
-            'gambar.mimes'            => 'Format gambar harus jpg, jpeg, atau png.',
-            'gambar.max'              => 'Ukuran gambar maksimal 2MB.',
-        ]);
+        $this->validatePelanggan($request);
 
         // Proses upload gambar jika ada
         $gambarPath = $this->uploadGambar($request);

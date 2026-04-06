@@ -136,12 +136,12 @@
         <div class="flex gap-2 mt-3">
             <input id="inputDiskon" type="text" inputmode="decimal"
                    class="flex-1 p-3 rounded-2xl border bg-gray-100" 
-                   placeholder="Diskon / Rupiah">
-            <div class="flex flex-col rounded-2xl overflow-hidden">
-                <button id="btnRupiah" class="px-4 py-2 bg-yellow-400 font-bold">Rupiah Rp</button>
-                <button id="btnPersen" class="px-4 py-2 bg-white border font-bold text-sm">Persen %</button>
-            </div>
+                   placeholder="Diskon nominal">
         </div>
+        <p class="text-xs text-gray-500">
+            <i class="bi bi-info-circle-fill text-blue-500"></i>
+            Diskon diinput dalam nominal rupiah saja.
+        </p>
     </div>
 </div>
 
@@ -160,14 +160,14 @@
 
 <!-- POPUP ALERT CUSTOM -->
 <div id="customAlert" class="fixed inset-0 bg-black/60 flex items-center justify-center px-4 z-[9999] hidden">
-    <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate__animated animate__shakeX">
+    <div id="customAlertBox" class="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6">
         <div class="flex flex-col items-center">
-            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <i class="bi bi-exclamation-triangle-fill text-red-500 text-4xl"></i>
+            <div id="alertIconWrap" class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-4 transition">
+                <i id="alertIcon" class="bi bi-exclamation-triangle-fill text-red-500 text-4xl"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">Perhatian!</h3>
+            <h3 id="alertTitle" class="text-xl font-bold text-gray-800 mb-2">Perhatian!</h3>
             <p id="alertMessage" class="text-center text-gray-600 mb-6 leading-relaxed"></p>
-            <button id="btnCloseAlert" 
+            <button id="btnCloseAlert"
                     class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition">
                 Tutup
             </button>
@@ -218,6 +218,8 @@
         <p class="font-semibold text-lg mt-4">Total Harga: <span id="succTotal"></span></p>
         <p class="font-semibold text-lg mb-6">Jumlah Bayar: <span id="succBayar"></span></p>
         <p class="font-semibold text-lg">Diskon: <span id="succDiskon"></span></p>
+        <input type="hidden" id="shareTransactionId">
+        <input type="hidden" id="shareCustomerEmail">
 
         <div class="flex justify-center gap-8 mb-6">
             <div class="flex flex-col items-center cursor-pointer" id="btnSelesai">
@@ -241,6 +243,42 @@
     </div>
 </div>
 
+<!-- POPUP BAGIKAN -->
+<div id="popupBagikan" class="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-[1000] hidden">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-xl p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-xl font-bold text-gray-900">Bagikan Hasil Pembayaran</h3>
+            <button type="button" id="closeSharePopup" class="text-2xl font-bold text-gray-500 hover:text-gray-700">×</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-5">
+            <button type="button" id="shareEmailOption"
+                class="share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400">
+                <i class="bi bi-envelope-fill mr-2"></i>Email
+            </button>
+            <button type="button" id="shareTelegramOption"
+                class="share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200">
+                <i class="bi bi-telegram mr-2"></i>Telegram
+            </button>
+        </div>
+
+        <div class="mb-3">
+            <label id="shareRecipientLabel" class="block font-semibold text-gray-700 mb-2">Email Tujuan</label>
+            <input type="text" id="shareRecipientInput"
+                class="w-full p-3 rounded-2xl border bg-gray-100 text-gray-700"
+                placeholder="Masukkan email tujuan">
+            <p id="shareRecipientHint" class="text-xs text-gray-500 mt-2">
+                Email pelanggan akan diisi otomatis jika tersedia.
+            </p>
+        </div>
+
+        <button type="button" id="btnKirimBagikan"
+            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-2xl font-bold shadow">
+            Kirim Sekarang
+        </button>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -248,11 +286,23 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     // ===== CUSTOM ALERT FUNCTION =====
-    const showAlert = (message) => {
-        const customAlert = document.getElementById('customAlert');
-        const alertMessage = document.getElementById('alertMessage');
-        const btnCloseAlert = document.getElementById('btnCloseAlert');
-        
+    const customAlert = document.getElementById('customAlert');
+    const customAlertBox = document.getElementById('customAlertBox');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertIconWrap = document.getElementById('alertIconWrap');
+    const alertIcon = document.getElementById('alertIcon');
+    const btnCloseAlert = document.getElementById('btnCloseAlert');
+
+    const showAlert = (message, type = 'error') => {
+        const isSuccess = type === 'success';
+
+        customAlertBox.className = `bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate__animated ${isSuccess ? 'animate__fadeInUp' : 'animate__shakeX'}`;
+        alertIconWrap.className = `w-20 h-20 rounded-full flex items-center justify-center mb-4 transition ${isSuccess ? 'bg-green-100' : 'bg-red-100'}`;
+        alertIcon.className = `bi text-4xl ${isSuccess ? 'bi-check-circle-fill text-green-500' : 'bi-exclamation-triangle-fill text-red-500'}`;
+        alertTitle.textContent = isSuccess ? 'Berhasil!' : 'Perhatian!';
+        btnCloseAlert.className = `w-full py-3 text-white font-bold rounded-2xl transition ${isSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`;
+
         alertMessage.textContent = message;
         customAlert.classList.remove('hidden');
         
@@ -266,13 +316,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ===== GLOBAL VARIABLES =====
-    const btnRupiah = document.getElementById('btnRupiah');
-    const btnPersen = document.getElementById('btnPersen');
     const inputDiskon = document.getElementById('inputDiskon');
     const infoDiskon = document.getElementById('infoDiskon');
     const totalHargaFooter = document.getElementById('totalHargaFooter');
     const totalAwal = {{ $totalHarga }};
-    let mode = "rupiah";
     let estimasiValid = false;
 
     // ===== VALIDASI INPUT DISKON =====
@@ -353,31 +400,14 @@ document.addEventListener("DOMContentLoaded", () => {
    // ===== HITUNG DISKON =====
 const hitungDiskon = () => {
     let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
-    let potongan = 0;
-    
-    if (mode === "persen") {
-        // Batasi persen maksimal 100%
-        value = Math.min(value, 100);
-        potongan = totalAwal * value / 100;
-    } else {
-        potongan = value;
-    }
+    let potongan = value;
     
     potongan = Math.min(Math.max(potongan, 0), totalAwal);
     let totalAkhir = totalAwal - potongan;
 
     if (value > 0) {
         infoDiskon.style.display = "block";
-        
-        // ✅ PERBAIKAN: Tampilkan angka tanpa trailing zero
-        let displayValue;
-        if (mode === "persen") {
-            // Jika angka bulat (misal 1.00), tampilkan tanpa desimal
-            // Jika ada desimal (misal 10.5), tampilkan dengan desimal
-            displayValue = value % 1 === 0 ? `${value}%` : `${value}%`;
-        } else {
-            displayValue = `Rp${value.toLocaleString('id-ID')}`;
-        }
+        const displayValue = `Rp${value.toLocaleString('id-ID')}`;
         
         infoDiskon.innerHTML = `
             <span class="font-semibold">Diskon (${displayValue}):</span> Rp${potongan.toLocaleString('id-ID')}<br>
@@ -390,23 +420,6 @@ const hitungDiskon = () => {
     totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
     return totalAkhir;
 };
-
-    // ===== TOGGLE DISKON MODE =====
-    btnRupiah.addEventListener('click', () => {
-        mode = "rupiah";
-        btnRupiah.classList.add('bg-yellow-400');
-        btnPersen.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder = "Diskon / Rupiah";
-        hitungDiskon();
-    });
-
-    btnPersen.addEventListener('click', () => {
-        mode = "persen";
-        btnPersen.classList.add('bg-yellow-400');
-        btnRupiah.classList.remove('bg-yellow-400');
-        inputDiskon.placeholder = "Diskon / Persen % (Contoh: 10.5)";
-        hitungDiskon();
-    });
 
     inputDiskon.addEventListener('input', hitungDiskon);
 
@@ -479,6 +492,34 @@ const hitungDiskon = () => {
     const succDiskon = document.getElementById("succDiskon");
     const succNama = document.getElementById("succNama");
     const succHp = document.getElementById("succHp");
+    const shareTransactionId = document.getElementById("shareTransactionId");
+    const shareCustomerEmail = document.getElementById("shareCustomerEmail");
+    const popupBagikan = document.getElementById("popupBagikan");
+    const closeSharePopup = document.getElementById("closeSharePopup");
+    const shareRecipientInput = document.getElementById("shareRecipientInput");
+    const shareRecipientLabel = document.getElementById("shareRecipientLabel");
+    const shareRecipientHint = document.getElementById("shareRecipientHint");
+    const shareEmailOption = document.getElementById("shareEmailOption");
+    const shareTelegramOption = document.getElementById("shareTelegramOption");
+    let selectedShareChannel = "email";
+
+    const updateShareChannelUI = () => {
+        if (selectedShareChannel === "email") {
+            shareEmailOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+            shareTelegramOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+            shareRecipientLabel.textContent = "Email Tujuan";
+            shareRecipientInput.placeholder = "Masukkan email tujuan";
+            shareRecipientInput.value = shareCustomerEmail.value || "";
+            shareRecipientHint.textContent = "Email pelanggan akan diisi otomatis jika tersedia.";
+        } else {
+            shareEmailOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+            shareTelegramOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+            shareRecipientLabel.textContent = "Chat ID Telegram";
+            shareRecipientInput.placeholder = "Masukkan chat ID Telegram";
+            shareRecipientInput.value = "";
+            shareRecipientHint.textContent = "Gunakan chat ID numerik Telegram, bukan username. Untuk chat pribadi, kirim pesan dulu ke bot lalu ambil chat.id dari getUpdates.";
+        }
+    };
 
     // ===== SIMPAN PEMBAYARAN =====
     document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
@@ -486,7 +527,6 @@ const hitungDiskon = () => {
             const totalAkhir = hitungDiskon();
             const bayar = parseFloat(inputBayar.value) || 0;
             const diskonValue = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
-            const tipe_diskon = btnPersen.classList.contains("bg-yellow-400") ? "percent" : "nominal";
             const keterangan = document.getElementById("keteranganTransaksi").value || null;
             const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
             const tgl_estimasi_value = document.getElementById("tgl_estimasi").value || null;
@@ -496,7 +536,6 @@ const hitungDiskon = () => {
                 dp: bayar,
                 langsung_bayar: langsung,
                 diskon: diskonValue,
-                tipe_diskon: tipe_diskon,
                 keterangan: keterangan,
                 id_metode_bayar: id_metode_bayar,
                 tgl_estimasi: tgl_estimasi_value,
@@ -529,13 +568,13 @@ const hitungDiskon = () => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Accept": "application/json",
                     "X-CSRF-TOKEN": "{{ csrf_token() }}"
                 },
                 body: JSON.stringify({
                     dp: bayar,
                     langsung_bayar: langsung,
                     diskon: diskonValue,
-                    tipe_diskon: tipe_diskon,
                     keterangan: keterangan,
                     id_metode_bayar: id_metode_bayar,
                     tgl_estimasi: tgl_estimasi_value
@@ -564,6 +603,8 @@ const hitungDiskon = () => {
             popupBayar.classList.add("hidden");
 
             // UPDATE POPUP SUCCESS
+            shareTransactionId.value = data.id_transaksi ?? "";
+            shareCustomerEmail.value = data.email ?? "";
             succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
             succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
             succNama.textContent = data.nama;
@@ -605,12 +646,75 @@ const hitungDiskon = () => {
         window.location.href = "{{ route('kasir.dashboard') }}";
     });
 
-    document.getElementById("btnBagikan").addEventListener("click", async () => {
-        const shareText = `Transaksi Berhasil!\nTotal: ${succTotal.textContent}\nBayar: ${succBayar.textContent}`;
-        if (navigator.share) {
-            await navigator.share({ text: shareText });
-        } else {
-            alert("Fitur share tidak tersedia di browser ini");
+    shareEmailOption.addEventListener("click", () => {
+        selectedShareChannel = "email";
+        updateShareChannelUI();
+    });
+
+    shareTelegramOption.addEventListener("click", () => {
+        selectedShareChannel = "telegram";
+        updateShareChannelUI();
+    });
+
+    closeSharePopup.addEventListener("click", () => {
+        popupBagikan.classList.add("hidden");
+    });
+
+    document.getElementById("btnBagikan").addEventListener("click", () => {
+        if (!shareTransactionId.value) {
+            showAlert("ID transaksi belum tersedia untuk dibagikan.");
+            return;
+        }
+
+        selectedShareChannel = "email";
+        updateShareChannelUI();
+        popupBagikan.classList.remove("hidden");
+    });
+
+    document.getElementById("btnKirimBagikan").addEventListener("click", async () => {
+        try {
+            const recipient = shareRecipientInput.value.trim();
+
+            if (selectedShareChannel === "email" && recipient === "") {
+                showAlert("Silakan isi email tujuan terlebih dahulu.");
+                return;
+            }
+
+            const response = await fetch("{{ route('kasir.transaksi.share') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    id_transaksi: shareTransactionId.value,
+                    channel: selectedShareChannel,
+                    recipient: recipient
+                })
+            });
+
+            const rawResult = await response.text();
+            let result = {};
+
+            try {
+                result = rawResult ? JSON.parse(rawResult) : {};
+            } catch (error) {
+                console.error("Share response parse error:", error, rawResult);
+                showAlert("Server mengembalikan respons yang tidak valid saat membagikan transaksi.");
+                return;
+            }
+
+            if (!response.ok || !result.success) {
+                showAlert(result.message || "Gagal membagikan hasil pembayaran.");
+                return;
+            }
+
+            popupBagikan.classList.add("hidden");
+            showAlert(result.message || "Ringkasan pembayaran berhasil dikirim.", "success");
+        } catch (error) {
+            console.error("Share error:", error);
+            showAlert("Terjadi kesalahan saat membagikan hasil pembayaran.");
         }
     });
 

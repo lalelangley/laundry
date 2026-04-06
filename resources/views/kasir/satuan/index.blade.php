@@ -84,6 +84,12 @@
             @endforelse
         </div>
 
+        @if(method_exists($satuan, 'links'))
+        <div class="pt-2">
+            {{ $satuan->links() }}
+        </div>
+        @endif
+
         <!-- ADD BUTTON -->
         @php
         $params = [];

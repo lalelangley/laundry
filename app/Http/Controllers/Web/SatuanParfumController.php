@@ -34,7 +34,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_satuan', 'asc');
         }
 
-        $satuan = $query->get();
+        $satuan = $query->paginate(10)->withQueryString();
 
         return view('satuan.index', compact('satuan'));
     }
@@ -153,7 +153,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_parfum', 'asc');
         }
 
-        $parfum = $query->get();
+        $parfum = $query->paginate(10)->withQueryString();
 
         return view('parfum.index', compact('parfum'));
     }
@@ -244,7 +244,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_satuan', 'asc');
         }
 
-        $satuan = $query->get();
+        $satuan = $query->paginate(10)->withQueryString();
 
         return view('kasir.satuan.index', compact('satuan'));
     }
@@ -365,7 +365,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_parfum', 'asc');
         }
 
-        $parfum = $query->get();
+        $parfum = $query->paginate(10)->withQueryString();
 
         return view('kasir.parfum.index', compact('parfum'));
     }
@@ -466,7 +466,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_parfum', 'asc');
         }
 
-        $parfum = $query->get();
+        $parfum = $query->paginate(10)->withQueryString();
 
         return view('admin2.parfum.index', compact('parfum'));
     }
@@ -566,7 +566,7 @@ class SatuanParfumController extends Controller
             $query->orderBy('nama_satuan', 'asc');
         }
 
-        $satuan = $query->get();
+        $satuan = $query->paginate(10)->withQueryString();
 
         return view('admin2.satuan.index', compact('satuan'));
     }

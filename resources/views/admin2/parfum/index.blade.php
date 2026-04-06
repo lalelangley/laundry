@@ -84,6 +84,12 @@
             @endforelse
         </div>
 
+        @if(method_exists($parfum, 'links'))
+        <div class="pt-2">
+            {{ $parfum->links() }}
+        </div>
+        @endif
+
         <!-- ADD BUTTON -->
         <a href="{{ route('admin2.parfum.create') }}"
            class="block bg-yellow-400 hover:bg-yellow-500 py-4 rounded-2xl font-bold text-black text-center shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center gap-2">

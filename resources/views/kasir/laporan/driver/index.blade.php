@@ -16,12 +16,6 @@
                 </div>
             </div>
             
-            {{-- Export Button --}}
-            <a href="{{ route('kasir.laporan.driver.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
-               class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-3 rounded-full transition-all shadow">
-                <i class="bi bi-file-earmark-spreadsheet text-xl"></i>
-                Export Excel
-            </a>
         </div>
     </div>
 
@@ -148,7 +142,7 @@
                         </div>
                     </div>
                     <div class="text-sm text-gray-500">
-                        <span class="font-semibold text-gray-700">{{ $data->count() }}</span> Driver
+                        <span class="font-semibold text-gray-700">{{ $stats['total_driver_aktif'] }}</span> Driver
                     </div>
                 </div>
             </div>
@@ -202,7 +196,7 @@
                                         {{ $index == 2 ? 'bg-orange-300 text-white' : '' }}
                                         {{ $index > 2 ? 'bg-gray-100 text-gray-600' : '' }}
                                         rounded-full text-sm font-bold">
-                                        {{ $index + 1 }}
+                                        {{ ($data->firstItem() ?? 1) + $index }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-5">
@@ -265,6 +259,12 @@
             </div>
         </div>
     </div>
+
+    @if(method_exists($data, 'links'))
+    <div class="px-8 pb-10">
+        {{ $data->links() }}
+    </div>
+    @endif
 </div>
 
 @if(session('success'))

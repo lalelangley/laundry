@@ -27,11 +27,16 @@ class UserManagerController extends Controller
 
         $admins = Admin::whereIn('role_id', [1,2])
             ->orderBy('role_id')
-            ->get();
+            ->paginate(10, ['*'], 'admins_page')
+            ->withQueryString();
 
-        $kasirs = Kasir::orderBy('created_at', 'desc')->get();
+        $kasirs = Kasir::orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'kasirs_page')
+            ->withQueryString();
         
-        $drivers = Driver::orderBy('created_at', 'desc')->get();
+        $drivers = Driver::orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'drivers_page')
+            ->withQueryString();
 
         return view('manager.index', compact('admins','kasirs','drivers','adminLogin'));
     }
@@ -561,8 +566,12 @@ class UserManagerController extends Controller
             abort(403, 'Akses ditolak. Hanya Admin2 yang dapat mengakses halaman ini.');
         }
 
-        $kasirs = Kasir::orderBy('created_at', 'desc')->get();
-        $drivers = Driver::orderBy('created_at', 'desc')->get();
+        $kasirs = Kasir::orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'kasirs_page')
+            ->withQueryString();
+        $drivers = Driver::orderBy('created_at', 'desc')
+            ->paginate(10, ['*'], 'drivers_page')
+            ->withQueryString();
 
         return view('admin2.manager.index', compact('kasirs', 'drivers', 'admin'));
     }

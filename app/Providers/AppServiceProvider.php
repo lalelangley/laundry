@@ -80,6 +80,12 @@ class AppServiceProvider extends ServiceProvider
                                 ->get();
                         }
 
+                        if (in_array($roleId, [1, 2], true)) {
+                            $menus = $menus->reject(function ($menu) {
+                                return in_array($menu->route, ['transaksi.create', 'admin2.transaksi.create'], true);
+                            })->values();
+                        }
+
                         Log::info("Menus loaded for user", [
                             'role_id' => $roleId,
                             'guard' => $guardType,

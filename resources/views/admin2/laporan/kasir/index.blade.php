@@ -12,12 +12,18 @@
             <h1 class="text-lg font-bold">Laporan Kasir</h1>
         </div>
         
-        {{-- Export Excel Button --}}
-        <a href="{{ route('admin2.laporan.kasir.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
-           class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all text-sm">
-            <i class="bi bi-file-earmark-spreadsheet"></i>
-            Export Excel
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin2.laporan.kasir.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
+               class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all text-sm">
+                <i class="bi bi-file-earmark-pdf"></i>
+                PDF
+            </a>
+            <a href="{{ route('admin2.laporan.kasir.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
+               class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all text-sm">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Excel
+            </a>
+        </div>
     </div>
 
     {{-- FILTER --}}
@@ -52,24 +58,24 @@
     <div class="px-5 mt-6 grid grid-cols-3 gap-3">
         <div class="bg-white rounded-xl p-4 shadow border-2 border-yellow-400 text-center">
             <div class="text-xs text-gray-500 font-semibold">Total Kasir</div>
-            <div class="text-2xl font-bold text-gray-800">{{ $data->count() }}</div>
+            <div class="text-2xl font-bold text-gray-800">{{ $summary['total_kasir'] }}</div>
         </div>
         
         <div class="bg-white rounded-xl p-4 shadow border-2 border-orange-400 text-center">
             <div class="text-xs text-gray-500 font-semibold">Total Transaksi</div>
-            <div class="text-2xl font-bold text-orange-600">{{ $data->sum('total_transaksi') }}</div>
+            <div class="text-2xl font-bold text-orange-600">{{ $summary['total_transaksi'] }}</div>
         </div>
         
         <div class="bg-white rounded-xl p-4 shadow border-2 border-green-400 text-center">
             <div class="text-xs text-gray-500 font-semibold">Total Pendapatan</div>
             <div class="text-sm font-bold text-green-600">
-                Rp {{ number_format($data->sum('total_pendapatan'), 0, ',', '.') }}
+                Rp {{ number_format($summary['total_pendapatan'], 0, ',', '.') }}
             </div>
         </div>
     </div>
 
     {{-- TOP KASIR --}}
-    @php $top = $data->first(); @endphp
+    @php $top = $topKasir ?? $data->first(); @endphp
     @if($top)
     <div class="mx-5 mt-5 bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-yellow-400 rounded-xl p-5 shadow-md">
         <div class="flex items-center justify-between">
@@ -116,7 +122,7 @@
                         {{ $index == 1 ? 'bg-gray-300 text-white' : '' }}
                         {{ $index == 2 ? 'bg-orange-300 text-white' : '' }}
                         {{ $index > 2 ? 'bg-gray-100 text-gray-600' : '' }}">
-                        {{ $index + 1 }}
+                        {{ ($data->firstItem() ?? 1) + $index }}
                     </div>
                     
                     {{-- Avatar & Name --}}
@@ -192,6 +198,12 @@
         </div>
         @endforelse
     </div>
+
+    @if(method_exists($data, 'links'))
+    <div class="px-5 pb-6">
+        {{ $data->links() }}
+    </div>
+    @endif
 </div>
 
 @endsection

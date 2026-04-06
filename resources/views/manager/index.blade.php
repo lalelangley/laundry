@@ -164,6 +164,12 @@ $adminLogin = auth()->guard('admin')->user();
                     </tbody>
                 </table>
             </div>
+
+            @if(method_exists($admins, 'links'))
+            <div class="px-8 py-5 border-t border-gray-200">
+                {{ $admins->appends(request()->except('admins_page'))->links() }}
+            </div>
+            @endif
         </div>
 
         {{-- ================= KASIR ================= --}}
@@ -264,6 +270,12 @@ $adminLogin = auth()->guard('admin')->user();
                     </tbody>
                 </table>
             </div>
+
+            @if(method_exists($kasirs, 'links'))
+            <div class="px-8 py-5 border-t border-gray-200">
+                {{ $kasirs->appends(request()->except('kasirs_page'))->links() }}
+            </div>
+            @endif
         </div>
 
         {{-- ================= DRIVER ================= --}}
@@ -365,6 +377,12 @@ $adminLogin = auth()->guard('admin')->user();
                     </tbody>
                 </table>
             </div>
+
+            @if(method_exists($drivers, 'links'))
+            <div class="px-8 py-5 border-t border-gray-200">
+                {{ $drivers->appends(request()->except('drivers_page'))->links() }}
+            </div>
+            @endif
         </div>
 
     </div>

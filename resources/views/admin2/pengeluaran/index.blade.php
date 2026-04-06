@@ -120,6 +120,12 @@
 
 </div>
 
+@if(method_exists($pengeluaran, 'links'))
+<div class="px-5 pb-24 bg-gray-100">
+    {{ $pengeluaran->links() }}
+</div>
+@endif
+
 {{-- BUTTON TAMBAH --}}
 <div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5">
     <a href="{{ route('admin2.pengeluaran.create') }}"

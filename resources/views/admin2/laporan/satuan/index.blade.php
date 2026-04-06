@@ -57,6 +57,12 @@
         </div>
         @endforelse
     </div>
+
+    @if(method_exists($data, 'links'))
+    <div class="px-5 pb-6">
+        {{ $data->links() }}
+    </div>
+    @endif
 </div>
 @endsection
 

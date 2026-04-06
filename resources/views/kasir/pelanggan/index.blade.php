@@ -73,6 +73,12 @@
     @endforeach
 </div>
 
+@if(method_exists($pelanggan, 'links'))
+<div class="px-5 pb-28">
+    {{ $pelanggan->links() }}
+</div>
+@endif
+
 {{-- BUTTON TAMBAH --}}
 <div class="fixed bottom-5 left-0 right-0 px-6">
     <a href="{{ route('kasir.pelanggan.create') }}"

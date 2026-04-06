@@ -10,11 +10,16 @@
             </a>
             <h1 class="text-lg font-bold">Laporan Metode Bayar</h1>
         </div>
-        {{-- ✅ TOMBOL EXPORT --}}
-        <a href="{{ route('admin2.laporan.bayar.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir]) }}" 
-           class="text-sm font-semibold bg-white px-4 py-2 rounded-full hover:bg-gray-100 transition">
-            <i class="bi bi-file-earmark-excel"></i> Export
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin2.laporan.bayar.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
+               class="text-sm font-semibold bg-white px-4 py-2 rounded-full hover:bg-gray-100 transition">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+            <a href="{{ route('admin2.laporan.bayar.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir]) }}" 
+               class="text-sm font-semibold bg-white px-4 py-2 rounded-full hover:bg-gray-100 transition">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+        </div>
     </div>
 
 {{-- FILTER TANGGAL --}}
@@ -36,7 +41,7 @@
     <div class="px-5 mt-5">
         <div class="bg-white rounded-xl p-4 shadow">
             <p class="text-sm text-gray-600">Total Penggunaan</p>
-            <p class="text-2xl font-bold text-yellow-500">{{ $data->sum('total_penggunaan') }}</p>
+            <p class="text-2xl font-bold text-yellow-500">{{ $totalPenggunaan }}</p>
         </div>
     </div>
 
@@ -56,6 +61,12 @@
         </div>
         @endforelse
     </div>
+
+    @if(method_exists($data, 'links'))
+    <div class="px-5 pb-6">
+        {{ $data->links() }}
+    </div>
+    @endif
 </div>
 @endsection
 

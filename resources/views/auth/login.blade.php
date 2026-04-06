@@ -189,24 +189,24 @@
             autocomplete="tel"
             class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
             placeholder="Contoh: 08123456789">
-    </div>
-    <div>
-        <label class="block text-gray-700 font-semibold mb-2 text-sm">
-            <i class="fas fa-lock text-yellow-500 mr-1"></i> Password
-        </label>
-        <div class="relative">
-            {{-- Ganti name jadi password_kasir --}}
-            <input type="password" name="password_kasir" id="input-password-kasir"
-                autocomplete="current-password"
-                class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
-                placeholder="Masukkan password...">
-            <button type="button" onclick="togglePassword('input-password-kasir','icon-kasir')"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                <i class="fas fa-eye" id="icon-kasir"></i>
-            </button>
         </div>
-    </div>
-</div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2 text-sm">
+                    <i class="fas fa-lock text-yellow-500 mr-1"></i> Password
+                </label>
+                <div class="relative">
+                    {{-- Ganti name jadi password_kasir --}}
+                    <input type="password" name="password_kasir" id="input-password-kasir"
+                        autocomplete="current-password"
+                        class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
+                        placeholder="Masukkan password...">
+                    <button type="button" onclick="togglePassword('input-password-kasir','icon-kasir')"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-eye" id="icon-kasir"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
 
                     {{-- Submit Button --}}
                     <div class="mt-5">

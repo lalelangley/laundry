@@ -580,11 +580,6 @@
                                 <div class="font-semibold text-red-600 whitespace-nowrap">
                                     Rp {{ number_format($o->diskon, 0, ',', '.') }}
                                 </div>
-                                @if($o->tipe_diskon)
-                                    <div class="text-xs text-gray-500">
-                                        {{ ucfirst($o->tipe_diskon) }}
-                                    </div>
-                                @endif
                             @else
                                 <span class="text-xs text-gray-400">-</span>
                             @endif

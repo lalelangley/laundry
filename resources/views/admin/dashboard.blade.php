@@ -356,11 +356,6 @@
                     <p class="text-sm text-gray-500">Menampilkan {{ $orders->count() }} transaksi</p>
                 </div>
             </div>
-            <a href="{{ route('transaksi.create') }}"
-               class="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 transition-all px-6 py-3 rounded-2xl text-gray-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 transform inline-flex items-center gap-2">
-                <i class="bi bi-plus-circle-fill text-lg"></i>
-                <span>Transaksi Baru</span>
-            </a>
         </div>
     </div>
 

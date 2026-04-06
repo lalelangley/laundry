@@ -20,13 +20,14 @@ class CheckPermission
     {
         // ✅ Get authenticated user (support both admin and kasir guard)
         $user = auth('admin')->user() ?? auth('kasir')->user();
+        $roleId = auth('kasir')->check() ? 3 : (isset($user->role_id) ? (int) $user->role_id : null);
 
         if (!$user) {
             return $this->handleUnauthenticated($request);
         }
 
         // ✅ Super Admin bypass - Cast to int untuk konsistensi
-        if ((int)$user->role_id === 1) {
+        if ($roleId === 1) {
             return $next($request);
         }
 
@@ -59,16 +60,29 @@ class CheckPermission
             Log::warning("Menu identifier not found for route", [
                 'route' => $routeName,
                 'user_id' => $user->id_kasir ?? $user->id_admin ?? null,
-                'role_id' => $user->role_id
+                'role_id' => $roleId
             ]);
             abort(403, 'Menu tidak ditemukan');
         }
 
         // ✅ Check permission menggunakan helper yang sudah diperbaiki
         if (!checkPermission($menuIdentifier, $permission)) {
+            if ($this->canFallbackToViewPermission($request, $routeName, $permission, $menuIdentifier)) {
+                Log::info("Permission fallback to view", [
+                    'user_id' => $user->id_kasir ?? $user->id_admin ?? null,
+                    'role_id' => $roleId,
+                    'route' => $routeName,
+                    'menu' => $menuIdentifier,
+                    'requested_permission' => $permission,
+                ]);
+
+                return $next($request);
+            }
+
             return $this->handlePermissionDenied(
                 $request,
                 $user,
+                $roleId,
                 $routeName,
                 $menuIdentifier,
                 $permission
@@ -76,6 +90,39 @@ class CheckPermission
         }
 
         return $next($request);
+    }
+
+    private function canFallbackToViewPermission(
+        Request $request,
+        string $routeName,
+        string $permission,
+        string $menuIdentifier
+    ): bool {
+        if (!$request->isMethod('get')) {
+            return false;
+        }
+
+        if (!in_array($permission, ['add', 'edit'])) {
+            return false;
+        }
+
+        $viewFallbackRoutes = [
+            '.create',
+            '.edit',
+            '.confirm',
+            '.pelanggan',
+            '.detail',
+            '.print',
+            '.form',
+        ];
+
+        foreach ($viewFallbackRoutes as $suffix) {
+            if (str_ends_with($routeName, $suffix)) {
+                return checkPermission($menuIdentifier, 'view');
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -200,6 +247,7 @@ class CheckPermission
     private function handlePermissionDenied(
         Request $request,
         $user,
+        ?int $roleId,
         string $routeName,
         string $menuIdentifier,
         string $permission
@@ -207,7 +255,7 @@ class CheckPermission
         // ✅ Log permission denial
         Log::info("Permission denied", [
             'user_id' => $user->id_kasir ?? $user->id_admin ?? null,
-            'role_id' => $user->role_id,
+            'role_id' => $roleId,
             'route' => $routeName,
             'menu' => $menuIdentifier,
             'permission' => $permission,

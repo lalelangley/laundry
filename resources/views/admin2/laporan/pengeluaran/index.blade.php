@@ -12,12 +12,18 @@
         <h1 class="text-lg font-bold">Laporan Pengeluaran</h1>
     </div>
     
-    {{-- Export Excel Button --}}
-    <a href="{{ route('admin2.laporan.pengeluaran.export') }}?{{ http_build_query(request()->all()) }}" 
-       class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all">
-        <i class="bi bi-file-earmark-spreadsheet"></i>
-        Export Excel
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="{{ route('admin2.laporan.pengeluaran.export') }}?{{ http_build_query(array_merge(request()->all(), ['format' => 'pdf'])) }}"
+           class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all">
+            <i class="bi bi-file-earmark-pdf"></i>
+            PDF
+        </a>
+        <a href="{{ route('admin2.laporan.pengeluaran.export') }}?{{ http_build_query(request()->all()) }}" 
+           class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition-all">
+            <i class="bi bi-file-earmark-spreadsheet"></i>
+            Excel
+        </a>
+    </div>
 </div>
 
 {{-- FILTER --}}
@@ -77,7 +83,7 @@
             </div>
             <div>
                 <div class="text-xs text-gray-500 font-semibold">Total Item</div>
-                <div class="text-xl font-bold text-gray-800">{{ $pengeluaran->count() }}</div>
+                <div class="text-xl font-bold text-gray-800">{{ $totalItem }}</div>
             </div>
         </div>
     </div>
@@ -90,7 +96,7 @@
             <div>
                 <div class="text-xs text-gray-500 font-semibold">Total Pengeluaran</div>
                 <div class="text-lg font-bold text-orange-600">
-                    Rp {{ number_format($pengeluaran->sum('nominal'),0,',','.') }}
+                    Rp {{ number_format($totalNominal,0,',','.') }}
                 </div>
             </div>
         </div>
@@ -137,6 +143,12 @@
     </div>
 </div>
 
+@if(method_exists($pengeluaran, 'links'))
+<div class="px-6 mt-4 pb-32">
+    {{ $pengeluaran->links() }}
+</div>
+@endif
+
 {{-- TOTAL FOOTER --}}
 <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 px-6 py-5 flex justify-between items-center font-bold text-lg shadow-2xl">
     <div class="flex items-center gap-2">
@@ -144,7 +156,7 @@
         <span>Total Pengeluaran</span>
     </div>
     <span class="text-xl">
-        Rp {{ number_format($pengeluaran->sum('nominal'),0,',','.') }}
+        Rp {{ number_format($totalNominal,0,',','.') }}
     </span>
 </div>
 
@@ -154,25 +166,10 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const exportBtn = document.getElementById('exportBtn');
-    const exportMenu = document.getElementById('exportMenu');
     const filterForm = document.getElementById('filterForm');
     const resetBtn = document.getElementById('resetBtn');
     const dariInput = document.getElementById('dari');
     const sampaiInput = document.getElementById('sampai');
-
-    // Toggle export menu
-    exportBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        exportMenu.classList.toggle('hidden');
-    });
-
-    // Close export menu when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) {
-            exportMenu.classList.add('hidden');
-        }
-    });
 
     // Auto submit when date changes
     dariInput.addEventListener('change', function() {

@@ -304,7 +304,8 @@ class PengaturanController extends Controller
         // Ambil semua metode bayar, diurutkan berdasarkan nama
         $metode = DB::table('metode_bayar')
             ->orderBy('nama_metode_bayar')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
         
         $permissions = $this->getCustomPermissions();
             
@@ -458,7 +459,7 @@ class PengaturanController extends Controller
             requirePermission('pengaturan', 'view');
         }
         
-        $metode      = DB::table('metode_bayar')->orderBy('nama_metode_bayar')->get();
+        $metode      = DB::table('metode_bayar')->orderBy('nama_metode_bayar')->paginate(10)->withQueryString();
         $permissions = $this->getCustomPermissions();
             
         return view('kasir.pengaturan.metode_bayar', compact('metode', 'permissions'));
@@ -586,7 +587,7 @@ class PengaturanController extends Controller
             requirePermission('pengaturan', 'view');
         }
         
-        $metode      = DB::table('metode_bayar')->orderBy('nama_metode_bayar')->get();
+        $metode      = DB::table('metode_bayar')->orderBy('nama_metode_bayar')->paginate(10)->withQueryString();
         $permissions = $this->getCustomPermissions();
             
         return view('admin2.pengaturan.metode_bayar', compact('metode', 'permissions'));

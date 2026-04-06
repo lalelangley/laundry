@@ -65,6 +65,12 @@
         </div>
         @endforelse
     </div>
+
+    @if(method_exists($metode, 'links'))
+    <div>
+        {{ $metode->links() }}
+    </div>
+    @endif
 </div>
 
 {{-- MODAL TAMBAH METODE --}}

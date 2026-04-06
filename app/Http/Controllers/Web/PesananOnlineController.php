@@ -353,7 +353,7 @@ class PesananOnlineController extends Controller
             'metodeBayar',
             'pembayaran',
             'biayaTambahan'
-        ])->findOrFail($id);
+        ])->where('id_transaksi', $id)->firstOrFail();
 
         // Ambil master list biaya tambahan untuk keperluan dropdown form
         $masterBiayaTambahan = \DB::table('biaya_tambahan')
@@ -1430,7 +1430,7 @@ class PesananOnlineController extends Controller
             'metodeBayar',
             'pembayaran',
             'biayaTambahan'
-        ])->findOrFail($id);
+        ])->where('id_transaksi', $id)->firstOrFail();
 
         $masterBiayaTambahan = \DB::table('biaya_tambahan')
             ->select('nama_biaya', 'nominal')

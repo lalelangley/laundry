@@ -408,12 +408,6 @@
                     <p class="text-sm text-gray-500">Menampilkan {{ $orders->count() }} transaksi</p>
                 </div>
             </div>
-
-            <a href="{{ route('admin2.transaksi.create') }}"
-               class="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 transition-all px-6 py-3 rounded-2xl text-gray-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 transform inline-flex items-center gap-2">
-                <i class="bi bi-plus-circle-fill text-lg"></i>
-                <span>Transaksi Baru</span>
-            </a>
         </div>
     </div>
 
@@ -580,11 +574,6 @@
                                 <div class="font-semibold text-red-600 whitespace-nowrap">
                                     Rp {{ number_format($o->diskon, 0, ',', '.') }}
                                 </div>
-                                @if($o->tipe_diskon)
-                                    <div class="text-xs text-gray-500">
-                                        {{ ucfirst($o->tipe_diskon) }}
-                                    </div>
-                                @endif
                             @else
                                 <span class="text-xs text-gray-400">-</span>
                             @endif

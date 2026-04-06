@@ -157,6 +157,12 @@
 
 </div>
 
+@if(method_exists($pengeluaran, 'links'))
+<div class="px-5 pb-24 bg-gray-100">
+    {{ $pengeluaran->links() }}
+</div>
+@endif
+
 {{-- ========================================
      TOMBOL TAMBAH PENGELUARAN (FIXED BOTTOM)
 ======================================== --}}

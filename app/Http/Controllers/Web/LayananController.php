@@ -36,7 +36,9 @@ class LayananController extends Controller
         $parfum = \App\Models\Parfum::all();
         
         // Eager load relasi jenis -> satuan untuk menghindari N+1 query
-        $layananUtama = Layanan::with(['jenis.satuan'])->get();
+        $layananUtama = Layanan::with(['jenis.satuan'])
+            ->paginate(10)
+            ->withQueryString();
 
         // ======================
         // KASIR - tampilkan view kasir dengan izin dinamis per aksi
@@ -84,7 +86,9 @@ class LayananController extends Controller
         }
 
         // Eager load relasi jenis dan satuan
-        $layananUtama = Layanan::with(['jenis.satuan'])->get();
+        $layananUtama = Layanan::with(['jenis.satuan'])
+            ->paginate(10)
+            ->withQueryString();
         $parfum = \App\Models\Parfum::all();
 
         return view('admin2.layanan.layanan', [
