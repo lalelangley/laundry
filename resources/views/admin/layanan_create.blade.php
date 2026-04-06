@@ -62,12 +62,13 @@
         </div>
     @endif
 
-    {{-- BUTTON TAMBAH JENIS BARU --}}
-    <a href="{{ route('layanan.jenis.create', ['id_layanan' => $layanan_id]) }}"
-       class="block mt-6 mb-6 bg-yellow-400 hover:bg-yellow-500 text-black text-center py-3 rounded-2xl font-semibold shadow transition inline-flex items-center justify-center gap-2">
-        <i class="bi bi-plus-circle"></i>
-        <span>Tambah Jenis Layanan Baru</span>
-    </a>
+    
+   {{-- BUTTON TAMBAH JENIS BARU --}}
+<a href="{{ route('layanan.jenis.create', ['id_layanan' => $layanan_id]) }}"
+   class="mt-6 mb-6 flex items-center justify-center gap-2 bg-yellow-400 hover:bg-yellow-500 text-black text-center py-3 rounded-2xl font-semibold shadow transition">
+    <i class="bi bi-plus-circle"></i>
+    <span>Tambah Jenis Layanan Baru</span>
+</a>
 
     {{-- FORM CREATE LAYANAN --}}
     <form id="formLayanan" action="{{ route('layanan.store') }}" method="POST" class="bg-white p-5 rounded-2xl shadow">
