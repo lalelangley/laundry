@@ -1,3 +1,5 @@
+// FE-DOC: Script frontend untuk public/js/riwayat-detail.js. Komentar dipakai untuk menandai file ini sebagai bagian dari interaksi UI dan helper JavaScript project.
+
 /* ================================================
    resources/js/riwayat-detail.js
    JavaScript untuk halaman detail transaksi riwayat
@@ -24,6 +26,7 @@ const idTransaksi     = window.DETAIL_DATA.idTransaksi;
 // ==============================
 // HELPER: FORMAT RUPIAH
 // ==============================
+// FE-DOC: Function berikut mengelola bagian interaksi UI atau helper data sesuai nama tanggung jawabnya.
 function formatRupiah(angka) {
     return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }

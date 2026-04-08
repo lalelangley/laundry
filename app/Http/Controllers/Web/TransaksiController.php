@@ -16,6 +16,31 @@ use App\Models\JenisLayanan;
 
 class TransaksiController extends Controller
 {
+    private function buildPelangganPickerQuery(Request $request)
+    {
+        $query = Pelanggan::query();
+        $search = trim((string) $request->get('search', ''));
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('nama_pelanggan', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->orWhere('no_hp', 'like', '%' . $search . '%');
+            });
+        }
+
+        $sort = $request->get('sort', 'nama_asc');
+
+        match ($sort) {
+            'nama_desc' => $query->orderBy('nama_pelanggan', 'desc'),
+            'terbaru' => $query->orderBy('id_pelanggan', 'desc'),
+            'terlama' => $query->orderBy('id_pelanggan', 'asc'),
+            default => $query->orderBy('nama_pelanggan', 'asc'),
+        };
+
+        return $query;
+    }
+
     // ==========================
     // 1. HALAMAN AWAL TRANSAKSI - ADMIN
     // ==========================
@@ -56,12 +81,12 @@ class TransaksiController extends Controller
     // ==========================
     // 3. PILIH PELANGGAN - ADMIN
     // ==========================
-    public function pilihPelanggan()
+    public function pilihPelanggan(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+        $pelanggan = $this->buildPelangganPickerQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('transaksi.pelanggan', compact('pelanggan'));
@@ -462,12 +487,12 @@ public function bayar(Request $request)
     // ==========================
     // KASIR - PILIH PELANGGAN
     // ==========================
-    public function pelangganKasir()
+    public function pelangganKasir(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+        $pelanggan = $this->buildPelangganPickerQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('kasir.transaksi.pelanggan', compact('pelanggan'));
@@ -633,12 +658,12 @@ public function bayarKasir(Request $request)
     // ==========================
     // ADMIN2 - PILIH PELANGGAN
     // ==========================
-    public function pelangganAdmin2()
+    public function pelangganAdmin2(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
         requirePermission('transaksi', 'view');
         
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan')
+        $pelanggan = $this->buildPelangganPickerQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('admin2.transaksi.pelanggan', compact('pelanggan'));
@@ -1320,21 +1345,75 @@ public function confirmKasir()
             ], 500);
         }
 
+        $this->storeTelegramChatIdForPelanggan($transaksi, $chatId);
+
         return response()->json([
             'success' => true,
             'message' => 'Ringkasan pembayaran berhasil dikirim ke Telegram.'
         ]);
     }
 
+    private function storeTelegramChatIdForPelanggan(Transaksi $transaksi, string $chatId): void
+    {
+        if ($chatId === '') {
+            return;
+        }
+
+        $pelanggan = $transaksi->pelanggan;
+
+        if (!$pelanggan && !empty($transaksi->id_pelanggan)) {
+            $pelanggan = Pelanggan::find($transaksi->id_pelanggan);
+        }
+
+        if (!$pelanggan) {
+            $normalizedNoHp = preg_replace('/[^0-9]/', '', (string) $transaksi->no_hp);
+
+            if ($normalizedNoHp !== '') {
+                $pelanggan = Pelanggan::get()->first(function ($item) use ($normalizedNoHp) {
+                    return preg_replace('/[^0-9]/', '', (string) $item->no_hp) === $normalizedNoHp;
+                });
+            }
+        }
+
+        if (!$pelanggan) {
+            Log::info('Share Telegram berhasil, tapi pelanggan tidak ditemukan untuk simpan chat id.', [
+                'id_transaksi' => $transaksi->id_transaksi,
+                'chat_id' => $chatId,
+            ]);
+
+            return;
+        }
+
+        $payload = ['telegram_chat_id' => $chatId];
+
+        if (!$transaksi->id_pelanggan || (int) $transaksi->id_pelanggan !== (int) $pelanggan->id_pelanggan) {
+            $transaksi->update(['id_pelanggan' => $pelanggan->id_pelanggan]);
+            $transaksi->setRelation('pelanggan', $pelanggan);
+        }
+
+        if (empty($pelanggan->telegram_chat_id) || (string) $pelanggan->telegram_chat_id !== $chatId) {
+            $pelanggan->update($payload);
+        }
+    }
+
     private function buildShareMessage(Transaksi $transaksi): string
     {
         $detailLines = $transaksi->detail->map(function ($item) {
-            $subtotal = (float) $item->harga * (float) $item->qty;
+            $qty = (float) $item->qty;
+            $storedHarga = (float) ($item->harga ?? 0);
+            $storedSubtotal = (float) ($item->subtotal ?? 0);
+            $hargaJenis = (float) ($item->jenis?->harga ?? 0);
+            $hargaSatuan = $storedHarga > 0
+                ? $storedHarga
+                : ($qty > 0 && $storedSubtotal > 0
+                    ? $storedSubtotal / $qty
+                    : $hargaJenis);
+            $subtotal = $storedSubtotal > 0 ? $storedSubtotal : ($hargaSatuan * $qty);
             $layanan = $item->layanan?->nama_layanan ?? 'Layanan';
             $jenis = $item->jenis?->nama_jenis ? ' (' . $item->jenis->nama_jenis . ')' : '';
 
             return '- ' . $layanan . $jenis . ': ' .
-                $item->qty . ' x Rp' . number_format((float) $item->harga, 0, ',', '.') .
+                $item->qty . ' x Rp' . number_format($hargaSatuan, 0, ',', '.') .
                 ' = Rp' . number_format($subtotal, 0, ',', '.');
         })->implode("\n");
 

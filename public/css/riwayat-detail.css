@@ -1,4 +1,7 @@
+/* FE-DOC: Stylesheet frontend untuk public/css/riwayat-detail.css. Komentar dipakai untuk menandai file ini sebagai sumber style, utilitas Tailwind, atau CSS kustom project. */
 
+
+/* FE-DOC: Modal bayar diatur lewat CSS ini agar mudah di-toggle oleh JavaScript. */
 #modalBayar {
     display: flex;
 }

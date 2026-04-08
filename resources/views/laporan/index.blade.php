@@ -1,9 +1,11 @@
+{{-- FE-DOC: Template frontend untuk resources/views/laporan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Kelola Pelanggan')
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
         <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
@@ -35,6 +37,7 @@
             </div>
 
             {{-- TAB CONTENT: LAPORAN --}}
+{{-- FE-DOC: Tab laporan memuat navigasi ke modul laporan utama. --}}
             <div id="laporan" class="tab-content p-12">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-graph-up me-2"></i>Laporan Utama
@@ -80,6 +83,7 @@
             </div>
 
             {{-- TAB CONTENT: TRANSAKSI --}}
+{{-- FE-DOC: Tab transaksi berisi laporan yang berhubungan dengan proses operasional dan pembayaran. --}}
             <div id="transaksi" class="tab-content p-12 hidden">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-cash-stack me-2"></i>Informasi Transaksi
@@ -137,20 +141,23 @@
             </div>
 
             {{-- TAB CONTENT: DATA & EXPORT --}}
+{{-- FE-DOC: Tab data dan export menampung aksi download atau backup data. --}}
             <div id="data" class="tab-content p-12 hidden">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-file-earmark-arrow-down me-2"></i>Export & Backup Data
                 </h3>
                 
+                {{-- Kartu aksi export dibuat responsif: 1 kolom di mobile, melebar di layar besar --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <button type="button" onclick="openExportModal()"
                        class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all text-left w-full">
+                        {{-- Ikon utama memakai gradient kuning agar konsisten dengan area laporan --}}
                         <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-file-earmark-excel text-white text-4xl"></i>
+                            <i class="bi bi-file-earmark-arrow-down text-white text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Export Data Transaksi Ke Excel</h4>
-                            <p class="text-gray-600">Download semua data transaksi dalam format Excel</p>
+                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Export Data Transaksi</h4>
+                            <p class="text-gray-600">Download laporan transaksi dalam format Excel atau PDF</p>
                         </div>
                         <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
                     </button> 
@@ -160,129 +167,129 @@
     </div>
 </div>
 
-{{-- ✅ MODAL POPUP EXPORT EXCEL --}}
+{{-- ✅ MODAL POPUP EXPORT TRANSAKSI --}}
 <div id="exportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 z-50 hidden">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden animate-fadeIn">
-        
-        {{-- Modal Header --}}
-        <div class="bg-gradient-to-r from-yellow-400 to-yellow-500 px-8 py-6 flex items-center justify-between sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-                    <i class="bi bi-file-earmark-excel text-white text-2xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-white drop-shadow-sm">
-                    Export Data Transaksi
-                </h3>
-            </div>
-            <button onclick="closeExportModal()" 
-                class="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-xl transition text-white text-2xl font-bold">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-
-        {{-- Modal Body --}}
-        <div class="overflow-y-auto max-h-[calc(95vh-88px)]">
-            <form action="{{ route('laporan.transaksi.export') }}" method="POST" class="p-8 space-y-6" data-no-loading>
+    {{-- Shell modal memakai panel terang, radius besar, dan shadow tebal agar terasa seperti dialog utama --}}
+    <div class="bg-[#fcfcfb] rounded-[32px] shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden animate-fadeIn export-modal-shell">
+        <div class="overflow-y-auto max-h-[95vh]">
+            <form action="{{ route('laporan.transaksi.export') }}" method="POST" class="p-8 md:p-10 space-y-6" data-no-loading>
                 @csrf
+                {{-- Hidden input ini diubah via JS supaya satu form bisa kirim Excel atau PDF --}}
+                <input type="hidden" name="format" id="exportFormat" value="excel">
                 
-                {{-- Filter Berdasarkan --}}
+                {{-- Select ini menentukan kolom tanggal mana yang dipakai backend saat export --}}
                 <div class="space-y-3">
-                    <label class="flex items-center gap-2 text-lg font-bold text-gray-900">
-                        <i class="bi bi-funnel-fill text-yellow-500"></i>
+                    <label class="flex items-center gap-3 text-[15px] font-bold text-gray-900">
+                        <span class="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                            <i class="bi bi-calendar2-week"></i>
+                        </span>
                         Filter Berdasarkan
                     </label>
                     <select name="filter_type" id="filterType"
-                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition bg-gray-50 hover:bg-white">
-                        <option value="tanggal_masuk">📅 Tanggal Masuk Pesanan</option>
-                        <option value="tanggal_selesai">✅ Tanggal Selesai</option>
-                        <option value="tanggal_bayar">💰 Tanggal Bayar</option>
+                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-2xl focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition bg-white shadow-sm">
+                        <option value="tanggal_masuk">Tanggal Masuk Pesanan</option>
+                        <option value="tanggal_selesai">Tanggal Selesai</option>
+                        <option value="tanggal_bayar">Tanggal Bayar</option>
                     </select>
                 </div>
 
-                {{-- Tanggal Awal & Akhir --}}
+                {{-- Dua input tanggal ditaruh dalam grid agar sejajar di desktop dan menumpuk di mobile --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-3">
-                        <label class="flex items-center gap-2 text-base font-semibold text-gray-900">
-                            <i class="bi bi-calendar-check text-yellow-500"></i>
+                        <label class="flex items-center gap-3 text-[15px] font-bold text-gray-900">
+                            <span class="w-8 h-8 rounded-xl bg-yellow-50 text-yellow-500 flex items-center justify-center">
+                                <i class="bi bi-calendar-check"></i>
+                            </span>
                             Tanggal Awal
                         </label>
                         <input type="date" name="tanggal_awal" required
                             value="{{ date('Y-m-d', strtotime('-30 days')) }}"
-                            class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition bg-gray-50 hover:bg-white">
+                            class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-2xl focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition bg-white shadow-sm">
                     </div>
                     
                     <div class="space-y-3">
-                        <label class="flex items-center gap-2 text-base font-semibold text-gray-900">
-                            <i class="bi bi-calendar-x text-yellow-500"></i>
+                        <label class="flex items-center gap-3 text-[15px] font-bold text-gray-900">
+                            <span class="w-8 h-8 rounded-xl bg-yellow-50 text-yellow-500 flex items-center justify-center">
+                                <i class="bi bi-calendar-range"></i>
+                            </span>
                             Tanggal Akhir
                         </label>
                         <input type="date" name="tanggal_akhir" required
                             value="{{ date('Y-m-d') }}"
-                            class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition bg-gray-50 hover:bg-white">
+                            class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-2xl focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition bg-white shadow-sm">
                     </div>
                 </div>
 
-                {{-- Status Pembayaran --}}
+                {{-- Filter pembayaran dibuat sederhana karena nilainya akan divalidasi lagi di controller --}}
                 <div class="space-y-3">
-                    <label class="flex items-center gap-2 text-lg font-bold text-gray-900">
-                        <i class="bi bi-cash-coin text-yellow-500"></i>
+                    <label class="flex items-center gap-3 text-[15px] font-bold text-gray-900">
+                        <span class="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                            <i class="bi bi-cash-coin"></i>
+                        </span>
                         Status Pembayaran
                     </label>
                     <select name="status_bayar"
-                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition bg-gray-50 hover:bg-white">
-                        <option value="semua">📊 Semua Status</option>
-                        <option value="lunas">✅ Lunas</option>
-                        <option value="belum_lunas">⏳ Belum Lunas</option>
-                        <option value="DP">💵 DP (Down Payment)</option>
+                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-2xl focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition bg-white shadow-sm">
+                        <option value="semua">Semua Status</option>
+                        <option value="lunas">Lunas</option>
+                        <option value="belum_lunas">Belum Lunas</option>
+                        <option value="DP">DP (Down Payment)</option>
                     </select>
                 </div>
 
-                {{-- Nama File --}}
+                {{-- Nama file opsional: kalau kosong backend akan generate nama default otomatis --}}
                 <div class="space-y-3">
-                    <label class="flex items-center gap-2 text-base font-semibold text-gray-900">
-                        <i class="bi bi-file-text text-yellow-500"></i>
+                    <label class="flex items-center gap-3 text-[15px] font-bold text-gray-900">
+                        <span class="w-8 h-8 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </span>
                         Nama File (Opsional)
                     </label>
                     <input type="text" name="nama_file" 
                         placeholder="Contoh: Laporan_Transaksi_Januari_2026"
                         value="Laporan_Transaksi_{{ date('d_m_Y') }}"
-                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-xl focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition bg-gray-50 hover:bg-white placeholder:text-gray-400">
+                        class="w-full px-5 py-4 text-base border-2 border-gray-200 rounded-2xl focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition bg-white shadow-sm placeholder:text-gray-400">
                     <p class="flex items-start gap-2 text-sm text-gray-500">
-                        <i class="bi bi-info-circle-fill text-yellow-500 mt-0.5"></i>
+                        <i class="bi bi-exclamation-circle-fill text-yellow-500 mt-0.5"></i>
                         <span>Kosongkan untuk menggunakan nama file default dengan tanggal otomatis</span>
                     </p>
                 </div>
 
-                {{-- Divider --}}
                 <div class="border-t border-gray-200 my-6"></div>
 
-                {{-- Info Box --}}
-                <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-5">
+                {{-- Info box kuning dipakai untuk menekankan aturan export sebelum user submit --}}
+                <div class="bg-[#fff9db] border-2 border-yellow-200 rounded-2xl p-5">
                     <div class="flex gap-3">
                         <i class="bi bi-lightbulb-fill text-yellow-600 text-xl flex-shrink-0 mt-0.5"></i>
                         <div class="space-y-2 text-sm text-gray-700">
                             <p class="font-semibold text-gray-900">Informasi Export:</p>
                             <ul class="space-y-1 list-disc list-inside ml-2">
-                                <li>File akan didownload dalam format Excel (.xlsx)</li>
-                                <li>Data yang diexport hanya transaksi dengan status "Selesai"</li>
+                                <li>File akan didownload dalam format Excel (.xlsx) atau PDF (.pdf)</li>
+                                <li>Filter tanggal dan status pembayaran akan ikut diterapkan ke hasil export</li>
                                 <li>Proses export mungkin memakan waktu jika data sangat banyak</li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                {{-- Action Buttons --}}
-                <div class="flex gap-3 pt-4">
+                {{-- Tombol aksi ditumpuk di mobile lalu jadi sejajar di layar yang lebih lebar --}}
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
                     <button type="button" onclick="closeExportModal()"
-                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-lg py-4 rounded-xl transition shadow-sm hover:shadow flex items-center justify-center gap-2">
+                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-lg py-4 rounded-2xl transition shadow-sm hover:shadow flex items-center justify-center gap-2">
                         <i class="bi bi-x-circle"></i>
                         <span>Batal</span>
                     </button>
                     
-                    <button type="submit"
-                        class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold text-lg py-4 rounded-xl transition shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                        <i class="bi bi-download"></i>
+                    <button type="submit" onclick="setExportFormat('excel')"
+                        class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold text-lg py-4 rounded-2xl transition shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                        <i class="bi bi-file-earmark-spreadsheet"></i>
                         <span>Download Excel</span>
+                    </button>
+
+                    <button type="submit" onclick="setExportFormat('pdf')"
+                        class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-lg py-4 rounded-2xl transition shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                        <span>Download PDF</span>
                     </button>
                 </div>
             </form>
@@ -293,7 +300,9 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 <style>
+/* Animasi masuk ringan agar modal terasa halus saat dibuka. */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -309,6 +318,12 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+/* Border tipis membantu panel modal tetap terbaca di atas backdrop gelap. */
+.export-modal-shell {
+    border: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+/* Custom scrollbar ini hanya berlaku di area scroll modal export. */
 #exportModal .overflow-y-auto::-webkit-scrollbar {
     width: 8px;
 }
@@ -327,6 +342,8 @@
     background: #94a3b8;
 }
 </style>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 // ✅ FIXED: Function untuk switch tab
@@ -362,7 +379,7 @@ function openTab(tabName) {
     }
 }
 
-// ✅ Function buka modal export
+// Menampilkan modal export dan mengunci scroll body di belakang modal.
 function openExportModal() {
     const modal = document.getElementById('exportModal');
     if (modal) {
@@ -371,7 +388,7 @@ function openExportModal() {
     }
 }
 
-// ✅ Function tutup modal export
+// Menutup modal dengan animasi singkat lalu mengembalikan scroll halaman.
 function closeExportModal() {
     const modal = document.getElementById('exportModal');
     if (modal) {
@@ -392,12 +409,20 @@ function closeExportModal() {
     }
 }
 
+// Format export diubah tepat sebelum submit agar satu form bisa melayani dua tombol.
+function setExportFormat(format) {
+    const formatInput = document.getElementById('exportFormat');
+    if (formatInput) {
+        formatInput.value = format;
+    }
+}
+
 // ✅ Event listeners setelah DOM loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Set tab pertama aktif saat load
     openTab('laporan');
     
-    // Tutup modal ketika klik di luar area modal
+    // Klik backdrop akan menutup modal supaya interaksi terasa natural.
     const modal = document.getElementById('exportModal');
     if (modal) {
         modal.addEventListener('click', function(e) {
@@ -407,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Tutup dengan tombol ESC
+    // Escape jadi shortcut keyboard untuk keluar dari modal.
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
             closeExportModal();

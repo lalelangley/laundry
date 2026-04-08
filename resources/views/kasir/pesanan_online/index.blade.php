@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/pesanan_online/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
+    {{-- FE-DOC: Blok CSS khusus halaman ini. --}}
     <style>
         .delete-btn {
             pointer-events: auto !important;
@@ -548,6 +550,7 @@
 @endforeach
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 // Search functionality
 document.getElementById('searchInput').addEventListener('keyup', function() {

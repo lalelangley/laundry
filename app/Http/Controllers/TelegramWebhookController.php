@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pelanggan;
+use App\Services\TelegramNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TelegramWebhookController extends Controller
@@ -23,66 +24,86 @@ class TelegramWebhookController extends Controller
         }
 
         if ($text === '/start') {
-            $this->sendMessage($chatId,
+            TelegramNotificationService::sendMessage($chatId,
                 "Halo, selamat datang di Kasmini Laundry.\n\n" .
                 "Bot ini digunakan untuk menerima notifikasi transaksi dan informasi layanan laundry.\n\n" .
                 "Perintah yang tersedia:\n" .
                 "/start - Mulai gunakan bot\n" .
                 "/help - Bantuan penggunaan bot\n" .
-                "/status - Info bot"
+                "/status - Info bot\n" .
+                "/link 08xxxxxxxxxx - Hubungkan bot ke nomor HP pelanggan"
             );
 
             return response()->json(['ok' => true]);
         }
 
         if ($text === '/help') {
-            $this->sendMessage($chatId,
+            TelegramNotificationService::sendMessage($chatId,
                 "Bantuan Kasmini Laundry Bot\n\n" .
-                "Bot ini akan membantu mengirim ringkasan pembayaran dan info layanan.\n" .
+                "Bot ini akan membantu mengirim ringkasan pembayaran, info layanan, dan notifikasi pesanan selesai.\n" .
                 "Gunakan perintah berikut:\n" .
                 "/start - Mulai gunakan bot\n" .
                 "/help - Lihat bantuan\n" .
-                "/status - Cek status bot"
+                "/status - Cek status bot\n" .
+                "/link 08xxxxxxxxxx - Hubungkan akun Telegram ke nomor pelanggan"
             );
 
             return response()->json(['ok' => true]);
         }
 
         if ($text === '/status') {
-            $this->sendMessage($chatId, 'Kasmini Laundry Bot aktif dan siap digunakan.');
+            $pelanggan = Pelanggan::where('telegram_chat_id', (string) $chatId)->first();
+
+            $statusText = $pelanggan
+                ? "Kasmini Laundry Bot aktif.\nAkun Telegram ini sudah terhubung ke pelanggan: {$pelanggan->nama_pelanggan} ({$pelanggan->no_hp})."
+                : "Kasmini Laundry Bot aktif.\nAkun Telegram ini belum terhubung ke data pelanggan. Gunakan /link 08xxxxxxxxxx.";
+
+            TelegramNotificationService::sendMessage($chatId, $statusText);
 
             return response()->json(['ok' => true]);
         }
 
-        $this->sendMessage($chatId,
-            "Pesan diterima.\n\n" .
-            "Gunakan /help untuk melihat perintah yang tersedia."
+        if (str_starts_with($text, '/link ')) {
+            $noHp = trim((string) str_replace('/link', '', $text));
+
+            return $this->linkTelegramToPelanggan($chatId, $noHp, data_get($message, 'from.username'));
+        }
+
+        if (preg_match('/^[0-9+\-\s]{10,20}$/', $text)) {
+            return $this->linkTelegramToPelanggan($chatId, preg_replace('/\s+/', '', $text), data_get($message, 'from.username'));
+        }
+
+        TelegramNotificationService::sendMessage($chatId,
+            "Pesan diterima.\n\nGunakan /help untuk melihat perintah yang tersedia."
         );
 
         return response()->json(['ok' => true]);
     }
 
-    private function sendMessage(int|string $chatId, string $text): void
+    private function linkTelegramToPelanggan(int|string $chatId, string $noHp, ?string $username = null)
     {
-        $botToken = config('services.telegram.bot_token');
+        $normalizedNoHp = preg_replace('/[^0-9]/', '', $noHp);
+        $pelanggan = Pelanggan::where('no_hp', $normalizedNoHp)->first();
 
-        if (empty($botToken)) {
-            Log::warning('Telegram bot token kosong saat mencoba reply webhook.');
-            return;
+        if (!$pelanggan) {
+            TelegramNotificationService::sendMessage(
+                $chatId,
+                "Nomor HP {$normalizedNoHp} tidak ditemukan di data pelanggan.\nPastikan nomor yang dikirim sama dengan yang terdaftar di Kasmini Laundry."
+            );
+
+            return response()->json(['ok' => true]);
         }
 
-        try {
-            Http::asForm()
-                ->timeout(15)
-                ->post("https://api.telegram.org/bot{$botToken}/sendMessage", [
-                    'chat_id' => $chatId,
-                    'text' => $text,
-                ]);
-        } catch (\Throwable $e) {
-            Log::error('Gagal mengirim balasan webhook Telegram', [
-                'chat_id' => $chatId,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        $pelanggan->update([
+            'telegram_chat_id' => (string) $chatId,
+            'telegram_username' => $username ? '@' . ltrim($username, '@') : null,
+        ]);
+
+        TelegramNotificationService::sendMessage(
+            $chatId,
+            "Berhasil.\nAkun Telegram ini sekarang terhubung ke pelanggan {$pelanggan->nama_pelanggan} ({$pelanggan->no_hp}).\nAnda akan menerima notifikasi saat pesanan selesai."
+        );
+
+        return response()->json(['ok' => true]);
     }
 }

@@ -12,6 +12,7 @@ use App\Models\Pelanggan;
 use App\Models\Satuan;
 use App\Models\Layanan;
 use App\Models\Parfum;
+use App\Services\TelegramNotificationService;
 
 /**
  * RiwayatController
@@ -117,6 +118,107 @@ class RiwayatController extends Controller
     }
 
     // =============================
+    // HELPER - HUBUNGKAN TRANSAKSI KE PELANGGAN
+    // Jika id_pelanggan kosong, cari pelanggan berdasarkan no_hp transaksi.
+    // =============================
+    private function ensurePelangganAttached(Transaksi $transaksi): ?Pelanggan
+    {
+        if ($transaksi->id_pelanggan) {
+            return Pelanggan::find($transaksi->id_pelanggan);
+        }
+
+        $noHp = preg_replace('/[^0-9]/', '', (string) $transaksi->no_hp);
+
+        if ($noHp === '') {
+            return null;
+        }
+
+        $pelanggan = Pelanggan::where('no_hp', $noHp)->first();
+
+        if (!$pelanggan) {
+            $pelanggan = Pelanggan::get()->first(function ($item) use ($noHp) {
+                return preg_replace('/[^0-9]/', '', (string) $item->no_hp) === $noHp;
+            });
+        }
+
+        if (!$pelanggan) {
+            return null;
+        }
+
+        $transaksi->update([
+            'id_pelanggan' => $pelanggan->id_pelanggan,
+            'nama_pelanggan' => $transaksi->nama_pelanggan ?: $pelanggan->nama_pelanggan,
+            'no_hp' => $transaksi->no_hp ?: $pelanggan->no_hp,
+        ]);
+
+        return $pelanggan;
+    }
+
+    // =============================
+    // HELPER - KIRIM NOTIF TELEGRAM SIAP DIAMBIL
+    // =============================
+    private function sendReadyPickupTelegramNotification(Transaksi $transaksi): array
+    {
+        $pelanggan = $this->ensurePelangganAttached($transaksi);
+
+        if (!$pelanggan) {
+            return [
+                'sent' => false,
+                'message' => 'Transaksi siap diambil, tapi pelanggan tidak ditemukan dari nomor HP transaksi.',
+            ];
+        }
+
+        $transaksi->setRelation('pelanggan', $pelanggan);
+
+        if (empty($pelanggan->telegram_chat_id)) {
+            return [
+                'sent' => false,
+                'message' => "Transaksi siap diambil, tapi pelanggan {$pelanggan->nama_pelanggan} belum menautkan Telegram ke bot.",
+            ];
+        }
+
+        $sent = TelegramNotificationService::sendReadyForPickupNotification($transaksi);
+
+        return [
+            'sent' => $sent,
+            'message' => $sent
+                ? 'Transaksi siap diambil dan notifikasi Telegram berhasil dikirim!'
+                : 'Transaksi siap diambil, tapi Telegram menolak pengiriman atau chat pelanggan belum aktif.',
+        ];
+    }
+
+    // =============================
+    // HELPER - KIRIM ULANG NOTIF TELEGRAM DARI HALAMAN DETAIL
+    // =============================
+    private function resendReadyPickupNotification(int|string $id, string $redirectRoute)
+    {
+        requirePermission('riwayat', 'edit');
+
+        $trx = Transaksi::findOrFail($id);
+        $notification = $this->sendReadyPickupTelegramNotification($trx);
+
+        return redirect()
+            ->route($redirectRoute, ['id' => $trx->id_transaksi])
+            ->with($notification['sent'] ? 'success' : 'error', $notification['message']);
+    }
+
+    private function applyRiwayatSort($query, Request $request)
+    {
+        $sort = $request->get('sort', 'terbaru');
+
+        match ($sort) {
+            'terlama' => $query->orderBy('id_transaksi', 'asc'),
+            'nama_asc' => $query->orderBy('nama_pelanggan', 'asc'),
+            'nama_desc' => $query->orderBy('nama_pelanggan', 'desc'),
+            'total_asc' => $query->orderBy('total_harga', 'asc'),
+            'total_desc' => $query->orderBy('total_harga', 'desc'),
+            default => $query->orderBy('id_transaksi', 'desc'),
+        };
+
+        return $query;
+    }
+
+    // =============================
     // CETAK NOTA - ADMIN
     // =============================
     public function cetakNota($id)
@@ -180,9 +282,11 @@ class RiwayatController extends Controller
 
         $riwayat = Transaksi::with('pelanggan')
             ->where('jenis_transaksi', 'offline')
-            ->where('status_transaksi', $tab)
-            ->orderBy('id_transaksi', 'DESC')
-            ->paginate(10);
+            ->where('status_transaksi', $tab);
+
+        $riwayat = $this->applyRiwayatSort($riwayat, $request)
+            ->paginate(10)
+            ->withQueryString();
 
         return view('riwayat.index', compact('riwayat', 'tab'));
     }
@@ -353,8 +457,15 @@ class RiwayatController extends Controller
         $trx->status_transaksi     = 'siap_di_ambil';
         $trx->save();
 
+        $notification = $this->sendReadyPickupTelegramNotification($trx);
+
         return redirect()->route('riwayat.index', ['tab' => 'siap_di_ambil'])
-            ->with('success', 'Transaksi siap diambil!');
+            ->with($notification['sent'] ? 'success' : 'error', $notification['message']);
+    }
+
+    public function kirimNotifTelegram($id)
+    {
+        return $this->resendReadyPickupNotification($id, 'riwayat.detail');
     }
 
     // =============================
@@ -687,14 +798,15 @@ class RiwayatController extends Controller
         $tab = $request->tab ?? 'antrian';
 
         $riwayat = Transaksi::with('pelanggan')
-            ->where('jenis_transaksi', 'offline')
-            ->orderBy('id_transaksi', 'DESC');
+            ->where('jenis_transaksi', 'offline');
 
         if (in_array($tab, ['antrian', 'proses', 'siap_di_ambil', 'selesai', 'batal'])) {
             $riwayat = $riwayat->where('status_transaksi', $tab);
         }
 
-        $riwayat = $riwayat->paginate(10);
+        $riwayat = $this->applyRiwayatSort($riwayat, $request)
+            ->paginate(10)
+            ->withQueryString();
 
         return view('kasir.riwayat.index', compact('riwayat', 'tab'));
     }
@@ -916,8 +1028,15 @@ class RiwayatController extends Controller
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
 
+        $notification = $this->sendReadyPickupTelegramNotification($trx);
+
         return redirect()->route('kasir.riwayat.index', ['tab' => 'siap_di_ambil'])
-            ->with('success', 'Transaksi siap diambil!');
+            ->with($notification['sent'] ? 'success' : 'error', $notification['message']);
+    }
+
+    public function kirimNotifTelegramKasir($id)
+    {
+        return $this->resendReadyPickupNotification($id, 'kasir.riwayat.detail');
     }
 
     // =============================
@@ -1099,14 +1218,15 @@ class RiwayatController extends Controller
         $tab = $request->tab ?? 'antrian';
 
         $riwayat = Transaksi::with('pelanggan')
-            ->where('jenis_transaksi', 'offline')
-            ->orderBy('id_transaksi', 'DESC');
+            ->where('jenis_transaksi', 'offline');
 
         if (in_array($tab, ['antrian', 'proses', 'siap_di_ambil', 'selesai', 'batal'])) {
             $riwayat = $riwayat->where('status_transaksi', $tab);
         }
 
-        $riwayat = $riwayat->paginate(10);
+        $riwayat = $this->applyRiwayatSort($riwayat, $request)
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin2.riwayat.index', compact('riwayat', 'tab'));
     }
@@ -1275,8 +1395,15 @@ class RiwayatController extends Controller
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
 
+        $notification = $this->sendReadyPickupTelegramNotification($trx);
+
         return redirect()->route('admin2.riwayat.index', ['tab' => 'siap_di_ambil'])
-            ->with('success', 'Transaksi siap diambil!');
+            ->with($notification['sent'] ? 'success' : 'error', $notification['message']);
+    }
+
+    public function kirimNotifTelegramAdmin2($id)
+    {
+        return $this->resendReadyPickupNotification($id, 'admin2.riwayat.detail');
     }
 
     // =============================

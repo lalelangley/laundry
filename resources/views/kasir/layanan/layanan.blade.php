@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/layanan/layanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -6,6 +7,8 @@ $routePrefix = 'kasir';
 @endphp
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
 <style>
     @keyframes shake {
@@ -305,6 +308,7 @@ $routePrefix = 'kasir';
 
 @endsection
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("modalLayanan");

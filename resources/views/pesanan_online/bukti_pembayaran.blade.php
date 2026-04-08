@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/pesanan_online/bukti_pembayaran.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -426,6 +427,8 @@
         <img id="fotoBuktiImage" src="" alt="Bukti Transfer" class="w-full h-auto rounded-lg shadow-2xl">
     </div>
 </div>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 function toggleTipePembayaran(tipe) {

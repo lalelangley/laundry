@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/pengeluaran/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 {{-- ============================================================
      HALAMAN: LIST PENGELUARAN
      Deskripsi: Menampilkan daftar pengeluaran dengan fitur
@@ -174,6 +175,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 
 // SORT MENU TOGGLE

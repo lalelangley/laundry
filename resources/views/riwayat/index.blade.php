@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/riwayat/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('content')
 
@@ -10,6 +11,8 @@
 ============================================================ --}}
 
 <div class="min-h-screen bg-gray-50">
+
+    {{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
     <style>
         {{-- Animasi tombol hapus muncul saat hover pada card --}}
@@ -91,6 +94,20 @@
             </div>
         </div>
 
+        <form method="GET" class="mb-6 flex justify-end">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            <select name="sort"
+                    onchange="this.form.submit()"
+                    class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold outline-none shadow-sm">
+                <option value="terbaru" {{ request('sort', 'terbaru') === 'terbaru' ? 'selected' : '' }}>Urutkan: Terbaru</option>
+                <option value="terlama" {{ request('sort') === 'terlama' ? 'selected' : '' }}>Urutkan: Terlama</option>
+                <option value="nama_asc" {{ request('sort') === 'nama_asc' ? 'selected' : '' }}>Nama A-Z</option>
+                <option value="nama_desc" {{ request('sort') === 'nama_desc' ? 'selected' : '' }}>Nama Z-A</option>
+                <option value="total_asc" {{ request('sort') === 'total_asc' ? 'selected' : '' }}>Total Terendah</option>
+                <option value="total_desc" {{ request('sort') === 'total_desc' ? 'selected' : '' }}>Total Tertinggi</option>
+            </select>
+        </form>
+
         {{-- ========================================
              STATUS TABS / FILTER TAB
              Tab untuk memfilter transaksi berdasarkan status.
@@ -110,7 +127,7 @@
                 @endphp
 
                 @foreach ($tabs as $key => $data)
-                    <a href="{{ route('riwayat.index', ['tab' => $key]) }}"
+                    <a href="{{ route('riwayat.index', array_merge(request()->except('page', 'tab'), ['tab' => $key])) }}"
                        class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl whitespace-nowrap font-semibold transition-all
                               {{ $tab == $key 
                                   ? 'bg-yellow-400 text-gray-900 shadow-sm' 
@@ -281,6 +298,12 @@
             @endforelse
         </div>
 
+        @if(method_exists($riwayat, 'links'))
+            <div class="mt-6">
+                {{ $riwayat->appends(request()->query())->links() }}
+            </div>
+        @endif
+
         {{-- ========================================
              PAGINATION
              Navigasi halaman untuk daftar transaksi.
@@ -358,6 +381,8 @@
 
 {{-- SweetAlert2 untuk dialog konfirmasi hapus --}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 // =============================

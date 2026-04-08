@@ -1,9 +1,16 @@
+/* FE-DOC: Stylesheet frontend untuk resources/css/app.css. Komentar dipakai untuk menandai file ini sebagai sumber style, utilitas Tailwind, atau CSS kustom project. */
+
+/* FE-DOC: Import Tailwind mengaktifkan utility CSS utama yang dipakai di seluruh komponen. */
 @import 'tailwindcss';
+/* FE-DOC: Master stylesheet menyimpan style global tambahan di luar utility Tailwind. */
 @import "./master.css";
+/* FE-DOC: Layer base memuat reset dan fondasi style bawaan Tailwind. */
 @tailwind base;
 @tailwind components;
+/* FE-DOC: Layer utilities menyediakan class utility yang dipakai langsung di Blade. */
 @tailwind utilities;
 
+/* FE-DOC: Source path memberi tahu Tailwind file mana yang perlu discan untuk class yang dipakai. */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';

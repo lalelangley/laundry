@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/layouts/master.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -16,6 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite('resources/css/app.css')
     @stack('styles')   {{-- ← TAMBAH INI --}}
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
         body { 
             font-family: 'Poppins', sans-serif;
@@ -100,6 +102,8 @@
             'jenis' => canDelete('jenis'),
         ];
     @endphp
+
+    <!-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. -->
 
     <script>
         window.userPermissions = @json($permissions);

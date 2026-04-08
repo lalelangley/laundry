@@ -19,6 +19,29 @@ use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Models\Satuan;
 
+/*
+|--------------------------------------------------------------------------
+| FILE ROUTE WEB APLIKASI LAUNDRY
+|--------------------------------------------------------------------------
+| Fungsi file ini:
+| 1. Mendefinisikan seluruh endpoint web aplikasi
+| 2. Memisahkan route berdasarkan role: public, kasir, admin, admin2
+| 3. Menghubungkan URL ke controller/method tertentu
+| 4. Menambahkan middleware autentikasi dan permission per modul
+|
+| Konsep yang tampak:
+| - Method routing: get/post/put/delete/view
+| - Closure route untuk logout/reset sederhana
+| - Percabangan akses melalui middleware auth dan permission
+| - Struktur modular berdasarkan prefix dan name
+|--------------------------------------------------------------------------
+*/
+
+// ============================================================
+// ROUTE UMUM / PUBLIC
+// Bagian ini bisa diakses tanpa login, kecuali endpoint tertentu
+// yang memang memakai middleware khusus seperti sanctum.
+// ============================================================
 Route::middleware('auth:sanctum')->post('/fcm-token', [FcmTokenController::class, 'store']);
 Route::view('/privacy-policy/telegram-bot', 'privacy.telegram-bot')->name('privacy.telegram-bot');
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
@@ -44,6 +67,7 @@ Route::post('/logout', function (): RedirectResponse {
 
 // ✅ KASIR LOGOUT
 Route::post('/kasir/logout', function (): RedirectResponse {
+    // [CLOSURE ROUTE] Logout kasir dilakukan langsung via closure sederhana.
     Auth::guard('kasir')->logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
@@ -52,6 +76,7 @@ Route::post('/kasir/logout', function (): RedirectResponse {
 
 // ✅ ADMIN2 LOGOUT
 Route::post('/admin2/logout', function (): RedirectResponse {
+    // [CLOSURE ROUTE] Admin2 memakai guard admin, lalu sesi dihapus total.
     Auth::guard('admin')->logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
@@ -63,13 +88,22 @@ Route::post('/admin2/logout', function (): RedirectResponse {
 | KASIR ROUTES - With Authentication
 |--------------------------------------------------------------------------
 */
+// ============================================================
+// ROUTE KASIR
+// Semua route di dalam group ini wajib lolos autentikasi kasir.
+// ============================================================
 Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
 
     // ================= DASHBOARD (No Permission) =================
+    // Halaman dashboard kasir cukup memakai middleware auth:kasir.
     Route::get('/dashboard', [AuthWebController::class, 'kasirDashboard'])
         ->name('kasir.dashboard');
 
-    // ================= TRANSAKSI (KASIR) - WITH PERMISSION =================
+    // ========================================================
+    // MODUL TRANSAKSI KASIR
+    // Route di bawah ini menunjukkan validasi akses per aksi:
+    // view, add, edit, dan delete melalui middleware permission.
+    // ========================================================
     Route::prefix('transaksi')->name('kasir.transaksi.')->group(function () {
         // View - butuh permission:view untuk akses halaman transaksi
         Route::get('/pelanggan', [TransaksiController::class, 'pelangganKasir'])
@@ -135,6 +169,7 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             ->name('remove');
         
         // Reset (no permission needed)
+        // [CLOSURE ROUTE] Menghapus session transaksi sementara.
         Route::get('/reset', function () {
             session()->forget(['detail_transaksi', 'pelanggan', 'keterangan_transaksi']);
             return redirect()->route('kasir.dashboard');
@@ -149,7 +184,10 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
     Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->name('jenis.session.form');
     Route::post('/{from}/jenis/add-edit', [LayananController::class, 'addJenisEdit'])->name('jenis.add.edit');
 
-    // ================= PELANGGAN (With Permission) =================
+    // ========================================================
+    // MODUL PELANGGAN KASIR
+    // Menangani CRUD pelanggan dengan pembatasan permission.
+    // ========================================================
     Route::prefix('pelanggan')->name('kasir.pelanggan.')->group(function () {
         Route::get('/', [AuthWebController::class, 'pelangganIndexKasir'])
             ->middleware('permission:view')
@@ -176,7 +214,10 @@ Route::prefix('kasir')->middleware('auth:kasir')->group(function () {
             ->name('destroy');
     });
 
-    // ================= LAYANAN (With Permission) =================
+    // ========================================================
+    // MODUL LAYANAN KASIR
+    // Termasuk CRUD layanan dan jenis layanan.
+    // ========================================================
 Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
     Route::get('/', [LayananController::class, 'index'])->middleware('permission:view')->name('index');
     Route::get('/create', [LayananController::class, 'createKasir'])->middleware('permission:add')->name('create');
@@ -199,7 +240,11 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
     Route::get('/{from}/jenis/tambah-edit', [LayananController::class, 'addJenisSessionForm'])->middleware('permission:add')->name('jenis.session.form');
 });
 
-    // ================= PESANAN ONLINE (KASIR) =================
+    // ========================================================
+    // MODUL PESANAN ONLINE KASIR
+    // Menangani detail, konfirmasi, pembayaran, status proses,
+    // bukti pembayaran, dan penghapusan pesanan.
+    // ========================================================
     Route::prefix('pesanan-online')->name('kasir.pesanan.online.')->group(function () {
         // Index & Detail
         Route::get('/', [PesananOnlineController::class, 'indexKasir'])
@@ -329,6 +374,10 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
         Route::get('/{id}/siap-di-ambil', [RiwayatController::class, 'siapDiAmbilKasir'])
             ->middleware('permission:edit')
             ->name('siap_di_ambil');
+
+        Route::post('/{id}/kirim-notif-telegram', [RiwayatController::class, 'kirimNotifTelegramKasir'])
+            ->middleware('permission:edit')
+            ->name('kirim_notif_telegram');
         
         // ✅ ROUTE BAYAR
         Route::post('/{id}/bayar', [RiwayatController::class, 'bayarSubmitKasir'])
@@ -870,6 +919,10 @@ Route::prefix('layanan')
         Route::get('/{id}/siap-di-ambil', [RiwayatController::class, 'siapDiAmbil'])
             ->middleware('permission:edit')
             ->name('siap_di_ambil');
+
+        Route::post('/{id}/kirim-notif-telegram', [RiwayatController::class, 'kirimNotifTelegram'])
+            ->middleware('permission:edit')
+            ->name('kirim_notif_telegram');
         
         // Layanan
         Route::get('/{id}/add-layanan', [RiwayatController::class, 'addLayananPage'])
@@ -1451,6 +1504,10 @@ Route::prefix('admin2')->middleware('auth:admin')->group(function () {
         Route::get('/{id}/siap-di-ambil', [RiwayatController::class, 'siapDiAmbilAdmin2'])
             ->whereNumber('id')
             ->name('siap_di_ambil');
+
+        Route::post('/{id}/kirim-notif-telegram', [RiwayatController::class, 'kirimNotifTelegramAdmin2'])
+            ->whereNumber('id')
+            ->name('kirim_notif_telegram');
         
         Route::delete('/{id}', [RiwayatController::class, 'destroyAdmin2'])
             ->whereNumber('id')

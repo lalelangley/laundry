@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/layouts/sidebar.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
 @php
@@ -133,12 +134,16 @@ if (Auth::guard('kasir')->check()) {
     </div>
 </div>
 
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
+
 <script>
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('-translate-x-full');
     document.getElementById('sidebarOverlay').classList.toggle('hidden');
 }
 </script>
+
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
 <style>
 #sidebar::-webkit-scrollbar {

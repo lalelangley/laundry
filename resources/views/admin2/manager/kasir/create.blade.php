@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/manager/kasir/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -132,6 +133,7 @@
 </div>
 
 @if(session('error'))
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     alert("{{ session('error') }}");
 </script>

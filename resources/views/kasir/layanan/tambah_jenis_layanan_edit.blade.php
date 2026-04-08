@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/layanan/tambah_jenis_layanan_edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('kasir.layanan.edit', $from ?? 0) }}" class="text-black text-3xl font-bold">←</a>
     <span class="text-xl font-bold">Tambah Jenis Layanan Baru</span>
@@ -123,6 +125,8 @@
 
     </form>
 </div>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 document.getElementById('inputGambarJenis')?.addEventListener('change', function (e) {

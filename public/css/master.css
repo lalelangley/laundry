@@ -1,6 +1,9 @@
+/* FE-DOC: Stylesheet frontend untuk public/css/master.css. Komentar dipakai untuk menandai file ini sebagai sumber style, utilitas Tailwind, atau CSS kustom project. */
+
 /* ===============================
    GLOBAL TRANSPARENT LOADING
    =============================== */
+/* FE-DOC: Overlay loading menutup halaman sementara saat proses penting sedang berjalan. */
 .loading-overlay {
     position: fixed;
     inset: 0;
@@ -21,6 +24,7 @@
     pointer-events: all;
 }
 
+/* FE-DOC: Spinner menjadi indikator visual bahwa aplikasi masih memproses data. */
 .spinner {
     width: 48px;
     height: 48px;
@@ -30,6 +34,7 @@
     animation: spin 0.8s linear infinite;
 }
 
+/* FE-DOC: Keyframes mendefinisikan animasi dasar yang dipakai ulang oleh elemen UI. */
 @keyframes spin {
     to { 
         transform: rotate(360deg);
@@ -88,11 +93,13 @@
 }
 
 /* Smooth Scroll */
+/* FE-DOC: Aturan global html dipakai untuk perilaku scroll dan baseline dokumen. */
 html {
     scroll-behavior: smooth;
 }
 
 /* Font Smoothing */
+/* FE-DOC: Selector global ini merapikan baseline rendering di seluruh halaman. */
 * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

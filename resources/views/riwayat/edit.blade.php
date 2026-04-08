@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/riwayat/edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 {{-- ============================================================
      HALAMAN: EDIT TRANSAKSI
      Deskripsi: Menampilkan form edit detail layanan dalam transaksi.
@@ -331,6 +332,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 // =============================
 // VARIABEL GLOBAL

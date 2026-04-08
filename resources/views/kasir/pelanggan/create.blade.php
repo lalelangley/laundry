@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/pelanggan/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Tambah Pelanggan')
@@ -138,6 +139,7 @@
 </div>
 
 {{-- SCRIPT PREVIEW FOTO --}}
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     document.getElementById('fotoInput').addEventListener('change', function () {
         const file = this.files[0];

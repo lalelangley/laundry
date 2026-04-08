@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/pengaturan/metode_bayar.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Metode Pembayaran')
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('admin2.pengaturan.index') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
         <i class="bi bi-arrow-left"></i>
@@ -115,6 +117,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     // ✅ Show success/error message if exists

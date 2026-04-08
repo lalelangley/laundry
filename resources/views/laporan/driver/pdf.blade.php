@@ -1,8 +1,10 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/laporan/driver/pdf.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <title>Laporan Driver</title>
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #222; }
         h1 { margin: 0 0 8px; font-size: 20px; text-align: center; }

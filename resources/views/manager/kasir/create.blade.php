@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/manager/kasir/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -191,6 +192,7 @@
 </div>
 
 {{-- Script toggle password --}}
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     function togglePassword() {
         const input = document.getElementById('passwordInput');

@@ -23,6 +23,27 @@ use App\Models\Satuan;
  */
 class LayananController extends Controller
 {
+    private function buildLayananQuery(Request $request)
+    {
+        $query = Layanan::with(['jenis.satuan']);
+        $search = trim((string) $request->get('search', ''));
+
+        if ($search !== '') {
+            $query->where('nama_layanan', 'like', '%' . $search . '%');
+        }
+
+        $sort = $request->get('sort', 'default');
+
+        match ($sort) {
+            'az' => $query->orderBy('nama_layanan', 'asc'),
+            'za' => $query->orderBy('nama_layanan', 'desc'),
+            'terlama' => $query->orderBy('id_layanan', 'asc'),
+            default => $query->orderBy('id_layanan', 'desc'),
+        };
+
+        return $query;
+    }
+
     // =========================
     // INDEX LAYANAN
     // Menampilkan daftar semua layanan utama beserta jenis dan satuannya
@@ -36,7 +57,7 @@ class LayananController extends Controller
         $parfum = \App\Models\Parfum::all();
         
         // Eager load relasi jenis -> satuan untuk menghindari N+1 query
-        $layananUtama = Layanan::with(['jenis.satuan'])
+        $layananUtama = $this->buildLayananQuery($request)
             ->paginate(10)
             ->withQueryString();
 
@@ -86,7 +107,7 @@ class LayananController extends Controller
         }
 
         // Eager load relasi jenis dan satuan
-        $layananUtama = Layanan::with(['jenis.satuan'])
+        $layananUtama = $this->buildLayananQuery($request)
             ->paginate(10)
             ->withQueryString();
         $parfum = \App\Models\Parfum::all();
@@ -102,7 +123,7 @@ class LayananController extends Controller
     // INDEX PENGELUARAN - KASIR
     // Menampilkan daftar pengeluaran kasir diurutkan dari terbaru
     // =========================
-    public function indexKasir()
+    public function indexKasir(Request $request)
     {
         requirePermission('layanan', 'view');
         

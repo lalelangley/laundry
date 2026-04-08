@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin/layanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -316,6 +317,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     window.LAYANAN_DATA = {
         addJenisTransaksiUrl: "{{ route('transaksi.addJenis', ':id') }}",

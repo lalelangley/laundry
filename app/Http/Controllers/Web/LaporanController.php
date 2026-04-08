@@ -63,13 +63,22 @@ class LaporanController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
         // [VALIDASI AKSES] Hanya user dengan izin 'view' pada modul 'pengeluaran' yang bisa masuk
         requirePermission('pengeluaran', 'view');
 
         // [OBJECT + METHOD] Memanggil method orderBy dan get dari class Pengeluaran (Eloquent Model)
-        $pengeluaran = Pengeluaran::orderBy('id_pengeluaran', 'DESC')
+        $pengeluaran = Pengeluaran::query();
+
+        match ($request->get('sort', 'terbaru')) {
+            'terlama' => $pengeluaran->orderBy('id_pengeluaran', 'asc'),
+            'nominal_tertinggi' => $pengeluaran->orderBy('nominal', 'desc'),
+            'nominal_terendah' => $pengeluaran->orderBy('nominal', 'asc'),
+            default => $pengeluaran->orderBy('id_pengeluaran', 'desc'),
+        };
+
+        $pengeluaran = $pengeluaran
             ->paginate(10)
             ->withQueryString();
 
@@ -223,12 +232,20 @@ class LaporanController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function indexKasir()
+    public function indexKasir(Request $request)
     {
         requirePermission('pengeluaran', 'view');
 
-        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
-            ->orderBy('created_at', 'desc')
+        $pengeluaran = Pengeluaran::query();
+
+        match ($request->get('sort', 'terbaru')) {
+            'terlama' => $pengeluaran->orderBy('tanggal_pengeluaran', 'asc')->orderBy('created_at', 'asc'),
+            'nominal_tertinggi' => $pengeluaran->orderBy('nominal', 'desc'),
+            'nominal_terendah' => $pengeluaran->orderBy('nominal', 'asc'),
+            default => $pengeluaran->orderBy('tanggal_pengeluaran', 'desc')->orderBy('created_at', 'desc'),
+        };
+
+        $pengeluaran = $pengeluaran
             ->paginate(10)
             ->withQueryString();
 
@@ -368,12 +385,20 @@ class LaporanController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function indexAdmin2()
+    public function indexAdmin2(Request $request)
     {
         requirePermission('pengeluaran', 'view');
 
-        $pengeluaran = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC')
-            ->orderBy('created_at', 'desc')
+        $pengeluaran = Pengeluaran::query();
+
+        match ($request->get('sort', 'terbaru')) {
+            'terlama' => $pengeluaran->orderBy('tanggal_pengeluaran', 'asc')->orderBy('created_at', 'asc'),
+            'nominal_tertinggi' => $pengeluaran->orderBy('nominal', 'desc'),
+            'nominal_terendah' => $pengeluaran->orderBy('nominal', 'asc'),
+            default => $pengeluaran->orderBy('tanggal_pengeluaran', 'desc')->orderBy('created_at', 'desc'),
+        };
+
+        $pengeluaran = $pengeluaran
             ->paginate(10)
             ->withQueryString();
 
@@ -696,17 +721,25 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
+        // [VALIDASI AKSES] Memastikan hanya role yang memiliki izin laporan
+        // yang dapat mengakses data transaksi versi kasir.
+
         // [PERCABANGAN] Default tanggal jika tidak ada input
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
+        /**
+         * [CLASS-OBJECT + METHOD]
+         * Transaksi::with(...) menghasilkan object query builder.
+         * Object ini dipakai untuk chaining method filter dan sorting.
+         */
         $query = Transaksi::with(['pelanggan', 'metodeBayar', 'kasir'])
             ->whereBetween('tgl_transaksi', [
                 $tglAwal . ' 00:00:00',
                 $tglAkhir . ' 23:59:59'
             ]);
 
-        // [PERCABANGAN + ARRAY] Filter pencarian
+        // [PERCABANGAN + METHOD] Filter pencarian teks berdasarkan beberapa kolom.
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
@@ -716,20 +749,23 @@ class LaporanController extends Controller
             });
         }
 
-        // [PERCABANGAN + ARRAY] Filter berdasarkan array status
+        // [ARRAY] request('status') berupa array checkbox dari form filter.
+        // [PERCABANGAN] whereIn dijalankan hanya jika array tersebut terisi.
         if ($request->filled('status')) {
             $query->whereIn('status_transaksi', $request->status);
         }
 
+        // [ARRAY] request('bayar') berisi multi pilihan status pembayaran.
         if ($request->filled('bayar')) {
             $query->whereIn('status_bayar', $request->bayar);
         }
 
+        // [ARRAY] request('jenis') berisi pilihan jenis transaksi online/offline.
         if ($request->filled('jenis')) {
             $query->whereIn('jenis_transaksi', $request->jenis);
         }
 
-        // [PERCABANGAN - switch] Sorting
+        // [PERCABANGAN - switch] Sorting data berdasarkan pilihan user.
         $sortBy = $request->sort ?? 'terbaru';
         switch ($sortBy) {
             case 'terlama':
@@ -746,14 +782,21 @@ class LaporanController extends Controller
                 $query->orderBy('tgl_transaksi', 'DESC');
         }
 
-        // [PAGING] Paginasi 10 data per halaman
+        // [PAGING] paginate(10) membagi data menjadi beberapa halaman.
+        // withQueryString() menjaga filter tetap ada saat page berpindah.
         $transaksi = $query->paginate(10)->withQueryString();
 
+        /**
+         * [OBJECT + METHOD]
+         * Query kedua digunakan khusus untuk menghitung total omzet
+         * dan jumlah transaksi seluruh hasil filter, bukan hanya page aktif.
+         */
         $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
             $tglAwal . ' 00:00:00',
             $tglAkhir . ' 23:59:59'
         ]);
 
+        // [PERCABANGAN] Filter yang sama diterapkan kembali agar hasil ringkasan konsisten.
         if ($request->filled('q')) {
             $q = $request->q;
             $queryTotal->where(function ($sub) use ($q) {
@@ -775,6 +818,11 @@ class LaporanController extends Controller
             $queryTotal->whereIn('jenis_transaksi', $request->jenis);
         }
 
+        /**
+         * [ARRAY ASOSIATIF]
+         * Data dikirim ke view sebagai array key => value agar mudah
+         * dipakai di Blade untuk list data, ringkasan, dan paging.
+         */
         return view('kasir.laporan.transaksi.index', [
             'transaksi'  => $transaksi,
             'tglAwal'    => $tglAwal,
@@ -796,15 +844,25 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
+        // [VALIDASI AKSES] Hanya user yang lolos permission view laporan
+        // yang dapat mengakses laporan transaksi untuk panel Admin2.
+
+        // [PERCABANGAN] Menetapkan nilai default tanggal bila input kosong.
         $tglAwal  = $request->dari ?? now()->subMonth()->toDateString();
         $tglAkhir = $request->sampai ?? now()->toDateString();
 
+        /**
+         * [CLASS-OBJECT + METHOD]
+         * Query Builder Eloquent dibentuk dari model Transaksi lalu
+         * di-chain dengan eager loading relasi dan filter tanggal.
+         */
         $query = Transaksi::with(['pelanggan', 'metodeBayar', 'kasir'])
             ->whereBetween('tgl_transaksi', [
                 $tglAwal . ' 00:00:00',
                 $tglAkhir . ' 23:59:59'
             ]);
 
+        // [PERCABANGAN + METHOD] Pencarian lintas beberapa kolom.
         if ($request->filled('q')) {
             $q = $request->q;
             $query->where(function ($sub) use ($q) {
@@ -814,18 +872,22 @@ class LaporanController extends Controller
             });
         }
 
+        // [ARRAY] request('status') berasal dari checkbox multiple pada form.
         if ($request->filled('status')) {
             $query->whereIn('status_transaksi', $request->status);
         }
 
+        // [ARRAY] request('bayar') dipakai untuk filter multi status pembayaran.
         if ($request->filled('bayar')) {
             $query->whereIn('status_bayar', $request->bayar);
         }
 
+        // [ARRAY] request('jenis') dipakai untuk filter online/offline.
         if ($request->filled('jenis')) {
             $query->whereIn('jenis_transaksi', $request->jenis);
         }
 
+        // [PERCABANGAN - switch] Menentukan urutan data transaksi.
         $sortBy = $request->sort ?? 'terbaru';
         switch ($sortBy) {
             case 'terlama':
@@ -842,13 +904,16 @@ class LaporanController extends Controller
                 $query->orderBy('tgl_transaksi', 'DESC');
         }
 
+        // [PAGING] Data dibagi 10 per halaman dan query string tetap dipertahankan.
         $transaksi = $query->paginate(10)->withQueryString();
 
+        // [OBJECT] Query kedua dipakai untuk ringkasan total omzet dan jumlah transaksi.
         $queryTotal = Transaksi::whereBetween('tgl_transaksi', [
             $tglAwal . ' 00:00:00',
             $tglAkhir . ' 23:59:59'
         ]);
 
+        // [PERCABANGAN] Seluruh filter diterapkan ulang agar summary sesuai data list.
         if ($request->filled('q')) {
             $q = $request->q;
             $queryTotal->where(function ($sub) use ($q) {
@@ -870,6 +935,7 @@ class LaporanController extends Controller
             $queryTotal->whereIn('jenis_transaksi', $request->jenis);
         }
 
+        // [ARRAY ASOSIATIF] Mengirim seluruh data yang dibutuhkan view admin2.
         return view('admin2.laporan.transaksi.index', [
             'transaksi'  => $transaksi,
             'tglAwal'    => $tglAwal,
@@ -959,7 +1025,13 @@ class LaporanController extends Controller
         });
 
         // [METHOD + PERULANGAN] sortByDesc() mengurutkan Collection berdasarkan nilai field
-        $data = $data->sortByDesc('total_pendapatan')->values();
+        $data = (match ($request->get('sort', 'pendapatan_tertinggi')) {
+            'pendapatan_terendah' => $data->sortBy('total_pendapatan'),
+            'transaksi_terbanyak' => $data->sortByDesc('total_transaksi'),
+            'nama_az' => $data->sortBy('nama_kasir', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_kasir', SORT_NATURAL | SORT_FLAG_CASE),
+            default => $data->sortByDesc('total_pendapatan'),
+        })->values();
         $topKasir = $data->first();
         $summary = [
             'total_kasir' => $data->count(),
@@ -1016,13 +1088,27 @@ class LaporanController extends Controller
             return $kasir;
         });
 
-        $data = $data->sortByDesc('total_pendapatan')->values();
+        $data = (match ($request->get('sort', 'pendapatan_tertinggi')) {
+            'pendapatan_terendah' => $data->sortBy('total_pendapatan'),
+            'transaksi_terbanyak' => $data->sortByDesc('total_transaksi'),
+            'nama_az' => $data->sortBy('nama_kasir', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_kasir', SORT_NATURAL | SORT_FLAG_CASE),
+            default => $data->sortByDesc('total_pendapatan'),
+        })->values();
         $topKasir = $data->first();
         $summary = [
             'total_kasir' => $data->count(),
             'total_transaksi' => $data->sum('total_transaksi'),
             'total_pendapatan' => $data->sum('total_pendapatan'),
         ];
+        $data = (match ($request->get('sort', 'total_tertinggi')) {
+            'total_terendah' => $data->sortBy('total_pengiriman'),
+            'nama_az' => $data->sortBy('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'sukses_tertinggi' => $data->sortByDesc('terkirim'),
+            default => $data->sortByDesc('total_pengiriman'),
+        })->values();
+
         $data = $this->paginateCollection($data, 10);
 
         return view('admin2.laporan.kasir.index', compact('data', 'tglAwal', 'tglAkhir', 'topKasir', 'summary'));
@@ -1075,8 +1161,14 @@ class LaporanController extends Controller
                 'metode_bayar.nama_metode_bayar',
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan') // fungsi agregat SQL
             )
-            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar');
+            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar');
+
+        match ($request->get('sort', 'penggunaan_tertinggi')) {
+            'penggunaan_terendah' => $query->orderBy('total_penggunaan', 'asc'),
+            'nama_za' => $query->orderBy('metode_bayar.nama_metode_bayar', 'desc'),
+            'nama_az' => $query->orderBy('metode_bayar.nama_metode_bayar', 'asc'),
+            default => $query->orderBy('total_penggunaan', 'desc')->orderBy('metode_bayar.nama_metode_bayar'),
+        };
 
         $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
         $data = $query->paginate(10)->withQueryString();
@@ -1112,8 +1204,14 @@ class LaporanController extends Controller
                 'metode_bayar.nama_metode_bayar',
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan')
             )
-            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar');
+            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar');
+
+        match ($request->get('sort', 'penggunaan_tertinggi')) {
+            'penggunaan_terendah' => $query->orderBy('total_penggunaan', 'asc'),
+            'nama_za' => $query->orderBy('metode_bayar.nama_metode_bayar', 'desc'),
+            'nama_az' => $query->orderBy('metode_bayar.nama_metode_bayar', 'asc'),
+            default => $query->orderBy('total_penggunaan', 'desc')->orderBy('metode_bayar.nama_metode_bayar'),
+        };
 
         $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
         $data = $query->paginate(10)->withQueryString();
@@ -1149,8 +1247,14 @@ class LaporanController extends Controller
                 'metode_bayar.nama_metode_bayar',
                 DB::raw('COUNT(transaksi.id_transaksi) as total_penggunaan')
             )
-            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar')
-            ->orderBy('metode_bayar.id_metode_bayar');
+            ->groupBy('metode_bayar.id_metode_bayar', 'metode_bayar.nama_metode_bayar');
+
+        match ($request->get('sort', 'penggunaan_tertinggi')) {
+            'penggunaan_terendah' => $query->orderBy('total_penggunaan', 'asc'),
+            'nama_za' => $query->orderBy('metode_bayar.nama_metode_bayar', 'desc'),
+            'nama_az' => $query->orderBy('metode_bayar.nama_metode_bayar', 'asc'),
+            default => $query->orderBy('total_penggunaan', 'desc')->orderBy('metode_bayar.nama_metode_bayar'),
+        };
 
         $totalPenggunaan = (clone $query)->get()->sum('total_penggunaan');
         $data = $query->paginate(10)->withQueryString();
@@ -1181,7 +1285,7 @@ class LaporanController extends Controller
     $tglAwal  = $request->dari ?? null;
     $tglAkhir = $request->sampai ?? null;
 
-    $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
+    $query = Pengeluaran::query();
 
     if ($request->filled('dari') && $request->filled('sampai')) {
         $query->whereBetween('tanggal_pengeluaran', [$tglAwal, $tglAkhir]);
@@ -1190,6 +1294,13 @@ class LaporanController extends Controller
     if ($request->filled('q')) {
         $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
     }
+
+    match ($request->get('sort', 'terbaru')) {
+        'terlama' => $query->orderBy('tanggal_pengeluaran', 'asc')->orderBy('created_at', 'asc'),
+        'nominal_tertinggi' => $query->orderBy('nominal', 'desc'),
+        'nominal_terendah' => $query->orderBy('nominal', 'asc'),
+        default => $query->orderBy('tanggal_pengeluaran', 'desc')->orderBy('created_at', 'desc'),
+    };
 
     // Hitung total dari SEMUA data (bukan hanya halaman aktif)
     $totalNominal = (clone $query)->sum('nominal');
@@ -1216,7 +1327,7 @@ class LaporanController extends Controller
         $tglAwal  = $request->dari ?? null;
         $tglAkhir = $request->sampai ?? null;
 
-        $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
+        $query = Pengeluaran::query();
 
         // [PERCABANGAN] Filter tanggal jika kedua parameter tersedia
         if ($request->filled('dari') && $request->filled('sampai')) {
@@ -1229,6 +1340,13 @@ class LaporanController extends Controller
         if ($request->filled('q')) {
             $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
         }
+
+        match ($request->get('sort', 'terbaru')) {
+            'terlama' => $query->orderBy('tanggal_pengeluaran', 'asc')->orderBy('created_at', 'asc'),
+            'nominal_tertinggi' => $query->orderBy('nominal', 'desc'),
+            'nominal_terendah' => $query->orderBy('nominal', 'asc'),
+            default => $query->orderBy('tanggal_pengeluaran', 'desc')->orderBy('created_at', 'desc'),
+        };
 
         $totalNominal = (clone $query)->sum('nominal');
         $totalItem = (clone $query)->count();
@@ -1257,7 +1375,7 @@ class LaporanController extends Controller
         $tglAwal  = $request->dari ?? null;
         $tglAkhir = $request->sampai ?? null;
 
-        $query = Pengeluaran::orderBy('tanggal_pengeluaran', 'DESC');
+        $query = Pengeluaran::query();
 
         // [PERCABANGAN] Filter tanggal jika kedua parameter tersedia
         if ($request->filled('dari') && $request->filled('sampai')) {
@@ -1270,6 +1388,13 @@ class LaporanController extends Controller
         if ($request->filled('q')) {
             $query->where('nama_pengeluaran', 'like', '%' . $request->q . '%');
         }
+
+        match ($request->get('sort', 'terbaru')) {
+            'terlama' => $query->orderBy('tanggal_pengeluaran', 'asc')->orderBy('created_at', 'asc'),
+            'nominal_tertinggi' => $query->orderBy('nominal', 'desc'),
+            'nominal_terendah' => $query->orderBy('nominal', 'asc'),
+            default => $query->orderBy('tanggal_pengeluaran', 'desc')->orderBy('created_at', 'desc'),
+        };
 
         $totalNominal = (clone $query)->sum('nominal');
         $totalItem = (clone $query)->count();
@@ -1370,6 +1495,14 @@ class LaporanController extends Controller
             'total_transaksi' => $data->sum('total_transaksi'),
             'total_belanja' => $data->sum('total_belanja'),
         ];
+        $data = (match ($request->get('sort', 'total_tertinggi')) {
+            'total_terendah' => $data->sortBy('total_pengiriman'),
+            'nama_az' => $data->sortBy('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'sukses_tertinggi' => $data->sortByDesc('terkirim'),
+            default => $data->sortByDesc('total_pengiriman'),
+        })->values();
+
         $data = $this->paginateCollection($data, 10);
 
         return view('laporan.pelanggan.index', compact('data', 'topPelanggan', 'summary'));
@@ -1434,6 +1567,14 @@ class LaporanController extends Controller
             'total_transaksi' => $data->sum('total_transaksi'),
             'total_belanja' => $data->sum('total_belanja'),
         ];
+        $data = (match ($request->get('sort', 'total_tertinggi')) {
+            'total_terendah' => $data->sortBy('total_pengiriman'),
+            'nama_az' => $data->sortBy('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'sukses_tertinggi' => $data->sortByDesc('terkirim'),
+            default => $data->sortByDesc('total_pengiriman'),
+        })->values();
+
         $data = $this->paginateCollection($data, 10);
 
         return view('kasir.laporan.pelanggan.index', compact('data', 'topPelanggan', 'summary'));
@@ -1553,9 +1694,16 @@ class LaporanController extends Controller
                 // COALESCE: jika SUM bernilai NULL → kembalikan 0 (penanganan nilai kosong)
                 DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty')
             )
-            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
-            ->orderBy('satuan.nama_satuan')
-            ->paginate(10);
+            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan');
+
+        match ($request->get('sort', 'qty_tertinggi')) {
+            'qty_terendah' => $data->orderBy('total_qty', 'asc'),
+            'nama_za' => $data->orderBy('satuan.nama_satuan', 'desc'),
+            'nama_az' => $data->orderBy('satuan.nama_satuan', 'asc'),
+            default => $data->orderBy('total_qty', 'desc')->orderBy('satuan.nama_satuan'),
+        };
+
+        $data = $data->paginate(10)->withQueryString();
 
         $totalQty = $data->sum('total_qty');
 
@@ -1591,9 +1739,16 @@ class LaporanController extends Controller
                 'satuan.nama_satuan',
                 DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty')
             )
-            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
-            ->orderBy('satuan.nama_satuan')
-            ->paginate(10);
+            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan');
+
+        match ($request->get('sort', 'qty_tertinggi')) {
+            'qty_terendah' => $data->orderBy('total_qty', 'asc'),
+            'nama_za' => $data->orderBy('satuan.nama_satuan', 'desc'),
+            'nama_az' => $data->orderBy('satuan.nama_satuan', 'asc'),
+            default => $data->orderBy('total_qty', 'desc')->orderBy('satuan.nama_satuan'),
+        };
+
+        $data = $data->paginate(10)->withQueryString();
 
         $totalQty = $data->sum('total_qty');
 
@@ -1629,9 +1784,16 @@ class LaporanController extends Controller
                 'satuan.nama_satuan',
                 DB::raw('COALESCE(SUM(detail_transaksi.qty),0) as total_qty')
             )
-            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan')
-            ->orderBy('satuan.nama_satuan')
-            ->paginate(10);
+            ->groupBy('satuan.id_satuan', 'satuan.nama_satuan');
+
+        match ($request->get('sort', 'qty_tertinggi')) {
+            'qty_terendah' => $data->orderBy('total_qty', 'asc'),
+            'nama_za' => $data->orderBy('satuan.nama_satuan', 'desc'),
+            'nama_az' => $data->orderBy('satuan.nama_satuan', 'asc'),
+            default => $data->orderBy('total_qty', 'desc')->orderBy('satuan.nama_satuan'),
+        };
+
+        $data = $data->paginate(10)->withQueryString();
 
         $totalQty = $data->sum('total_qty');
 
@@ -1662,61 +1824,8 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        // [PERCABANGAN] Default tanggal: awal bulan ini hingga hari ini
-        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
-
-        /**
-         * [OBJECT + METHOD] INNER JOIN dengan tabel driver.
-         * CASE WHEN di SQL → setara dengan percabangan (if) di PHP,
-         * digunakan untuk menghitung berbagai status dalam SATU query (efisien).
-         *
-         * Contoh CASE WHEN:
-         * COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END)
-         * → Hitung jumlah baris jika jenis = pickup, else NULL (tidak dihitung COUNT)
-         */
-        $data = DB::table('delivery')
-            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-            ->select(
-                'driver.id_driver',
-                'driver.nama_driver',
-                'driver.no_telp',
-                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-                /**
-                 * [ARRAY dalam SQL] IN() di SQL mengecek apakah nilai ada di dalam daftar (array):
-                 * delivery.status IN ("pending", "accepted", ...) → setara array_search() di PHP
-                 */
-                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-            )
-            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-            ->orderByDesc('total_pengiriman')
-            ->get();
-
-        /**
-         * [ARRAY ASOSIATIF] $stats adalah array asosiatif yang merangkum statistik keseluruhan.
-         * sum() pada Collection Laravel secara internal melakukan perulangan (foreach)
-         * untuk menjumlahkan nilai dari semua item Collection.
-         *
-         * Struktur array:
-         * [
-         *   'key'  => nilai,   // contoh: 'total_driver_aktif' => 5
-         *   ...
-         * ]
-         */
-        $stats = [
-            'total_driver_aktif' => $data->count(),                  // jumlah semua driver
-            'total_pengiriman'   => $data->sum('total_pengiriman'),  // jumlah semua pengiriman
-            'total_pickup'       => $data->sum('total_pickup'),      // jumlah pickup
-            'total_antar'        => $data->sum('total_antar'),       // jumlah antar
-            'total_terkirim'     => $data->sum('terkirim'),          // jumlah berhasil
-            'total_gagal'        => $data->sum('gagal'),             // jumlah gagal
-            'total_proses'       => $data->sum('dalam_proses'),      // jumlah dalam proses
-        ];
+        ['data' => $data, 'stats' => $stats, 'tglAwal' => $tglAwal, 'tglAkhir' => $tglAkhir] =
+            $this->getDriverReportData($request);
 
         $data = $this->paginateCollection($data, 10);
 
@@ -1735,37 +1844,8 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
-
-        $data = DB::table('delivery')
-            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-            ->select(
-                'driver.id_driver',
-                'driver.nama_driver',
-                'driver.no_telp',
-                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-            )
-            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-            ->orderByDesc('total_pengiriman')
-            ->get();
-
-        // [ARRAY ASOSIATIF] Ringkasan statistik keseluruhan
-        $stats = [
-            'total_driver_aktif' => $data->count(),
-            'total_pengiriman'   => $data->sum('total_pengiriman'),
-            'total_pickup'       => $data->sum('total_pickup'),
-            'total_antar'        => $data->sum('total_antar'),
-            'total_terkirim'     => $data->sum('terkirim'),
-            'total_gagal'        => $data->sum('gagal'),
-            'total_proses'       => $data->sum('dalam_proses'),
-        ];
+        ['data' => $data, 'stats' => $stats, 'tglAwal' => $tglAwal, 'tglAkhir' => $tglAkhir] =
+            $this->getDriverReportData($request);
 
         $data = $this->paginateCollection($data, 10);
 
@@ -1784,37 +1864,8 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
-
-        $data = DB::table('delivery')
-            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-            ->select(
-                'driver.id_driver',
-                'driver.nama_driver',
-                'driver.no_telp',
-                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-            )
-            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-            ->orderByDesc('total_pengiriman')
-            ->get();
-
-        // [ARRAY ASOSIATIF] Ringkasan statistik keseluruhan
-        $stats = [
-            'total_driver_aktif' => $data->count(),
-            'total_pengiriman'   => $data->sum('total_pengiriman'),
-            'total_pickup'       => $data->sum('total_pickup'),
-            'total_antar'        => $data->sum('total_antar'),
-            'total_terkirim'     => $data->sum('terkirim'),
-            'total_gagal'        => $data->sum('gagal'),
-            'total_proses'       => $data->sum('dalam_proses'),
-        ];
+        ['data' => $data, 'stats' => $stats, 'tglAwal' => $tglAwal, 'tglAkhir' => $tglAkhir] =
+            $this->getDriverReportData($request);
 
         $data = $this->paginateCollection($data, 10);
 
@@ -1849,44 +1900,20 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        /**
-         * [VALIDASI FORM + ERROR HANDLING]
-         * validate() menerima array aturan. Jika ada yang gagal → ValidationException dilempar.
-         * 'in:...' → field hanya boleh berisi salah satu dari nilai yang terdaftar.
-         * 'after_or_equal:tanggal_awal' → tanggal_akhir tidak boleh lebih awal dari tanggal_awal.
-         */
-        $request->validate([
-            'filter_type'   => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
-            'tanggal_awal'  => 'required|date',
-            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
-            'status_bayar'  => 'in:semua,belum_lunas,DP,lunas'
-        ]);
+        $validated = $this->validateTransaksiExportRequest($request);
 
-        /**
-         * [PERCABANGAN] Gunakan nama file dari request jika ada, atau generate otomatis.
-         * preg_replace() menggunakan regex untuk mengganti karakter tidak aman di nama file:
-         * - Pattern '/[^A-Za-z0-9\-_]/' → hanya izinkan huruf, angka, strip, underscore
-         * - Karakter lain (spasi, titik, dll) → diganti dengan underscore '_'
-         */
-        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
-        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
+        if (($validated['format'] ?? 'excel') === 'pdf') {
+            return $this->exportTransaksiPdf($request);
+        }
 
-        /**
-         * [OBJECT] new TransaksiExport(...) → membuat object dari class TransaksiExport.
-         * Class TransaksiExport mengimplementasikan interface dari Maatwebsite\Excel
-         * yang menangani pengambilan data dan formatting Excel secara otomatis.
-         *
-         * Excel::download() → static method yang:
-         * 1. Menjalankan export dari object TransaksiExport
-         * 2. Membuat file .xlsx di memori
-         * 3. Mengirimkan file ke browser sebagai download
-         */
+        $namaFile = $this->makeTransaksiExportFilename($request->nama_file, 'xlsx');
+
         return Excel::download(
             new TransaksiExport(
-                $request->filter_type,
-                $request->tanggal_awal,
-                $request->tanggal_akhir,
-                $request->status_bayar
+                $validated['filter_type'],
+                $validated['tanggal_awal'],
+                $validated['tanggal_akhir'],
+                $validated['status_bayar']
             ),
             $namaFile
         );
@@ -1904,27 +1931,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        // [VALIDASI FORM + ERROR HANDLING]
-        $request->validate([
-            'filter_type'   => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
-            'tanggal_awal'  => 'required|date',
-            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
-            'status_bayar'  => 'in:semua,lunas,belum_lunas,dp'
-        ]);
-
-        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
-        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
-
-        // [OBJECT] Instansiasi TransaksiExport lalu download via Maatwebsite\Excel
-        return Excel::download(
-            new TransaksiExport(
-                $request->filter_type,
-                $request->tanggal_awal,
-                $request->tanggal_akhir,
-                $request->status_bayar
-            ),
-            $namaFile
-        );
+        return $this->exportTransaksi($request);
     }
 
     /**
@@ -1939,27 +1946,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        // [VALIDASI FORM + ERROR HANDLING]
-        $request->validate([
-            'filter_type'   => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
-            'tanggal_awal'  => 'required|date',
-            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
-            'status_bayar'  => 'in:semua,lunas,belum_lunas,dp'
-        ]);
-
-        $namaFile = $request->nama_file ?: 'Laporan_Transaksi_' . date('d-m-Y');
-        $namaFile = preg_replace('/[^A-Za-z0-9\-_]/', '_', $namaFile) . '.xlsx';
-
-        // [OBJECT] Instansiasi TransaksiExport lalu download via Maatwebsite\Excel
-        return Excel::download(
-            new TransaksiExport(
-                $request->filter_type,
-                $request->tanggal_awal,
-                $request->tanggal_akhir,
-                $request->status_bayar
-            ),
-            $namaFile
-        );
+        return $this->exportTransaksi($request);
     }
 
     // =========================================
@@ -3436,32 +3423,8 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        // [PERCABANGAN] Default tanggal
-        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
-        $tglAkhir = $request->sampai ?? now()->toDateString();
-
-        /**
-         * [OBJECT + METHOD] Query dengan CASE WHEN untuk statistik per status.
-         * IN() di SQL → setara array dalam PHP untuk mengecek banyak nilai sekaligus.
-         */
-        $data = DB::table('delivery')
-            ->join('driver', 'delivery.id_driver', '=', 'driver.id_driver')
-            ->whereBetween(DB::raw('DATE(delivery.waktu)'), [$tglAwal, $tglAkhir])
-            ->select(
-                'driver.id_driver',
-                'driver.nama_driver',
-                'driver.no_telp',
-                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
-                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "delivered" THEN 1 END) as terkirim'),
-                DB::raw('COUNT(CASE WHEN delivery.status = "failed" THEN 1 END) as gagal'),
-                // [ARRAY dalam SQL] IN() mengecek apakah status ada dalam daftar status aktif
-                DB::raw('COUNT(CASE WHEN delivery.status IN ("pending", "accepted", "on_the_way_to_pickup", "picked_up", "on_the_way_to_deliver") THEN 1 END) as dalam_proses')
-            )
-            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
-            ->orderByDesc('total_pengiriman')
-            ->get();
+        ['data' => $data, 'tglAwal' => $tglAwal, 'tglAkhir' => $tglAkhir] =
+            $this->getDriverReportData($request);
 
         if ($request->format === 'pdf') {
             return $this->exportDriverPdf($data, $tglAwal, $tglAkhir);
@@ -3569,6 +3532,75 @@ class LaporanController extends Controller
     }
 
     /**
+     * Mengambil dataset laporan driver dari master driver + delivery.
+     * LEFT JOIN dipakai agar driver aktif tetap muncul walaupun belum punya delivery.
+     */
+    private function getDriverReportData(Request $request): array
+    {
+        $tglAwal  = $request->dari ?? now()->startOfMonth()->toDateString();
+        $tglAkhir = $request->sampai ?? now()->toDateString();
+
+        $statusTerkirim = ['delivered', 'selesai'];
+        $statusGagal = ['failed', 'batal'];
+        $statusProses = [
+            'pending',
+            'menunggu',
+            'accepted',
+            'proses',
+            'on_the_way_to_pickup',
+            'picked_up',
+            'on_the_way_to_laundry',
+            'arrived_at_laundry',
+            'on_the_way_to_deliver',
+            'on_the_way_to_customer',
+        ];
+
+        $quote = static fn (array $values) => collect($values)
+            ->map(fn ($value) => "'" . str_replace("'", "''", $value) . "'")
+            ->implode(', ');
+
+        $data = DB::table('driver')
+            ->leftJoin('delivery', function ($join) use ($tglAwal, $tglAkhir) {
+                $join->on('delivery.id_driver', '=', 'driver.id_driver')
+                    ->whereBetween(DB::raw('DATE(COALESCE(delivery.waktu, delivery.created_at))'), [$tglAwal, $tglAkhir]);
+            })
+            ->where('driver.status', 'aktif')
+            ->select(
+                'driver.id_driver',
+                'driver.nama_driver',
+                'driver.no_telp',
+                DB::raw('COUNT(delivery.id_delivery) as total_pengiriman'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "pickup" THEN 1 END) as total_pickup'),
+                DB::raw('COUNT(CASE WHEN delivery.jenis = "antar" THEN 1 END) as total_antar'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN (' . $quote($statusTerkirim) . ') THEN 1 END) as terkirim'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN (' . $quote($statusGagal) . ') THEN 1 END) as gagal'),
+                DB::raw('COUNT(CASE WHEN delivery.status IN (' . $quote($statusProses) . ') THEN 1 END) as dalam_proses')
+            )
+            ->groupBy('driver.id_driver', 'driver.nama_driver', 'driver.no_telp')
+            ->get();
+
+        $data = (match ($request->get('sort', 'total_tertinggi')) {
+            'total_terendah' => $data->sortBy('total_pengiriman'),
+            'sukses_tertinggi' => $data->sortByDesc('terkirim'),
+            'nama_az' => $data->sortBy('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            'nama_za' => $data->sortByDesc('nama_driver', SORT_NATURAL | SORT_FLAG_CASE),
+            default => $data->sortByDesc('total_pengiriman'),
+        })->values();
+
+        $stats = [
+            'total_driver_aktif' => $data->count(),
+            'total_pengiriman'   => $data->sum('total_pengiriman'),
+            'total_pickup'       => $data->sum('total_pickup'),
+            'total_antar'        => $data->sum('total_antar'),
+            'total_terkirim'     => $data->sum('terkirim'),
+            'total_gagal'        => $data->sum('gagal'),
+            'total_proses'       => $data->sum('dalam_proses'),
+        ];
+
+        return compact('data', 'stats', 'tglAwal', 'tglAkhir');
+    }
+
+    /**
      * [METHOD] exportDriverKasir()
      * Export driver untuk Kasir — mendelegasikan ke exportDriver().
      *
@@ -3619,6 +3651,92 @@ class LaporanController extends Controller
         ])->setPaper('a4', 'portrait');
 
         return $pdf->download('Laporan_Metode_Bayar_' . Carbon::now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    private function validateTransaksiExportRequest(Request $request): array
+    {
+        return $request->validate([
+            'filter_type'   => 'required|in:tanggal_masuk,tanggal_selesai,tanggal_bayar',
+            'tanggal_awal'  => 'required|date',
+            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
+            'status_bayar'  => 'required|in:semua,lunas,belum_lunas,DP,dp',
+            'format'        => 'nullable|in:excel,pdf',
+        ]);
+    }
+
+    private function makeTransaksiExportFilename(?string $namaFile, string $extension): string
+    {
+        $baseName = $namaFile ?: 'Laporan_Transaksi_' . date('d-m-Y');
+        $baseName = preg_replace('/[^A-Za-z0-9\-_]/', '_', $baseName);
+
+        return $baseName . '.' . $extension;
+    }
+
+    private function getTransaksiExportCollection(Request $request)
+    {
+        $validated = $this->validateTransaksiExportRequest($request);
+        $statusBayar = strtoupper($validated['status_bayar']) === 'DP' ? 'DP' : $validated['status_bayar'];
+
+        $query = Transaksi::query()
+            ->with(['metodeBayar', 'kasir'])
+            ->select('transaksi.*');
+
+        switch ($validated['filter_type']) {
+            case 'tanggal_selesai':
+                $query->whereNotNull('tgl_lunas')
+                    ->whereBetween(DB::raw('DATE(tgl_lunas)'), [
+                        $validated['tanggal_awal'],
+                        $validated['tanggal_akhir'],
+                    ]);
+                break;
+
+            case 'tanggal_bayar':
+                $query->whereNotNull('tgl_lunas')
+                    ->whereBetween(DB::raw('DATE(tgl_lunas)'), [
+                        $validated['tanggal_awal'],
+                        $validated['tanggal_akhir'],
+                    ]);
+                break;
+
+            case 'tanggal_masuk':
+            default:
+                $query->whereBetween('tgl_transaksi', [
+                    $validated['tanggal_awal'] . ' 00:00:00',
+                    $validated['tanggal_akhir'] . ' 23:59:59',
+                ]);
+                break;
+        }
+
+        if ($statusBayar !== 'semua') {
+            $query->where('status_bayar', $statusBayar);
+        }
+
+        return $query->orderBy('tgl_transaksi', 'desc')->get();
+    }
+
+    private function exportTransaksiPdf(Request $request)
+    {
+        $validated = $this->validateTransaksiExportRequest($request);
+        $data = $this->getTransaksiExportCollection($request);
+        $namaFile = $this->makeTransaksiExportFilename($request->nama_file, 'pdf');
+
+        $labelFilter = match ($validated['filter_type']) {
+            'tanggal_selesai' => 'Tanggal Selesai',
+            'tanggal_bayar' => 'Tanggal Bayar',
+            default => 'Tanggal Masuk Pesanan',
+        };
+
+        $pdf = Pdf::loadView('laporan.transaksi.pdf', [
+            'data' => $data,
+            'tanggalAwal' => $validated['tanggal_awal'],
+            'tanggalAkhir' => $validated['tanggal_akhir'],
+            'filterTypeLabel' => $labelFilter,
+            'statusBayar' => $validated['status_bayar'],
+            'tanggalCetak' => Carbon::now()->format('d/m/Y H:i:s'),
+            'totalOmzet' => $data->sum('total_bayar'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download($namaFile);
     }
 
     private function exportDriverPdf($data, $tglAwal, $tglAkhir)

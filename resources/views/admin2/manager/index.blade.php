@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/manager/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -47,14 +48,24 @@ $adminLogin = auth()->guard('admin')->user();
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             {{-- HEADER SECTION --}}
             <div class="px-8 py-5 bg-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-person-badge-fill text-white text-xl"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-person-badge-fill text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Kasir</h2>
+                            <p class="text-sm text-gray-500">Manajemen akun kasir toko</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Kasir</h2>
-                        <p class="text-sm text-gray-500">Manajemen akun kasir toko</p>
-                    </div>
+                    <form method="GET">
+                        <input type="hidden" name="drivers_sort" value="{{ request('drivers_sort', 'nama_asc') }}">
+                        <select name="kasirs_sort" onchange="this.form.submit()" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold outline-none">
+                            <option value="nama_asc" {{ request('kasirs_sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Kasir A-Z</option>
+                            <option value="nama_desc" {{ request('kasirs_sort') === 'nama_desc' ? 'selected' : '' }}>Kasir Z-A</option>
+                            <option value="terlama" {{ request('kasirs_sort') === 'terlama' ? 'selected' : '' }}>Kasir Terlama</option>
+                        </select>
+                    </form>
                 </div>
             </div>
 
@@ -135,14 +146,24 @@ $adminLogin = auth()->guard('admin')->user();
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             {{-- HEADER SECTION --}}
             <div class="px-8 py-5 bg-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-truck text-white text-xl"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-truck text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Driver</h2>
+                            <p class="text-sm text-gray-500">Manajemen akun driver pengiriman</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Driver</h2>
-                        <p class="text-sm text-gray-500">Manajemen akun driver pengiriman</p>
-                    </div>
+                    <form method="GET">
+                        <input type="hidden" name="kasirs_sort" value="{{ request('kasirs_sort', 'nama_asc') }}">
+                        <select name="drivers_sort" onchange="this.form.submit()" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold outline-none">
+                            <option value="nama_asc" {{ request('drivers_sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Driver A-Z</option>
+                            <option value="nama_desc" {{ request('drivers_sort') === 'nama_desc' ? 'selected' : '' }}>Driver Z-A</option>
+                            <option value="terlama" {{ request('drivers_sort') === 'terlama' ? 'selected' : '' }}>Driver Terlama</option>
+                        </select>
+                    </form>
                 </div>
             </div>
 

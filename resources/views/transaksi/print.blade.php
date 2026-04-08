@@ -1,0 +1,1 @@
+{{-- FE-DOC: Template frontend untuk resources/views/transaksi/print.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}

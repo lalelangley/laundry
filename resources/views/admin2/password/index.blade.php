@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/password/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Ganti Password')
@@ -5,6 +6,7 @@
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('admin2.dashboard') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -114,6 +116,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 // Toggle password visibility
 function togglePassword(inputId, button) {

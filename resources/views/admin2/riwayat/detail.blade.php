@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/riwayat/detail.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -357,6 +358,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 // Data PHP untuk JavaScript
 const subtotal = {{ $subtotal }};

@@ -1,9 +1,11 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/laporan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Laporan')
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
         <a href="{{ route('kasir.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
@@ -40,6 +42,7 @@
             </div>
 
             {{-- TAB CONTENT: LAPORAN --}}
+{{-- FE-DOC: Tab laporan memuat navigasi ke modul laporan utama. --}}
             <div id="laporan" class="tab-content p-12">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-graph-up me-2"></i>Laporan Utama
@@ -85,6 +88,7 @@
             </div>
 
             {{-- TAB CONTENT: TRANSAKSI --}}
+{{-- FE-DOC: Tab transaksi berisi laporan yang berhubungan dengan proses operasional dan pembayaran. --}}
             <div id="transaksi" class="tab-content p-12 hidden">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-cash-stack me-2"></i>Informasi Transaksi
@@ -131,6 +135,7 @@
             </div>
 
             {{-- TAB CONTENT: AKSES DATA --}}
+{{-- FE-DOC: Tab ini menjelaskan batasan akses role terhadap data atau fitur export. --}}
             <div id="data" class="tab-content p-12 hidden">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
                     <i class="bi bi-eye-fill me-2"></i>Akses Data
@@ -154,6 +159,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 <style>
 @keyframes fadeIn {
     from {
@@ -171,6 +177,8 @@
 }
 
 </style>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 // ✅ FIXED: Function untuk switch tab

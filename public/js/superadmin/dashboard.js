@@ -1,9 +1,12 @@
+// FE-DOC: Script frontend untuk public/js/superadmin/dashboard.js. Komentar dipakai untuk menandai file ini sebagai bagian dari interaksi UI dan helper JavaScript project.
+
 // dashboard.js
 // Semua logic dashboard: DataTable, notifikasi, reminder popup, modal
 
 // ════════════════════════════════════════
 // INJECT CSS ANIMATIONS (replaces dashboard.css)
 // ════════════════════════════════════════
+// FE-DOC: IIFE dipakai untuk membungkus logic agar variabel helper tidak bocor ke scope global.
 (function injectStyles() {
     const style = document.createElement('style');
     style.textContent = `
@@ -40,6 +43,7 @@ $(document).ready(function () {
 // ════════════════════════════════════════
 let orderTable;
 
+// FE-DOC: Function berikut mengelola bagian interaksi UI atau helper data sesuai nama tanggung jawabnya.
 function initDataTable() {
     orderTable = $('#orderTable').DataTable({
         pageLength: 25,

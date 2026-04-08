@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/laporan/satuan/satuan-pdf.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan Satuan</title>
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
         * {
             margin: 0;
@@ -196,6 +198,7 @@
 <body>
 
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="header">
         <div class="header-top">
             <div>
@@ -218,6 +221,7 @@
     </div>
 
     {{-- SUMMARY --}}
+{{-- FE-DOC: Summary section menampilkan total atau agregasi hasil filter aktif. --}}
     <div class="summary-wrapper">
         <div class="summary-card">
             <div class="label">Total Qty Keseluruhan</div>
@@ -226,6 +230,7 @@
     </div>
 
     {{-- TABLE --}}
+{{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
     <div class="table-wrapper">
         <table>
             <thead>
@@ -262,6 +267,7 @@
     </div>
 
     {{-- FOOTER --}}
+{{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
     <div class="footer">
         <span>Laporan Satuan &bull; {{ config('app.name', 'Aplikasi') }}</span>
         <span>{{ $data->count() }} jenis satuan tercatat</span>

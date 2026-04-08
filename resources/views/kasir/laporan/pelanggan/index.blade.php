@@ -1,9 +1,11 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/laporan/pelanggan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Laporan Pelanggan')
 @section('content')
 <div class="min-h-screen bg-gray-100 pb-24">
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center justify-between sticky top-0 z-20 shadow">
     <div class="flex items-center gap-4">
         <a href="{{ route('kasir.laporan.index') }}" class="text-2xl font-bold hover:scale-110 transition-transform">
@@ -17,7 +19,7 @@
 {{-- FILTER & SEARCH --}}
 <form method="GET" id="filterForm" class="px-5 mt-6 space-y-4">
     {{-- Date Range --}}
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3 flex items-center gap-2 font-semibold">
             <i class="bi bi-calendar-event"></i>
             <input type="date" 
@@ -35,7 +37,13 @@
                    value="{{ request('sampai') }}"
                    class="bg-transparent outline-none w-full font-semibold cursor-pointer">
         </div>
-        @if(request()->hasAny(['dari', 'sampai']))
+        <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-3 text-sm font-semibold outline-none shadow">
+            <option value="belanja_tertinggi" {{ request('sort', 'belanja_tertinggi') === 'belanja_tertinggi' ? 'selected' : '' }}>Belanja Tertinggi</option>
+            <option value="belanja_terendah" {{ request('sort') === 'belanja_terendah' ? 'selected' : '' }}>Belanja Terendah</option>
+            <option value="transaksi_terbanyak" {{ request('sort') === 'transaksi_terbanyak' ? 'selected' : '' }}>Transaksi Terbanyak</option>
+            <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
+        </select>
+        @if(request()->hasAny(['dari', 'sampai', 'sort']))
             <a href="{{ route('kasir.laporan.pelanggan.index') }}" 
                class="bg-gray-200 hover:bg-gray-300 px-4 py-3 rounded-full transition-all"
                title="Reset">
@@ -45,6 +53,7 @@
     </div>
 
     {{-- Search --}}
+{{-- FE-DOC: Search dipakai untuk pencarian cepat tanpa perlu membuka filter lanjutan. --}}
     <div class="bg-white rounded-full shadow flex items-center px-4 py-3 gap-3">
         <i class="bi bi-search text-xl text-gray-400"></i>
         <input type="text" 
@@ -166,7 +175,7 @@
 
 @if(method_exists($data, 'links'))
 <div class="px-5 pb-6">
-    {{ $data->links() }}
+    {{ $data->appends(request()->query())->links() }}
 </div>
 @endif
 
@@ -174,6 +183,7 @@
 @endsection
 
 @push('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');

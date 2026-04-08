@@ -1,9 +1,13 @@
+{{-- FE-DOC: Template frontend untuk resources/views/laporan/pengeluaran/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Laporan Pengeluaran')
 @section('content')
 <div class="min-h-screen bg-gray-100 pb-28">
 
+{{-- Wrapper halaman utama untuk memberi ruang, background, dan jarak bawah --}}
+
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl sticky top-0 z-20 shadow">
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -12,7 +16,7 @@
             </a>
             <h1 class="text-lg font-bold">Laporan Pengeluaran</h1>
         </div>
-        {{-- Export Buttons --}}
+        {{-- Tombol export mengikuti filter yang sedang aktif lewat query string --}}
         <div class="flex items-center gap-2">
             <a href="{{ route('laporan.pengeluaran.export') }}?{{ http_build_query(array_merge(request()->all(), ['format' => 'excel'])) }}"
                class="flex items-center gap-1.5 text-sm font-semibold bg-white bg-opacity-30 hover:bg-opacity-50 px-3 py-2 rounded-full transition-all">
@@ -29,8 +33,11 @@
 </div>
 
 {{-- FILTER --}}
+{{-- FE-DOC: Area filter merangkum input penting agar user bisa mempersempit data yang tampil. --}}
+{{-- FE-DOC: Area filter merangkum input tanggal, pencarian, sorting, dan reset agar user bisa mempersempit data. --}}
 <form method="GET" id="filterForm" class="px-6 mt-6 space-y-3">
-    <div class="flex items-center gap-3">
+    {{-- Filter digabung dalam satu form GET supaya URL bisa dibagikan / di-refresh --}}
+    <div class="flex flex-wrap items-center gap-3">
         <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3 flex items-center gap-2 font-semibold">
             <i class="bi bi-calendar-event"></i>
             <input type="date"
@@ -54,10 +61,20 @@
                 title="Reset Filter">
             <i class="bi bi-arrow-clockwise font-bold"></i>
         </button>
+        <select name="sort"
+                id="sort"
+                class="bg-white rounded-full px-4 py-3 font-semibold shadow outline-none">
+            <option value="terbaru" {{ request('sort', 'terbaru') === 'terbaru' ? 'selected' : '' }}>Terbaru</option>
+            <option value="terlama" {{ request('sort') === 'terlama' ? 'selected' : '' }}>Terlama</option>
+            <option value="nominal_tertinggi" {{ request('sort') === 'nominal_tertinggi' ? 'selected' : '' }}>Nominal Tertinggi</option>
+            <option value="nominal_terendah" {{ request('sort') === 'nominal_terendah' ? 'selected' : '' }}>Nominal Terendah</option>
+        </select>
     </div>
 
     {{-- Search --}}
+{{-- FE-DOC: Search dipakai untuk pencarian cepat tanpa perlu membuka filter lanjutan. --}}
     <div class="bg-white rounded-full shadow flex items-center px-4 py-3 gap-3">
+        {{-- Area search dibuat kontras agar aksi cari mudah terlihat --}}
         <i class="bi bi-search text-xl text-gray-400"></i>
         <input type="text"
                name="q"
@@ -67,7 +84,7 @@
         <button type="submit" class="bg-yellow-400 hover:bg-yellow-500 px-5 py-2 rounded-full font-bold transition-all">
             Cari
         </button>
-        @if(request()->hasAny(['q', 'dari', 'sampai']))
+        @if(request()->hasAny(['q', 'dari', 'sampai', 'sort']))
             <a href="{{ route('laporan.pengeluaran.index') }}"
                class="bg-gray-200 hover:bg-gray-300 px-5 py-2 rounded-full font-bold transition-all">
                 Reset
@@ -77,7 +94,9 @@
 </form>
 
 {{-- SUMMARY CARDS --}}
+{{-- FE-DOC: Summary cards menampilkan angka ringkas supaya insight utama terbaca sebelum masuk ke tabel. --}}
 <div class="px-6 mt-5 grid grid-cols-2 gap-4">
+    {{-- Kartu ringkasan untuk memberi gambaran cepat tanpa baca tabel --}}
     <div class="bg-white rounded-xl p-4 shadow border-2 border-yellow-400">
         <div class="flex items-center gap-3">
             <div class="w-11 h-11 bg-yellow-100 rounded-full flex items-center justify-center shrink-0">
@@ -106,9 +125,12 @@
 </div>
 
 {{-- TABLE --}}
+{{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
 <div class="px-6 mt-5">
+    {{-- Tabel utama memakai grid custom agar kolom nomor lebih ramping dari kolom isi --}}
     <div class="bg-white rounded-xl overflow-hidden shadow">
         {{-- Table Header --}}
+{{-- FE-DOC: Header tabel memberikan konteks kolom dan biasanya memuat ringkasan periode aktif. --}}
         <div class="grid grid-cols-[40px_1fr_1fr_1fr] bg-yellow-400 text-center font-bold text-sm py-3 border-b border-yellow-500">
             <div class="text-center">#</div>
             <div class="flex items-center justify-center gap-1">
@@ -148,12 +170,14 @@
 </div>
 
 {{-- PAGINATION --}}
+{{-- FE-DOC: Pagination menjaga jumlah data per halaman tetap nyaman dibaca dan performa tetap ringan. --}}
 @if ($pengeluaran->hasPages())
 <div class="px-6 mt-4 pb-4">
-    <div class="px-5 mt-6 flex items-center justify-center gap-2">
-        <p class="text-sm text-gray-500 font-semibold">
-            Menampilkan {{ $pengeluaran->firstItem() }}–{{ $pengeluaran->lastItem() }}
-            dari {{ $pengeluaran->total() }} data
+        <div class="px-5 mt-6 flex items-center justify-center gap-2">
+            {{-- Info jumlah data + navigasi halaman manual agar gaya tetap seragam --}}
+            <p class="text-sm text-gray-500 font-semibold">
+                Menampilkan {{ $pengeluaran->firstItem() }}–{{ $pengeluaran->lastItem() }}
+                dari {{ $pengeluaran->total() }} data
         </p>
         <div class="flex items-center gap-2">
             {{-- Prev --}}
@@ -195,29 +219,21 @@
 </div>
 @endif
 
-{{-- TOTAL FOOTER --}}
-<div class="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 px-6 py-4 flex justify-between items-center font-bold shadow-2xl">
-    <div class="flex items-center gap-2">
-        <i class="bi bi-wallet2 text-lg"></i>
-        <span>Total Pengeluaran</span>
-    </div>
-    <span class="text-xl">
-        Rp {{ number_format($totalNominal, 0, ',', '.') }}
-    </span>
-</div>
-
 </div>
 @endsection
 
 @push('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Cache elemen form untuk event filter dan validasi tanggal.
     const filterForm = document.getElementById('filterForm');
     const resetBtn   = document.getElementById('resetBtn');
     const dariInput  = document.getElementById('dari');
     const sampaiInput= document.getElementById('sampai');
+    const sortInput  = document.getElementById('sort');
 
-    // Auto-submit saat kedua tanggal sudah diisi
+    // Tanggal mulai memicu validasi dulu, lalu submit otomatis jika rentang sudah lengkap.
     dariInput.addEventListener('change', function() {
         if (sampaiInput.value && this.value > sampaiInput.value) {
             alert('Tanggal mulai tidak boleh lebih besar dari tanggal akhir');
@@ -227,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value && sampaiInput.value) filterForm.submit();
     });
 
+    // Tanggal akhir punya logika yang sama, tapi membandingkan arah sebaliknya.
     sampaiInput.addEventListener('change', function() {
         if (dariInput.value && this.value < dariInput.value) {
             alert('Tanggal akhir tidak boleh lebih kecil dari tanggal mulai');
@@ -236,9 +253,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value && dariInput.value) filterForm.submit();
     });
 
-    // Reset ke halaman bersih
+    // Reset kembali ke halaman index tanpa parameter query.
     resetBtn.addEventListener('click', function() {
         window.location.href = '{{ route("laporan.pengeluaran.index") }}';
+    });
+
+    // Sort langsung submit supaya urutan hasil cepat berubah.
+    sortInput.addEventListener('change', function() {
+        filterForm.submit();
     });
 });
 </script>

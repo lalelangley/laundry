@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/profile/edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Edit Profile')
 @section('content')
@@ -264,6 +265,7 @@
 @endsection
 
 @push('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 // Preview foto
 document.getElementById('photoInput').addEventListener('change', function(e) {

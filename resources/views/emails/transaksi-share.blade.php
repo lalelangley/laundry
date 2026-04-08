@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/emails/transaksi-share.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">

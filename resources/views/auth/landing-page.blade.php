@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/auth/landing-page.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
         body { font-family: 'Poppins', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #EEF6AE 0%, #FFC21A 100%); }

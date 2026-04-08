@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/pengeluaran/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'pengeluaran')
 @section('content')
@@ -130,6 +131,8 @@
         Tambah Pengeluaran
     </a>
 </div>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 // Dropdown Toggle

@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/pelanggan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Kelola Pelanggan')
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
     <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:scale-110 transition-transform">
         <i class="bi bi-arrow-left"></i>
@@ -11,16 +13,23 @@
 </div>
 
 {{-- SEARCH + SORT --}}
-<div class="px-5 mt-5">
-    <div class="bg-white rounded-2xl px-4 py-3 flex items-center shadow">
+<form method="GET" class="px-5 mt-5">
+    <div class="bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow">
         <i class="bi bi-search text-yellow-500 text-xl mr-3"></i>
-        <input type="text" placeholder="Cari" class="w-full focus:outline-none text-lg" name="search">
-        <button class="ml-3 text-gray-500 text-sm flex flex-col items-center">
-            <i class="bi bi-arrow-down-up text-xl"></i>
-            <span>Sort</span>
-        </button>
+        <input type="text"
+               placeholder="Cari pelanggan..."
+               class="w-full focus:outline-none text-lg"
+               name="search"
+               value="{{ request('search') }}">
+        <select name="sort" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold outline-none">
+            <option value="nama_asc" {{ request('sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Nama A-Z</option>
+            <option value="nama_desc" {{ request('sort') === 'nama_desc' ? 'selected' : '' }}>Nama Z-A</option>
+            <option value="terbaru" {{ request('sort') === 'terbaru' ? 'selected' : '' }}>Terbaru</option>
+            <option value="terlama" {{ request('sort') === 'terlama' ? 'selected' : '' }}>Terlama</option>
+        </select>
+        <button class="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded-xl font-semibold transition-all">Terapkan</button>
     </div>
-</div>
+</form>
 
 {{-- LIST PELANGGAN --}}
 <div class="px-5 mt-5 space-y-4 mb-24">
@@ -72,7 +81,7 @@
 
 @if(method_exists($pelanggan, 'links'))
 <div class="px-5 pb-28">
-    {{ $pelanggan->links() }}
+    {{ $pelanggan->appends(request()->query())->links() }}
 </div>
 @endif
 
@@ -88,6 +97,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- JAVASCRIPT DELETE -->
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 function confirmDelete(button) {
     const namaPelanggan = button.getAttribute('data-nama');

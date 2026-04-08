@@ -1,9 +1,11 @@
+{{-- FE-DOC: Template frontend untuk resources/views/laporan/satuan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Laporan Satuan')
 @section('content')
 <div class="min-h-screen bg-gray-100 pb-24">
 
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl sticky top-0 z-20">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -28,7 +30,8 @@
     </div>
 
     {{-- FILTER TANGGAL --}}
-    <form method="GET" class="px-5 mt-5 flex items-center gap-3">
+{{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
+    <form method="GET" class="px-5 mt-5 flex flex-wrap items-center gap-3">
         <div class="flex-1 bg-yellow-400 rounded-full px-4 py-3">
             <p class="text-xs">Tanggal Awal</p>
             <input type="date" name="dari" value="{{ $tglAwal }}"
@@ -40,6 +43,12 @@
             <input type="date" name="sampai" value="{{ $tglAkhir }}"
                    class="bg-transparent outline-none font-bold w-full">
         </div>
+        <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-3 text-sm font-semibold outline-none">
+            <option value="qty_tertinggi" {{ request('sort', 'qty_tertinggi') === 'qty_tertinggi' ? 'selected' : '' }}>Qty Tertinggi</option>
+            <option value="qty_terendah" {{ request('sort') === 'qty_terendah' ? 'selected' : '' }}>Qty Terendah</option>
+            <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
+            <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
+        </select>
     </form>
 
     {{-- SUMMARY CARD --}}
@@ -83,6 +92,7 @@
     </div>
 
    {{-- PAGINATION --}}
+{{-- FE-DOC: Pagination menjaga jumlah data per halaman tetap nyaman dibaca dan performa tetap ringan. --}}
 @if ($data->hasPages())
 <div class="px-6 mt-4 pb-4">
     <div class="px-5 mt-6 flex items-center justify-center gap-2">
@@ -134,6 +144,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     document.querySelectorAll('input[type="date"]').forEach(el => {
         el.addEventListener('change', () => el.form.submit());

@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/dashboard.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Dashboard Admin')
@@ -706,6 +707,8 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
+
 <script>
 // ========================================
 // DATA NOTIFIKASI DARI CONTROLLER
@@ -1307,6 +1310,8 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
+
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
 <style>
 @keyframes slide-in {

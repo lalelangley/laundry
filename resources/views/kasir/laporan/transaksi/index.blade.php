@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/laporan/transaksi/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Laporan Transaksi')
@@ -6,6 +7,7 @@
 <div class="min-h-screen bg-gray-100">
 
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow flex items-center justify-between">
         <div class="flex items-center gap-4">
             <a href="{{ route('kasir.laporan.index') }}" class="text-3xl font-bold hover:scale-110 transition-transform">
@@ -28,6 +30,7 @@
     <form method="GET" action="{{ route('kasir.laporan.transaksi.index') }}" id="filterForm" class="px-8 mt-6 space-y-4">
 
         {{-- FILTER TANGGAL --}}
+{{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
         <div class="flex items-center gap-4">
             <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
                 <i class="bi bi-calendar-event"></i>
@@ -58,6 +61,7 @@
         </div>
 
         {{-- ADVANCED FILTERS (Collapsible) --}}
+{{-- FE-DOC: Filter lanjutan disembunyikan default agar halaman tetap ringkas, lalu dibuka saat diperlukan. --}}
         <div id="advancedFilters" class="space-y-4 hidden">
             
             {{-- Status Transaksi --}}
@@ -150,6 +154,7 @@
         </div>
 
         {{-- SORT OPTIONS (Collapsible) --}}
+{{-- FE-DOC: Opsi sorting dipisah ke panel sendiri supaya user bisa mengganti urutan data tanpa memenuhi area utama. --}}
         <div id="sortOptions" class="bg-white rounded-2xl shadow p-6 hidden">
             <label class="block text-sm font-bold text-gray-700 mb-3">Urutkan Berdasarkan</label>
             <div class="grid grid-cols-2 gap-3">
@@ -181,6 +186,7 @@
         </div>
 
         {{-- SEARCH --}}
+{{-- FE-DOC: Input pencarian ini membantu user menemukan data spesifik berdasarkan kata kunci. --}}
         <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
             <i class="bi bi-search text-xl text-gray-400"></i>
 
@@ -208,6 +214,7 @@
     </form>
 
     {{-- SUMMARY --}}
+{{-- FE-DOC: Summary section menampilkan total atau agregasi hasil filter aktif. --}}
     <div class="px-8 mt-6">
         <div class="bg-white border-2 border-yellow-400 rounded-2xl p-6 font-semibold">
             <div class="flex justify-between text-lg">
@@ -222,6 +229,7 @@
     </div>
 
     {{-- LIST TRANSAKSI --}}
+{{-- FE-DOC: List transaksi memakai card layout supaya detail status, pembayaran, dan nominal lebih mudah discan. --}}
     <div class="px-8 mt-6 space-y-4 pb-10">
 
         @forelse ($transaksi as $t)
@@ -423,6 +431,7 @@
     </div>
 
     {{-- PAGINATION --}}
+{{-- FE-DOC: Pagination menjaga jumlah data per halaman tetap nyaman dibaca dan performa tetap ringan. --}}
     @if($transaksi->hasPages())
         <div class="px-8 pb-10">
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
@@ -479,6 +488,7 @@
 @endsection
 
 @push('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const filterForm = document.getElementById('filterForm');

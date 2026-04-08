@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/parfum/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="w-full bg-yellow-400 p-4 flex items-center">
     <a href="{{ route('admin2.parfum.index') }}" class="text-2xl mr-3">←</a>
     <h1 class="text-xl font-bold">Tambah Parfum</h1>

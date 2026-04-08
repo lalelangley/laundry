@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use App\Models\FcmToken;
 use App\Services\FcmService;
+use App\Services\TelegramNotificationService;
 
 class PesananOnlineController extends Controller
 {
@@ -531,7 +532,7 @@ class PesananOnlineController extends Controller
                     }
                 }
             }
-            
+
             DB::commit();
             
             return redirect()->route('kasir.pesanan.online.index', ['tab' => 'proses'])
@@ -611,7 +612,9 @@ class PesananOnlineController extends Controller
                     }
                 }
             }
-            
+
+            TelegramNotificationService::sendEstimasiSelesaiNotification($pesanan, $needDriverSelection);
+
             DB::commit();
             
             // Percabangan: redirect ke pilih driver jika pesanan terlambat
@@ -1018,7 +1021,7 @@ class PesananOnlineController extends Controller
                     }
                 }
             }
-            
+
             DB::commit();
             
             return redirect()->route('pesanan.online.index', ['tab' => 'proses'])
@@ -1111,6 +1114,8 @@ class PesananOnlineController extends Controller
                     }
                 }
             }
+
+            TelegramNotificationService::sendEstimasiSelesaiNotification($pesanan, $needDriverSelection);
             
             DB::commit();
             
@@ -1539,6 +1544,8 @@ class PesananOnlineController extends Controller
                     }
                 }
             }
+
+            TelegramNotificationService::sendEstimasiSelesaiNotification($pesanan, $needDriverSelection);
             
             DB::commit();
             
@@ -4142,6 +4149,8 @@ class PesananOnlineController extends Controller
                             }
                         }
                     }
+
+                    TelegramNotificationService::sendEstimasiSelesaiNotification($pesanan, true);
                     
                     DB::commit();
                     $countTerlambat++;

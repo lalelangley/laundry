@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/errors/403.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,6 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body class="bg-gray-50">
+    <!-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. -->
     <script>
         Swal.fire({
             icon: 'error',

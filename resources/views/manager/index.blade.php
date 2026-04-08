@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/manager/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('content')
 
@@ -55,14 +56,25 @@ $adminLogin = auth()->guard('admin')->user();
         {{-- ================= ADMIN ================= --}}
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-people-fill text-white text-xl"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-people-fill text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Admin Sistem</h2>
+                            <p class="text-sm text-gray-500">Manajemen akun admin dan super admin</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Admin Sistem</h2>
-                        <p class="text-sm text-gray-500">Manajemen akun admin dan super admin</p>
-                    </div>
+                    <form method="GET">
+                        <input type="hidden" name="kasirs_sort" value="{{ request('kasirs_sort', 'nama_asc') }}">
+                        <input type="hidden" name="drivers_sort" value="{{ request('drivers_sort', 'nama_asc') }}">
+                        <select name="admins_sort" onchange="this.form.submit()" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold outline-none">
+                            <option value="nama_asc" {{ request('admins_sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Admin A-Z</option>
+                            <option value="nama_desc" {{ request('admins_sort') === 'nama_desc' ? 'selected' : '' }}>Admin Z-A</option>
+                            <option value="terlama" {{ request('admins_sort') === 'terlama' ? 'selected' : '' }}>Admin Terlama</option>
+                        </select>
+                    </form>
                 </div>
             </div>
 
@@ -175,14 +187,25 @@ $adminLogin = auth()->guard('admin')->user();
         {{-- ================= KASIR ================= --}}
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-person-badge-fill text-white text-xl"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-person-badge-fill text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Kasir</h2>
+                            <p class="text-sm text-gray-500">Manajemen akun kasir toko</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Kasir</h2>
-                        <p class="text-sm text-gray-500">Manajemen akun kasir toko</p>
-                    </div>
+                    <form method="GET">
+                        <input type="hidden" name="admins_sort" value="{{ request('admins_sort', 'nama_asc') }}">
+                        <input type="hidden" name="drivers_sort" value="{{ request('drivers_sort', 'nama_asc') }}">
+                        <select name="kasirs_sort" onchange="this.form.submit()" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold outline-none">
+                            <option value="nama_asc" {{ request('kasirs_sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Kasir A-Z</option>
+                            <option value="nama_desc" {{ request('kasirs_sort') === 'nama_desc' ? 'selected' : '' }}>Kasir Z-A</option>
+                            <option value="terlama" {{ request('kasirs_sort') === 'terlama' ? 'selected' : '' }}>Kasir Terlama</option>
+                        </select>
+                    </form>
                 </div>
             </div>
 
@@ -281,14 +304,25 @@ $adminLogin = auth()->guard('admin')->user();
         {{-- ================= DRIVER ================= --}}
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="px-8 py-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-truck text-white text-xl"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-truck text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Driver</h2>
+                            <p class="text-sm text-gray-500">Manajemen akun driver pengiriman</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Driver</h2>
-                        <p class="text-sm text-gray-500">Manajemen akun driver pengiriman</p>
-                    </div>
+                    <form method="GET">
+                        <input type="hidden" name="admins_sort" value="{{ request('admins_sort', 'nama_asc') }}">
+                        <input type="hidden" name="kasirs_sort" value="{{ request('kasirs_sort', 'nama_asc') }}">
+                        <select name="drivers_sort" onchange="this.form.submit()" class="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold outline-none">
+                            <option value="nama_asc" {{ request('drivers_sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Driver A-Z</option>
+                            <option value="nama_desc" {{ request('drivers_sort') === 'nama_desc' ? 'selected' : '' }}>Driver Z-A</option>
+                            <option value="terlama" {{ request('drivers_sort') === 'terlama' ? 'selected' : '' }}>Driver Terlama</option>
+                        </select>
+                    </form>
                 </div>
             </div>
 

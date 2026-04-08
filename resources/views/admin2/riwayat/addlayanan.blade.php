@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/riwayat/addlayanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -6,6 +7,7 @@
 
 <div class="min-h-screen bg-gray-50 pb-24">
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-3xl flex items-center gap-3 shadow-lg">
    <a href="{{ route('admin2.riwayat.edit', $riwayat->id_transaksi) }}"
    class="text-black text-3xl font-bold hover:scale-110 transition-transform">
@@ -267,6 +269,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const modal = document.getElementById("modalLayanan");

@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/manager/menu-role/hak.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('content')
 <div class="min-h-screen bg-gray-50">
@@ -222,6 +223,8 @@
     </div>
 </div>
 
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
+
 <script>
 // =============================
 // AUTO-SAVE FUNCTION
@@ -396,6 +399,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
 <style>
 /* Card hover effects */

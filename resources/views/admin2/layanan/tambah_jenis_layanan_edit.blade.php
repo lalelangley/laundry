@@ -1,8 +1,10 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/layanan/tambah_jenis_layanan_edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
     <a href="{{ route('admin2.layanan.edit', $jenis->id_layanan ?? 0) }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -195,6 +197,8 @@
         </div>
     </form>
 </div>
+
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
 <script>
 function previewImage(event) {

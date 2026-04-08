@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/privacy/telegram-bot.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy Kasmini Laundry Bot</title>
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
         :root {
             --bg: #fff8e6;

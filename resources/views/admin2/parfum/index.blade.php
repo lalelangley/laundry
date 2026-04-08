@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/parfum/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -100,6 +101,7 @@
 </div>
 
 <!-- JAVASCRIPT SEARCH + SORT -->
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 function filterParfum() {
     let input = document.getElementById("searchInput").value.toLowerCase();

@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/riwayat/detail.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 {{-- resources/views/riwayat/detail.blade.php --}}
 {{-- ============================================================
      HALAMAN: DETAIL TRANSAKSI
@@ -423,6 +424,7 @@
      Data transaksi di-pass ke window object agar dapat diakses
      oleh riwayat-detail.js tanpa perlu request tambahan
 ======================================== --}}
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     window.DETAIL_DATA = {
         subtotal        : {{ $subtotal }},

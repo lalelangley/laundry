@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin2/transaksi/checkout.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Checkout')
@@ -5,6 +6,7 @@
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('admin2.transaksi.create') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -148,6 +150,7 @@
 <div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden"></div>
 
 {{-- FOOTER --}}
+{{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
 <div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
     <div>
         <p class="text-sm">Total Harga</p>
@@ -244,6 +247,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 

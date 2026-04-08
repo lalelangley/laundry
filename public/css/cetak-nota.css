@@ -1,3 +1,5 @@
+/* FE-DOC: Stylesheet frontend untuk public/css/cetak-nota.css. Komentar dipakai untuk menandai file ini sebagai sumber style, utilitas Tailwind, atau CSS kustom project. */
+
 /* ================================================
    resources/css/cetak-nota.css
    CSS untuk halaman cetak nota thermal
@@ -5,6 +7,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
 
+/* FE-DOC: Selector global ini merapikan baseline rendering di seluruh halaman. */
 * {
     margin: 0;
     padding: 0;
@@ -124,7 +127,7 @@ body::after {
     animation: slideUp 0.4s ease;
 }
 
-@keyframes slideUp {
+/* FE-DOC: Keyframes mendefinisikan animasi dasar yang dipakai ulang oleh elemen UI. */
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
 }

@@ -1,9 +1,11 @@
+{{-- FE-DOC: Template frontend untuk resources/views/laporan/driver/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 @section('title', 'Laporan Driver')
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -34,7 +36,8 @@
     <form method="GET" action="{{ route('laporan.driver.index') }}" id="filterForm" class="px-8 mt-6 space-y-4">
 
         {{-- FILTER TANGGAL --}}
-        <div class="flex items-center gap-4">
+{{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
+        <div class="flex flex-wrap items-center gap-4">
             <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
                 <i class="bi bi-calendar-event"></i>
                 <input type="date" 
@@ -60,9 +63,17 @@
                title="Reset Filter">
                 <i class="bi bi-arrow-clockwise font-bold"></i>
             </a>
+            <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 text-sm font-semibold outline-none shadow">
+                <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
+                <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
+                <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
+                <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
+                <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
+            </select>
         </div>
 
         {{-- STATISTICS CARDS --}}
+{{-- FE-DOC: Kartu statistik dipakai untuk merangkum KPI utama dari laporan yang sedang dibuka. --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {{-- Total Driver Aktif --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow">
@@ -136,9 +147,11 @@
     </form>
 
     {{-- TABLE --}}
+{{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
     <div class="px-8 pb-10 mt-6">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             {{-- Table Header --}}
+{{-- FE-DOC: Header tabel memberikan konteks kolom dan biasanya memuat ringkasan periode aktif. --}}
             <div class="px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -274,12 +287,13 @@
 
     @if(method_exists($data, 'links'))
     <div class="px-8 pb-10">
-        {{ $data->links() }}
+        {{ $data->appends(request()->query())->links() }}
     </div>
     @endif
 </div>
 
 @if(session('success'))
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     Swal.fire({
         icon: 'success',

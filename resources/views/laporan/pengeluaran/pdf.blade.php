@@ -1,11 +1,15 @@
 <!DOCTYPE html>
+<!-- FE-DOC: Template frontend untuk resources/views/laporan/pengeluaran/pdf.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur HTML, CSS, dan JavaScript tanpa mengubah behavior. -->
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <title>Laporan Pengeluaran</title>
+    <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
+        /* Reset dasar supaya hasil render PDF lebih konsisten antar elemen. */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* Tipografi dasar PDF dibuat netral dan aman untuk generator PDF. */
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
             font-size: 11px;
@@ -77,6 +81,7 @@
             margin-bottom: 20px;
         }
         .card {
+            /* Kartu kiri dan kanan memakai base yang sama, warna dibedakan lewat modifier. */
             flex: 1;
             border-radius: 10px;
             padding: 13px 16px;
@@ -133,6 +138,7 @@
         }
 
         /* ── TABLE ── */
+        /* Bungkus tabel agar jarak kiri-kanan konsisten dengan header dan summary. */
         .table-wrapper { padding: 0 28px; }
         table {
             width: 100%;
@@ -157,6 +163,7 @@
         tbody tr {
             border-bottom: 1px solid #F3F4F6;
         }
+        /* Zebra stripe membantu pembacaan saat data pengeluaran banyak. */
         tbody tr:nth-child(even) {
             background-color: #FFFBEB;
         }
@@ -220,7 +227,9 @@
 <body>
 
     {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="header">
+        {{-- Header PDF menampilkan judul laporan dan periode aktif --}}
         <div class="header-inner">
             <div class="header-left">
                 <h1>Laporan Pengeluaran</h1>
@@ -242,13 +251,16 @@
     </div>
 
     {{-- META BAR --}}
+{{-- FE-DOC: Meta bar biasanya menampilkan nama aplikasi, waktu cetak, atau konteks dokumen export. --}}
     <div class="meta-bar">
         <span class="app-name">{{ config('app.name', 'Laundry App') }}</span>
         <span>Dicetak: {{ $tanggal_cetak }} WIB</span>
     </div>
 
     {{-- SUMMARY CARDS --}}
+{{-- FE-DOC: Summary cards menampilkan angka ringkas supaya insight utama terbaca sebelum masuk ke tabel. --}}
     <div class="summary-row">
+        {{-- Summary dipakai untuk membaca total tanpa perlu melihat tabel rincian --}}
         <div class="card">
             <div class="card-label">Total Item Pengeluaran</div>
             <div class="card-value">{{ number_format($pengeluaran->count()) }}</div>
@@ -260,12 +272,15 @@
     </div>
 
     {{-- SECTION TITLE --}}
+{{-- FE-DOC: Section title memisahkan ringkasan dan tabel agar struktur dokumen PDF lebih jelas. --}}
     <div class="section-title">
         <span>Rincian Pengeluaran</span>
     </div>
 
     {{-- TABLE --}}
+{{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
     <div class="table-wrapper">
+        {{-- Struktur tabel sengaja sederhana agar aman saat dirender ke PDF --}}
         <table>
             <thead>
                 <tr>
@@ -307,6 +322,7 @@
     </div>
 
     {{-- FOOTER --}}
+{{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
     <div class="footer">
         <span>{{ config('app.name', 'Aplikasi') }} &bull; Laporan Pengeluaran</span>
         <span>{{ $pengeluaran->count() }} item tercatat &bull; Halaman 1</span>

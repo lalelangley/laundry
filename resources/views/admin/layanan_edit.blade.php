@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin/layanan_edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -7,6 +8,7 @@
 @endphp
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-6 py-4 rounded-b-2xl flex items-center gap-3 shadow w-full sticky top-0 z-10">
     <a href="{{ route('layanan.index') }}"
         class="text-black text-2xl font-bold leading-none hover:scale-110 transition-transform">

@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/riwayat/edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -300,6 +301,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 let currentCard = null;
 let deleteDetailId = null;

@@ -1,8 +1,11 @@
+// FE-DOC: Script frontend untuk public/js/superadmin/layanan.js. Komentar dipakai untuk menandai file ini sebagai bagian dari interaksi UI dan helper JavaScript project.
+
 // public/js/admin/layanan.js
 
 // ════════════════════════════════════════
 // INJECT CSS ANIMATIONS
 // ════════════════════════════════════════
+// FE-DOC: IIFE dipakai untuk membungkus logic agar variabel helper tidak bocor ke scope global.
 (function injectStyles() {
     const style = document.createElement('style');
     style.textContent = `
@@ -351,6 +354,7 @@ sortOptions.forEach(btn => {
 // ── SEARCH ────────────────────────────────────────────
 document.getElementById('searchInput').addEventListener('input', applySortAndSearch);
 
+// FE-DOC: Function berikut mengelola bagian interaksi UI atau helper data sesuai nama tanggung jawabnya.
 function applySortAndSearch() {
     const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
     const list    = document.getElementById('layananList');

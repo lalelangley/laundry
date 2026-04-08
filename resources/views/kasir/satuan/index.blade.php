@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/satuan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('content')
@@ -113,6 +114,7 @@
 </div>
 
 <!-- JAVASCRIPT SEARCH + SORT -->
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 function filterSatuan() {
     let input = document.getElementById("searchInput").value.toLowerCase();

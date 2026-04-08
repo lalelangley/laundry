@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/pengaturan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Pengaturan')
@@ -5,6 +6,7 @@
 @section('content')
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -29,6 +31,7 @@
                         class="w-full h-full object-cover"
                     >
                     @if(!empty($pengaturan['foto_outlet']))
+                    {{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
                     <script>
                         document.addEventListener('DOMContentLoaded', () => {
                             document.getElementById('btnHapusFoto').classList.remove('hidden');

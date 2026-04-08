@@ -603,34 +603,59 @@ class AuthWebController extends Controller
     // Syarat: Validasi akses setiap role berfungsi dengan baik
     // ============================================================
 
+    private function buildPelangganListQuery(Request $request)
+    {
+        $query = Pelanggan::query();
+        $search = trim((string) $request->get('search', ''));
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('nama_pelanggan', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->orWhere('no_hp', 'like', '%' . $search . '%');
+            });
+        }
+
+        $sort = $request->get('sort', 'nama_asc');
+
+        match ($sort) {
+            'nama_desc' => $query->orderBy('nama_pelanggan', 'desc'),
+            'terbaru' => $query->orderBy('id_pelanggan', 'desc'),
+            'terlama' => $query->orderBy('id_pelanggan', 'asc'),
+            default => $query->orderBy('nama_pelanggan', 'asc'),
+        };
+
+        return $query;
+    }
+
     // Halaman daftar pelanggan untuk Super Admin
-    public function pelangganIndex()
+    public function pelangganIndex(Request $request)
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+        $pelanggan = $this->buildPelangganListQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('pelanggan.index', compact('pelanggan'));
     }
 
     // Halaman daftar pelanggan untuk Kasir
-    public function pelangganIndexKasir()
+    public function pelangganIndexKasir(Request $request)
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+        $pelanggan = $this->buildPelangganListQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('kasir.pelanggan.index', compact('pelanggan'));
     }
 
     // Halaman daftar pelanggan untuk Admin Biasa
-    public function pelangganIndexAdmin2()
+    public function pelangganIndexAdmin2(Request $request)
     {
         // Cek permission view pelanggan
         requirePermission('pelanggan', 'view');
-        $pelanggan = Pelanggan::orderBy('nama_pelanggan', 'ASC')
+        $pelanggan = $this->buildPelangganListQuery($request)
             ->paginate(10)
             ->withQueryString();
         return view('admin2.pelanggan.index', compact('pelanggan'));

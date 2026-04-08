@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/transaksi/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
 @section('title', 'Transaksi')
@@ -10,6 +11,7 @@ $keterangan = session('keterangan_transaksi', '');
 @endphp
 
 {{-- HEADER --}}
+{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
    <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -153,6 +155,8 @@ $keterangan = session('keterangan_transaksi', '');
                 <textarea name="keterangan" id="keteranganTransaksi"
                     class="w-full p-3 border rounded-xl"
                     placeholder="Tambahkan keterangan untuk transaksi...">{{ $keterangan }}</textarea>
+
+                {{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 
                 <script>
                     document.getElementById('keteranganTransaksi').addEventListener('input', function () {

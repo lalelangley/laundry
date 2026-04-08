@@ -1,5 +1,8 @@
+// FE-DOC: Script frontend untuk public/js/superadmin/layanan-edit.js. Komentar dipakai untuk menandai file ini sebagai bagian dari interaksi UI dan helper JavaScript project.
+
 // public/js/admin/layanan-edit.js
 
+// FE-DOC: Event DOMContentLoaded memastikan manipulasi elemen dijalankan setelah struktur halaman selesai dimuat.
 document.addEventListener('DOMContentLoaded', function () {
 
     // ════════════════════════════════════════

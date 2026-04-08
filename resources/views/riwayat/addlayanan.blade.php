@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/riwayat/addlayanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 {{-- ============================================================
      HALAMAN: TAMBAH LAYANAN KE TRANSAKSI
      Deskripsi: Menampilkan daftar layanan yang tersedia untuk
@@ -10,6 +11,8 @@
 @section('content')
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
+{{-- FE-DOC: Blok CSS khusus halaman ini. --}}
 
 <style>
     {{-- Animasi goyang untuk validasi form gagal --}}
@@ -345,6 +348,7 @@
 @endsection
 
 @section('scripts')
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 

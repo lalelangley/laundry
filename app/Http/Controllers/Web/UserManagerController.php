@@ -14,10 +14,19 @@ use App\Models\Driver;
 
 class UserManagerController extends Controller
 {
+    private function applyManagerSort($query, string $sort, string $nameColumn, string $idColumn)
+    {
+        return match ($sort) {
+            'nama_desc' => $query->orderBy($nameColumn, 'desc'),
+            'terlama' => $query->orderBy($idColumn, 'asc'),
+            default => $query->orderBy($nameColumn, 'asc'),
+        };
+    }
+
     // =============================
     // INDEX USER MANAGER
     // =============================
-    public function index()
+    public function index(Request $request)
     {
         $adminLogin = auth('admin')->user();
 
@@ -25,16 +34,30 @@ class UserManagerController extends Controller
             abort(403, 'Silahkan login terlebih dahulu');
         }
 
-        $admins = Admin::whereIn('role_id', [1,2])
-            ->orderBy('role_id')
+        $admins = $this->applyManagerSort(
+            Admin::whereIn('role_id', [1,2])->orderBy('role_id'),
+            $request->get('admins_sort', 'nama_asc'),
+            'nama',
+            'id_admin'
+        )
             ->paginate(10, ['*'], 'admins_page')
             ->withQueryString();
 
-        $kasirs = Kasir::orderBy('created_at', 'desc')
+        $kasirs = $this->applyManagerSort(
+            Kasir::query(),
+            $request->get('kasirs_sort', 'nama_asc'),
+            'nama_kasir',
+            'id_kasir'
+        )
             ->paginate(10, ['*'], 'kasirs_page')
             ->withQueryString();
         
-        $drivers = Driver::orderBy('created_at', 'desc')
+        $drivers = $this->applyManagerSort(
+            Driver::query(),
+            $request->get('drivers_sort', 'nama_asc'),
+            'nama_driver',
+            'id_driver'
+        )
             ->paginate(10, ['*'], 'drivers_page')
             ->withQueryString();
 
@@ -558,7 +581,7 @@ class UserManagerController extends Controller
     // =============================
     // ADMIN2 - INDEX KELOLA KASIR
     // =============================
-    public function indexAdmin2()
+    public function indexAdmin2(Request $request)
     {
         $admin = auth('admin')->user();
         
@@ -566,10 +589,20 @@ class UserManagerController extends Controller
             abort(403, 'Akses ditolak. Hanya Admin2 yang dapat mengakses halaman ini.');
         }
 
-        $kasirs = Kasir::orderBy('created_at', 'desc')
+        $kasirs = $this->applyManagerSort(
+            Kasir::query(),
+            $request->get('kasirs_sort', 'nama_asc'),
+            'nama_kasir',
+            'id_kasir'
+        )
             ->paginate(10, ['*'], 'kasirs_page')
             ->withQueryString();
-        $drivers = Driver::orderBy('created_at', 'desc')
+        $drivers = $this->applyManagerSort(
+            Driver::query(),
+            $request->get('drivers_sort', 'nama_asc'),
+            'nama_driver',
+            'id_driver'
+        )
             ->paginate(10, ['*'], 'drivers_page')
             ->withQueryString();
 

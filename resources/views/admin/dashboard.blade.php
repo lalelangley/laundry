@@ -1,3 +1,4 @@
+{{-- FE-DOC: Template frontend untuk resources/views/admin/dashboard.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 {{-- resources/views/admin/dashboard.blade.php --}}
 @extends('layouts.master')
 
@@ -348,7 +349,7 @@
     <div class="px-8 py-6 border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-white rounded-t-3xl">
         <div class="flex justify-between items-center flex-wrap gap-4">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+                <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-md">
                     <i class="bi bi-clock-history text-white text-2xl"></i>
                 </div>
                 <div>
@@ -405,7 +406,7 @@
                                     @endif
                                 </div>
                             @endif
-                        </td>
+                            </td>
 
                         <td class="py-4 px-4">
                             <div class="min-w-[120px]">
@@ -604,6 +605,7 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
     window.DASHBOARD_DATA = {
         userId: {{ auth()->id() }},
