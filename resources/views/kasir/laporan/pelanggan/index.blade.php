@@ -37,12 +37,15 @@
                    value="{{ request('sampai') }}"
                    class="bg-transparent outline-none w-full font-semibold cursor-pointer">
         </div>
-        <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-3 text-sm font-semibold outline-none shadow">
+        <div class="relative w-full sm:w-auto">
+        <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-3 pr-12 text-sm font-semibold outline-none shadow w-full sm:w-auto appearance-none">
             <option value="belanja_tertinggi" {{ request('sort', 'belanja_tertinggi') === 'belanja_tertinggi' ? 'selected' : '' }}>Belanja Tertinggi</option>
             <option value="belanja_terendah" {{ request('sort') === 'belanja_terendah' ? 'selected' : '' }}>Belanja Terendah</option>
             <option value="transaksi_terbanyak" {{ request('sort') === 'transaksi_terbanyak' ? 'selected' : '' }}>Transaksi Terbanyak</option>
             <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
         </select>
+        <i class="bi bi-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+        </div>
         @if(request()->hasAny(['dari', 'sampai', 'sort']))
             <a href="{{ route('kasir.laporan.pelanggan.index') }}" 
                class="bg-gray-200 hover:bg-gray-300 px-4 py-3 rounded-full transition-all"

@@ -8,12 +8,13 @@
 
     {{-- HEADER --}}
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
-    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow flex items-center justify-between">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('laporan.index') }}" class="text-3xl font-bold hover:scale-110 transition-transform">
+    <div class="bg-yellow-400 px-5 py-5 md:px-8 md:py-6 rounded-b-3xl shadow">
+        <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 md:gap-4 min-w-0">
+            <a href="{{ route('laporan.index') }}" class="text-2xl md:text-3xl font-bold hover:scale-110 transition-transform">
                 <i class="bi bi-arrow-left"></i>
             </a>
-            <h1 class="text-2xl font-bold">Laporan Transaksi</h1>
+            <h1 class="text-xl md:text-2xl font-bold">Laporan Transaksi</h1>
         </div>
 
         <div class="flex gap-5 text-xl">
@@ -24,15 +25,16 @@
                 <i class="bi bi-sort-down"></i>
             </button>
         </div>
+        </div>
     </div>
 
     {{-- FORM FILTER --}}
-    <form method="GET" action="{{ route('laporan.transaksi.index') }}" id="filterForm" class="px-8 mt-6 space-y-4">
+    <form method="GET" action="{{ route('laporan.transaksi.index') }}" id="filterForm" class="px-5 md:px-8 mt-6 space-y-4">
 
         {{-- FILTER TANGGAL --}}
 {{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
-        <div class="flex items-center gap-4">
-            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+        <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
                 <i class="bi bi-calendar-event"></i>
                 <input type="date" 
                        name="dari" 
@@ -41,9 +43,9 @@
                        class="bg-transparent outline-none w-full font-semibold cursor-pointer">
             </div>
 
-            <span class="font-bold text-gray-700">s/d</span>
+            <span class="font-bold text-gray-700 hidden xl:block">s/d</span>
 
-            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
                 <i class="bi bi-calendar-event"></i>
                 <input type="date" 
                        name="sampai" 
@@ -52,12 +54,14 @@
                        class="bg-transparent outline-none w-full font-semibold cursor-pointer">
             </div>
 
+            <div class="flex flex-wrap gap-3">
             <button type="button" 
                     id="resetDate"
                     class="bg-gray-200 hover:bg-gray-300 px-4 py-4 rounded-full transition-all"
                     title="Reset Tanggal">
                 <i class="bi bi-arrow-clockwise font-bold"></i>
             </button>
+            </div>
         </div>
 
         {{-- ADVANCED FILTERS (Collapsible) --}}
@@ -110,7 +114,7 @@
             {{-- Status Pembayaran --}}
             <div class="bg-white rounded-2xl shadow p-6">
                 <label class="block text-sm font-bold text-gray-700 mb-3">Status Pembayaran</label>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="bayar[]" value="lunas" 
                                {{ in_array('lunas', request('bayar', [])) ? 'checked' : '' }}
@@ -187,7 +191,7 @@
 
         {{-- SEARCH --}}
 {{-- FE-DOC: Input pencarian ini membantu user menemukan data spesifik berdasarkan kata kunci. --}}
-        <div class="bg-white rounded-full shadow flex items-center px-6 py-4 gap-4">
+        <div class="bg-white rounded-3xl sm:rounded-full shadow flex flex-col sm:flex-row items-stretch sm:items-center px-6 py-4 gap-4">
             <i class="bi bi-search text-xl text-gray-400"></i>
 
             <input
@@ -199,13 +203,13 @@
             >
 
             <button type="submit"
-                    class="bg-yellow-400 hover:bg-yellow-500 px-6 py-2 rounded-full font-bold transition-all">
+                    class="bg-yellow-400 hover:bg-yellow-500 px-6 py-2 rounded-full font-bold transition-all w-full sm:w-auto">
                 Cari
             </button>
 
             @if(request()->hasAny(['q', 'dari', 'sampai', 'status', 'bayar', 'jenis', 'sort']))
                 <a href="{{ route('laporan.transaksi.index') }}"
-                   class="bg-gray-200 hover:bg-gray-300 px-6 py-2 rounded-full font-bold transition-all">
+                   class="bg-gray-200 hover:bg-gray-300 px-6 py-2 rounded-full font-bold transition-all text-center w-full sm:w-auto">
                     Reset
                 </a>
             @endif
@@ -215,13 +219,13 @@
 
     {{-- SUMMARY --}}
 {{-- FE-DOC: Summary section menampilkan total atau agregasi hasil filter aktif. --}}
-    <div class="px-8 mt-6">
+    <div class="px-5 md:px-8 mt-6">
         <div class="bg-white border-2 border-yellow-400 rounded-2xl p-6 font-semibold">
-            <div class="flex justify-between text-lg">
+            <div class="flex flex-col gap-1 sm:flex-row sm:justify-between text-base md:text-lg">
                 <span>Total Omzet</span>
-                <span class="text-orange-600 font-bold">Rp {{ number_format($totalOmzet,0,',','.') }}</span>
+                <span class="text-orange-600 font-bold break-words">Rp {{ number_format($totalOmzet,0,',','.') }}</span>
             </div>
-            <div class="flex justify-between text-lg mt-2">
+            <div class="flex flex-col gap-1 sm:flex-row sm:justify-between text-base md:text-lg mt-2">
                 <span>Jumlah Transaksi</span>
                 <span class="text-yellow-600 font-bold">{{ $jumlah }}</span>
             </div>
@@ -230,10 +234,10 @@
 
     {{-- LIST TRANSAKSI --}}
 {{-- FE-DOC: List transaksi memakai card layout supaya detail status, pembayaran, dan nominal lebih mudah discan. --}}
-    <div class="px-8 mt-6 space-y-4 pb-10">
+    <div class="px-5 md:px-8 mt-6 space-y-4 pb-10">
 
         @forelse ($transaksi as $t)
-        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 flex gap-6 border border-gray-200">
+        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-5 md:p-6 flex flex-col sm:flex-row gap-4 md:gap-6 border border-gray-200">
 
             {{-- AVATAR --}}
             <div class="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-yellow-400 to-orange-500 flex-shrink-0 flex items-center justify-center shadow-md">
@@ -276,11 +280,11 @@
 
             {{-- INFO --}}
             <div class="flex-1">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-800">{{ $t->nama_pelanggan }}</h3>
+                <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:items-start">
+                    <div class="min-w-0">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 break-words">{{ $t->nama_pelanggan }}</h3>
                         
-                        <div class="flex gap-2 mt-2">
+                        <div class="flex flex-wrap gap-2 mt-2">
                             @if($t->jenis_transaksi === 'online')
                                 <span class="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
                                     <i class="bi bi-globe"></i>
@@ -325,8 +329,8 @@
                             @endif
                         </div>
                     </div>
-                    <div class="text-right">
-                        <span class="text-2xl font-bold text-orange-600">
+                    <div class="text-left lg:text-right">
+                        <span class="text-xl md:text-2xl font-bold text-orange-600 break-words">
                             Rp {{ number_format($t->total_bayar ?? 0, 0, ',', '.') }}
                         </span>
                         @if($t->total_harga && $t->total_harga != $t->total_bayar)
@@ -337,7 +341,7 @@
                     </div>
                 </div>
 
-                <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                         <i class="bi bi-hash text-yellow-500"></i>
                         <div class="flex-1">
@@ -409,7 +413,7 @@
                     @endif
 
                     @if($t->keterangan)
-                    <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg col-span-2">
+                    <div class="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg md:col-span-2">
                         <i class="bi bi-chat-left-text text-yellow-500"></i>
                         <div class="flex-1">
                             <div class="text-gray-500 text-xs">Keterangan</div>
@@ -433,14 +437,14 @@
     {{-- PAGINATION --}}
 {{-- FE-DOC: Pagination menjaga jumlah data per halaman tetap nyaman dibaca dan performa tetap ringan. --}}
     @if($transaksi->hasPages())
-        <div class="px-8 pb-10">
+        <div class="px-5 md:px-8 pb-10">
             <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="text-sm text-gray-600">
                         Menampilkan {{ $transaksi->firstItem() ?? 0 }} - {{ $transaksi->lastItem() ?? 0 }} dari {{ $transaksi->total() }} transaksi
                     </div>
                     
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         {{-- Previous Button --}}
                         @if ($transaksi->onFirstPage())
                             <span class="px-4 py-2 bg-gray-100 text-gray-400 rounded-lg font-semibold cursor-not-allowed">

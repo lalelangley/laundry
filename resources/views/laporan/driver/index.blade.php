@@ -6,26 +6,26 @@
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
-    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="{{ route('laporan.index') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+    <div class="bg-yellow-400 px-5 py-5 md:px-8 md:py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-3 md:gap-4 min-w-0">
+                <a href="{{ route('laporan.index') }}" class="text-black text-2xl md:text-3xl font-bold hover:opacity-80 transition">
                     <i class="bi bi-arrow-left"></i>
                 </a>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Laporan Driver</h1>
+                <div class="min-w-0">
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900">Laporan Driver</h1>
                     <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <a href="{{ route('laporan.driver.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
-                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-3 rounded-full transition-all shadow">
+                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2.5 rounded-full transition-all shadow text-sm">
                     <i class="bi bi-file-earmark-pdf text-xl"></i>
                     PDF
                 </a>
                 <a href="{{ route('laporan.driver.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
-                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-5 py-3 rounded-full transition-all shadow">
+                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2.5 rounded-full transition-all shadow text-sm">
                     <i class="bi bi-file-earmark-spreadsheet text-xl"></i>
                     Excel
                 </a>
@@ -33,12 +33,12 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('laporan.driver.index') }}" id="filterForm" class="px-8 mt-6 space-y-4">
+    <form method="GET" action="{{ route('laporan.driver.index') }}" id="filterForm" class="px-5 md:px-8 mt-6 space-y-4">
 
         {{-- FILTER TANGGAL --}}
 {{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
-        <div class="flex flex-wrap items-center gap-4">
-            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+        <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
                 <i class="bi bi-calendar-event"></i>
                 <input type="date" 
                        name="dari" 
@@ -47,9 +47,9 @@
                        class="bg-transparent outline-none w-full font-semibold cursor-pointer">
             </div>
 
-            <span class="font-bold text-gray-700">s/d</span>
+            <span class="font-bold text-gray-700 hidden xl:block">s/d</span>
 
-            <div class="flex-1 bg-yellow-400 rounded-full px-6 py-4 flex items-center gap-3 font-semibold">
+            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
                 <i class="bi bi-calendar-event"></i>
                 <input type="date" 
                        name="sampai" 
@@ -58,18 +58,23 @@
                        class="bg-transparent outline-none w-full font-semibold cursor-pointer">
             </div>
             
+            <div class="flex flex-wrap gap-3">
             <a href="{{ route('laporan.driver.index') }}" 
                class="bg-gray-200 hover:bg-gray-300 px-4 py-4 rounded-full transition-all"
                title="Reset Filter">
                 <i class="bi bi-arrow-clockwise font-bold"></i>
             </a>
-            <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 text-sm font-semibold outline-none shadow">
-                <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
-                <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
-                <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
-                <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
-                <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
-            </select>
+            <div class="relative w-full sm:w-auto">
+                <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 pr-12 text-sm font-semibold outline-none shadow w-full sm:w-auto appearance-none">
+                    <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
+                    <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
+                    <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
+                    <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
+                    <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
+                </select>
+                <i class="bi bi-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+            </div>
+            </div>
         </div>
 
         {{-- STATISTICS CARDS --}}
@@ -77,7 +82,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {{-- Total Driver Aktif --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                     <div class="flex-1">
                         <p class="text-sm text-gray-500 font-semibold mb-2">Total Driver Aktif</p>
                         <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_driver_aktif'] }}</h3>
@@ -90,11 +95,11 @@
 
             {{-- Total Pengiriman --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                     <div class="flex-1">
                         <p class="text-sm text-gray-500 font-semibold mb-2">Total Pengiriman</p>
                         <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_pengiriman'] }}</h3>
-                        <div class="flex gap-3 mt-2">
+                        <div class="flex flex-wrap gap-3 mt-2">
                             <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 font-semibold rounded-full">
                                 {{ $stats['total_pickup'] }} Pickup
                             </span>
@@ -111,7 +116,7 @@
 
             {{-- Berhasil Terkirim --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-green-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-3">
                     <div class="flex-1">
                         <p class="text-sm text-gray-500 font-semibold mb-2">Berhasil Terkirim</p>
                         <h3 class="text-3xl font-bold text-green-600">{{ $stats['total_terkirim'] }}</h3>
@@ -130,13 +135,13 @@
 
             {{-- Gagal & Dalam Proses --}}
             <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between">
-                    <div class="flex-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex-1 text-left">
                         <p class="text-sm text-gray-500 font-bold mb-2">Status</p>
-                            <div class="text-center">
-                                <h3 class="text-3xl font-bold text-orange-500">{{ $stats['total_proses'] }}</h3>
-                                <p class="text-sm font-bold text-gray-700">Proses</p>
-                            </div>
+                        <div class="space-y-1 text-left">
+                            <h3 class="text-3xl font-bold text-orange-500 leading-none">{{ $stats['total_proses'] }}</h3>
+                            <p class="text-sm font-bold text-gray-700">Proses</p>
+                        </div>
                     </div>
                     <div class="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                         <i class="bi bi-hourglass-split text-3xl text-orange-600"></i>
@@ -148,17 +153,17 @@
 
     {{-- TABLE --}}
 {{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
-    <div class="px-8 pb-10 mt-6">
+    <div class="px-5 md:px-8 pb-10 mt-6">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             {{-- Table Header --}}
 {{-- FE-DOC: Header tabel memberikan konteks kolom dan biasanya memuat ringkasan periode aktif. --}}
-            <div class="px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
+            <div class="px-5 md:px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-3 min-w-0">
                         <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
                             <i class="bi bi-graph-up text-white text-xl"></i>
                         </div>
-                        <div>
+                        <div class="min-w-0">
                             <h2 class="text-lg font-bold text-gray-900">Performa Driver</h2>
                             <p class="text-sm text-gray-500">
                                 Periode: <span class="font-semibold">{{ \Carbon\Carbon::parse($tglAwal)->format('d M Y') }}</span> - 
@@ -174,7 +179,7 @@
 
             {{-- Table --}}
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full min-w-[820px]">
                     <thead>
                         <tr class="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
                             <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No</th>

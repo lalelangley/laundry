@@ -1,165 +1,165 @@
 {{-- FE-DOC: Template frontend untuk resources/views/laporan/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
-@section('title', 'Kelola Pelanggan')
+@section('title', 'Laporan')
 @section('content')
 
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
-    <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('admin.dashboard') }}" class="text-black text-3xl font-bold hover:opacity-80 transition">
+    <div class="bg-yellow-400 px-5 py-5 md:px-8 md:py-6 rounded-b-3xl flex items-center gap-3 md:gap-4 shadow-lg">
+        <a href="{{ route('admin.dashboard') }}" class="text-black text-2xl md:text-3xl font-bold hover:opacity-80 transition">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <span class="text-2xl font-bold text-gray-900">Kelola Laporan
+        <span class="text-xl md:text-2xl font-bold text-gray-900">Kelola Laporan
         </span>
     </div>
 
     {{-- TABS CONTAINER --}}
-    <div class="px-8 pt-8 pb-12">
+    <div class="px-4 pt-6 pb-10 md:px-8 md:pt-8 md:pb-12">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             
             {{-- TABS NAVIGATION --}}
-            <div class="flex border-b border-gray-200 bg-gray-50">
+            <div class="flex overflow-x-auto border-b border-gray-200 bg-gray-50">
                 <button onclick="openTab('laporan')" id="tab-laporan"
-                    class="flex-1 px-8 py-5 text-center font-semibold text-lg border-b-4 border-yellow-400 bg-white text-gray-900 transition">
+                    class="flex-1 min-w-[150px] px-4 py-4 text-center font-semibold text-sm md:px-8 md:py-5 md:text-lg border-b-4 border-yellow-400 bg-white text-gray-900 transition">
                     <i class="bi bi-bar-chart-fill me-2"></i> Laporan
                 </button>
                 
                 <button onclick="openTab('transaksi')" id="tab-transaksi"
-                    class="flex-1 px-8 py-5 text-center font-semibold text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
+                    class="flex-1 min-w-[150px] px-4 py-4 text-center font-semibold text-sm md:px-8 md:py-5 md:text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
                     <i class="bi bi-credit-card-fill me-2"></i> Transaksi
                 </button>
                 
                 <button onclick="openTab('data')" id="tab-data"
-                    class="flex-1 px-8 py-5 text-center font-semibold text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
+                    class="flex-1 min-w-[150px] px-4 py-4 text-center font-semibold text-sm md:px-8 md:py-5 md:text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition">
                     <i class="bi bi-database-fill me-2"></i> Data & Export
                 </button>
             </div>
 
             {{-- TAB CONTENT: LAPORAN --}}
 {{-- FE-DOC: Tab laporan memuat navigasi ke modul laporan utama. --}}
-            <div id="laporan" class="tab-content p-12">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
+            <div id="laporan" class="tab-content p-5 md:p-12">
+                <h3 class="text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500 mb-6 md:mb-8">
                     <i class="bi bi-graph-up me-2"></i>Laporan Utama
                 </h3>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <a href="{{ route('laporan.transaksi.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-receipt text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-receipt text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Transaksi</h4>
-                            <p class="text-gray-600">Lihat semua transaksi yang telah dilakukan</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Transaksi</h4>
+                            <p class="text-sm md:text-base text-gray-600">Lihat semua transaksi yang telah dilakukan</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                     
                     <a href="{{ route('laporan.pengeluaran.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-wallet2 text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-wallet2 text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Pengeluaran</h4>
-                            <p class="text-gray-600">Monitor dan analisis pengeluaran bisnis</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Pengeluaran</h4>
+                            <p class="text-sm md:text-base text-gray-600">Monitor dan analisis pengeluaran bisnis</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                     
                     <a href="{{ route('laporan.pelanggan.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-people text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-people text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Pelanggan</h4>
-                            <p class="text-gray-600">Data lengkap tentang pelanggan Anda</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Pelanggan</h4>
+                            <p class="text-sm md:text-base text-gray-600">Data lengkap tentang pelanggan Anda</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                 </div>
             </div>
 
             {{-- TAB CONTENT: TRANSAKSI --}}
 {{-- FE-DOC: Tab transaksi berisi laporan yang berhubungan dengan proses operasional dan pembayaran. --}}
-            <div id="transaksi" class="tab-content p-12 hidden">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
+            <div id="transaksi" class="tab-content p-5 md:p-12 hidden">
+                <h3 class="text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500 mb-6 md:mb-8">
                     <i class="bi bi-cash-stack me-2"></i>Informasi Transaksi
                 </h3>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <a href="{{ route('laporan.kasir.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-person-badge text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-person-badge text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Kasir</h4>
-                            <p class="text-gray-600">Pantau performa kasir per periode</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Kasir</h4>
+                            <p class="text-sm md:text-base text-gray-600">Pantau performa kasir per periode</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                     
                     <a href="{{ route('laporan.bayar.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-credit-card-2-front text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-credit-card-2-front text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Metode Bayar</h4>
-                            <p class="text-gray-600">Analisis metode pembayaran pelanggan</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Metode Bayar</h4>
+                            <p class="text-sm md:text-base text-gray-600">Analisis metode pembayaran pelanggan</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                     
                     <a href="{{ route('laporan.driver.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-truck text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-truck text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Driver</h4>
-                            <p class="text-gray-600">Pantau performa driver dan pengiriman</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Driver</h4>
+                            <p class="text-sm md:text-base text-gray-600">Pantau performa driver dan pengiriman</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                     
                     <a href="{{ route('laporan.satuan.index') }}" 
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-box-seam text-white text-4xl"></i>
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all">
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-box-seam text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Laporan Satuan</h4>
-                            <p class="text-gray-600">Detail laporan berdasarkan satuan produk</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Laporan Satuan</h4>
+                            <p class="text-sm md:text-base text-gray-600">Detail laporan berdasarkan satuan produk</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </a>
                 </div>
             </div>
 
             {{-- TAB CONTENT: DATA & EXPORT --}}
 {{-- FE-DOC: Tab data dan export menampung aksi download atau backup data. --}}
-            <div id="data" class="tab-content p-12 hidden">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-8">
+            <div id="data" class="tab-content p-5 md:p-12 hidden">
+                <h3 class="text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500 mb-6 md:mb-8">
                     <i class="bi bi-file-earmark-arrow-down me-2"></i>Export & Backup Data
                 </h3>
                 
                 {{-- Kartu aksi export dibuat responsif: 1 kolom di mobile, melebar di layar besar --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     <button type="button" onclick="openExportModal()"
-                       class="flex items-center gap-6 p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all text-left w-full">
+                       class="flex flex-col items-start gap-4 p-5 md:flex-row md:items-center md:gap-6 md:p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-yellow-400 hover:shadow-xl transition-all text-left w-full">
                         {{-- Ikon utama memakai gradient kuning agar konsisten dengan area laporan --}}
-                        <div class="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
-                            <i class="bi bi-file-earmark-arrow-down text-white text-4xl"></i>
+                        <div class="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex-shrink-0">
+                            <i class="bi bi-file-earmark-arrow-down text-white text-3xl md:text-4xl"></i>
                         </div>
                         <div class="flex-1">
-                            <h4 class="font-semibold text-xl text-gray-900 mb-2">Export Data Transaksi</h4>
-                            <p class="text-gray-600">Download laporan transaksi dalam format Excel atau PDF</p>
+                            <h4 class="font-semibold text-lg md:text-xl text-gray-900 mb-1 md:mb-2">Export Data Transaksi</h4>
+                            <p class="text-sm md:text-base text-gray-600">Download laporan transaksi dalam format Excel atau PDF</p>
                         </div>
-                        <i class="bi bi-arrow-right text-2xl text-gray-400"></i>
+                        <i class="bi bi-arrow-right text-xl md:text-2xl text-gray-400 self-end md:self-auto"></i>
                     </button> 
                 </div>
             </div>
@@ -172,7 +172,7 @@
     {{-- Shell modal memakai panel terang, radius besar, dan shadow tebal agar terasa seperti dialog utama --}}
     <div class="bg-[#fcfcfb] rounded-[32px] shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden animate-fadeIn export-modal-shell">
         <div class="overflow-y-auto max-h-[95vh]">
-            <form action="{{ route('laporan.transaksi.export') }}" method="POST" class="p-8 md:p-10 space-y-6" data-no-loading>
+            <form action="{{ route('laporan.transaksi.export') }}" method="POST" class="p-5 md:p-10 space-y-6" data-no-loading>
                 @csrf
                 {{-- Hidden input ini diubah via JS supaya satu form bisa kirim Excel atau PDF --}}
                 <input type="hidden" name="format" id="exportFormat" value="excel">
@@ -356,8 +356,9 @@ function openTab(tabName) {
     
     // Reset semua button tab ke state default
     const tabButtons = ['tab-laporan', 'tab-transaksi', 'tab-data'];
-    const defaultClass = 'flex-1 px-8 py-5 text-center font-semibold text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition';
-    const activeClass = 'flex-1 px-8 py-5 text-center font-semibold text-lg border-b-4 border-yellow-400 bg-white text-gray-900 transition';
+    const baseClass = 'flex-1 min-w-[150px] px-4 py-4 text-center font-semibold text-sm md:px-8 md:py-5 md:text-lg border-b-4 transition';
+    const defaultClass = baseClass + ' border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100';
+    const activeClass = baseClass + ' border-yellow-400 bg-white text-gray-900';
     
     tabButtons.forEach(function(btnId) {
         const btn = document.getElementById(btnId);
@@ -392,7 +393,7 @@ function openExportModal() {
 function closeExportModal() {
     const modal = document.getElementById('exportModal');
     if (modal) {
-        const content = modal.querySelector('.bg-white');
+        const content = modal.querySelector('.export-modal-shell');
         if (content) {
             content.style.opacity = '0';
             content.style.transform = 'scale(0.95) translateY(-20px)';

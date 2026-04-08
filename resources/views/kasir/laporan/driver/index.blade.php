@@ -51,13 +51,16 @@
                title="Reset Filter">
                 <i class="bi bi-arrow-clockwise font-bold"></i>
             </a>
-            <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 text-sm font-semibold outline-none shadow">
-                <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
-                <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
-                <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
-                <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
-                <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
-            </select>
+            <div class="relative w-full sm:w-auto">
+                <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 pr-12 text-sm font-semibold outline-none shadow w-full sm:w-auto appearance-none">
+                    <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
+                    <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
+                    <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
+                    <option value="nama_az" {{ request('sort') === 'nama_az' ? 'selected' : '' }}>Nama A-Z</option>
+                    <option value="nama_za" {{ request('sort') === 'nama_za' ? 'selected' : '' }}>Nama Z-A</option>
+                </select>
+                <i class="bi bi-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+            </div>
         </div>
 
         {{-- STATISTICS CARDS --}}
