@@ -42,7 +42,7 @@
         </div>
     @endif
 
-    <form action="{{ isset($jenis) ? route('kasir.layanan.jenis.update', $jenis->id_jenis_layanan) : route('kasir.ayanan.jenis.store', $idLayanan) }}" 
+    <form action="{{ isset($jenis) ? route('kasir.layanan.jenis.update', $jenis->id_jenis_layanan) : route('kasir.layanan.jenis.store', $idLayanan) }}" 
           method="POST" 
           enctype="multipart/form-data"
           class="bg-white p-6 rounded-2xl shadow-lg space-y-6">

@@ -376,10 +376,14 @@ class RiwayatController extends Controller
         foreach ($request->detail as $id_detail => $d) {
             $detail = DetailTransaksi::find($id_detail);
             if ($detail) {
+                $hargaEfektif = $detail->harga > 0
+                    ? $detail->harga
+                    : ($detail->jenis->harga ?? 0);
+
                 $detail->update([
                     'qty'       => $d['qty'],
                     'id_parfum' => $d['id_parfum'] ?? null,
-                    'harga'     => $detail->harga,
+                    'harga'     => $hargaEfektif,
                 ]);
             }
         }
@@ -985,10 +989,14 @@ class RiwayatController extends Controller
         foreach ($request->detail as $id_detail => $d) {
             $detail = DetailTransaksi::find($id_detail);
             if ($detail) {
+                $hargaEfektif = $detail->harga > 0
+                    ? $detail->harga
+                    : ($detail->jenis->harga ?? 0);
+
                 $detail->update([
                     'qty'       => $d['qty'],
                     'id_parfum' => $d['id_parfum'] ?? null,
-                    'harga'     => $detail->harga
+                    'harga'     => $hargaEfektif
                 ]);
             }
         }
@@ -1355,10 +1363,14 @@ class RiwayatController extends Controller
         foreach ($request->detail as $id_detail => $d) {
             $detail = DetailTransaksi::find($id_detail);
             if ($detail) {
+                $hargaEfektif = $detail->harga > 0
+                    ? $detail->harga
+                    : ($detail->jenis->harga ?? 0);
+
                 $detail->update([
                     'qty'       => $d['qty'],
                     'id_parfum' => $d['id_parfum'] ?? null,
-                    'harga'     => $detail->harga
+                    'harga'     => $hargaEfektif
                 ]);
             }
         }

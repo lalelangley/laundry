@@ -176,7 +176,7 @@
         </div>
 
         {{-- BUTTON TAMBAH --}}
-       <a href="{{ route('admin2.layanan.jenis.tambah', $layanan->id_layanan) }}"
+       <a href="{{ route('admin2.layanan.jenis.create', $layanan->id_layanan) }}"
         class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-black 
                 text-center py-3 rounded-xl font-semibold text-lg inline-flex items-center justify-center gap-2">
             <i class="bi bi-plus-circle text-xl"></i> 

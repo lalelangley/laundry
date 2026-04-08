@@ -88,12 +88,15 @@
                         @endphp
                         
                         @foreach ($detail->sortByDesc('id_detail_transaksi') as $index => $d)
+                        @php
+                            $hargaItem = (float) ($d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0));
+                        @endphp
                         <div class="group bg-gray-100 rounded-3xl p-5 shadow hover:shadow-xl transition-all layanan-item {{ $isNewItem && $index === 0 ? 'ring-4 ring-green-500 animate-pulse' : '' }}"
                             data-id="{{ $d->id_detail_transaksi }}"
                             data-nama="{{ $d->jenis->nama_jenis ?? 'Layanan' }}"
                             data-qty="{{ $d->qty }}"
                             data-parfum="{{ $d->id_parfum ?? '' }}"
-                            data-harga="{{ $d->harga }}"
+                            data-harga="{{ $hargaItem }}"
                             data-satuan="{{ $d->jenis->satuan->nama_satuan ?? 'Pcs' }}">
 
                             <div class="flex gap-4">
@@ -122,7 +125,7 @@
                                     </p>
                                     
                                     <p class="text-sm text-gray-600 mt-1">
-                                        Rp{{ number_format($d->harga, 0, ',', '.') }} / 
+                                        Rp{{ number_format($hargaItem, 0, ',', '.') }} / 
                                         {{ $d->jenis->satuan->nama_satuan ?? 'Pcs' }}
                                     </p>
                                     
@@ -133,7 +136,7 @@
                                     </p>
 
                                     <p class="font-semibold text-green-600 mt-2 subtotal">
-                                        SubTotal: Rp{{ number_format($d->qty * $d->harga, 0, ',', '.') }}
+                                        SubTotal: Rp{{ number_format($d->qty * $hargaItem, 0, ',', '.') }}
                                     </p>
 
                                     <input type="hidden" name="detail[{{ $d->id_detail_transaksi }}][qty]" value="{{ $d->qty }}" class="qty-input">
@@ -180,7 +183,7 @@
         <div>
             <p class="text-sm text-gray-700">Total Harga</p>
             <p class="text-2xl font-bold text-gray-900" id="totalHarga">
-                Rp{{ number_format($detail->sum(fn($d) => $d->qty * $d->harga),0,',','.') }}
+                Rp{{ number_format($detail->sum(fn($d) => $d->qty * ($d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0))),0,',','.') }}
             </p>
         </div>
 

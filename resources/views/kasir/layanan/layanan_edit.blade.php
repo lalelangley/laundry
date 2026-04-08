@@ -147,7 +147,7 @@
         </div>
 
         {{-- BUTTON TAMBAH --}}
-       <a href="{{ route('kasir.layanan.jenis.tambah', $layanan->id_layanan) }}"
+       <a href="{{ route('kasir.layanan.jenis.session.form', $layanan->id_layanan) }}"
         class="block mt-6 bg-yellow-400 hover:bg-yellow-500 transition text-white 
                 text-center py-3 rounded-xl font-semibold text-lg">
             <i class="bi bi-plus-circle text-lg"></i> Tambah Jenis
