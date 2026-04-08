@@ -90,8 +90,36 @@
                             @enderror
                         </div>
 
-                        {{-- ===== NO TELEPON ===== --}}
+                        {{-- ===== EMAIL ===== --}}
                         <div class="lg:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Email <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-envelope-fill text-lg
+                                        {{ $errors->has('email') ? 'text-red-400' : 'text-gray-400' }}"></i>
+                                </div>
+                                <input type="email"
+                                       name="email"
+                                       value="{{ old('email') }}"
+                                       class="w-full border-2 rounded-xl pl-14 pr-6 py-4 transition outline-none
+                                              {{ $errors->has('email')
+                                                 ? 'border-red-400 bg-red-50 focus:border-red-500 focus:ring-4 focus:ring-red-100'
+                                                 : 'border-gray-300 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                       placeholder="Contoh: kasir@kasmini.com"
+                                       required>
+                            </div>
+                            @error('email')
+                                <p class="mt-2 text-sm text-red-600 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
+                        {{-- ===== NO TELEPON ===== --}}
+                        <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 No. Telepon <span class="text-gray-400 text-xs">(Opsional)</span>
                             </label>
@@ -186,7 +214,7 @@
             <div class="text-sm text-blue-800">
                 <p class="font-semibold mb-2">Informasi Penting</p>
                 <p>Kasir yang ditambahkan akan mendapatkan akses ke sistem sesuai dengan hak akses yang telah ditentukan.
-                   Pastikan <strong>nama kasir</strong> dan <strong>nomor HP</strong> belum terdaftar di sistem sebelum menyimpan.</p>
+                   Pastikan <strong>nama kasir</strong>, <strong>email</strong>, dan <strong>nomor HP</strong> belum terdaftar di sistem sebelum menyimpan.</p>
             </div>
         </div>
 

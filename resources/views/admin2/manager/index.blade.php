@@ -76,6 +76,7 @@ $adminLogin = auth()->guard('admin')->user();
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200">
                             <th class="px-8 py-4 text-left text-sm font-semibold text-gray-700">Nama</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
                             <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">No HP</th>
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Status</th>
                             <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Aksi</th>
@@ -92,6 +93,7 @@ $adminLogin = auth()->guard('admin')->user();
                                         <span class="font-medium text-gray-900">{{ $kasir->nama_kasir ?? '-' }}</span>
                                     </div>
                                 </td>
+                                <td class="px-6 py-4 text-gray-700">{{ $kasir->email ?? '-' }}</td>
                                 <td class="px-6 py-4 text-gray-700">{{ $kasir->no_hp ?? '-' }}</td>
                                 <td class="px-6 py-4 text-center">
                                     <form action="{{ route('admin2.manager.update.status') }}" method="POST" class="inline-block">
@@ -124,7 +126,7 @@ $adminLogin = auth()->guard('admin')->user();
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-8 py-12 text-center">
+                                <td colspan="5" class="px-8 py-12 text-center">
                                     <div class="flex flex-col items-center gap-2">
                                         <i class="bi bi-inbox text-4xl text-gray-300"></i>
                                         <p class="text-gray-500 font-medium">Belum ada kasir</p>

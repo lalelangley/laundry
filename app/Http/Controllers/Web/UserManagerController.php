@@ -239,15 +239,20 @@ class UserManagerController extends Controller
     {
         $request->validate([
             'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir',
+            'email'      => 'required|email|max:255|unique:kasir,email',
             'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp',
             'password'   => 'required|string|min:6',
         ], [
             'nama_kasir.unique' => 'Nama kasir sudah terdaftar, gunakan nama lain.',
+            'email.required'    => 'Email kasir wajib diisi.',
+            'email.email'       => 'Format email kasir tidak valid.',
+            'email.unique'      => 'Email sudah digunakan oleh kasir lain.',
             'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         Kasir::create([
             'nama_kasir' => $request->nama_kasir,
+            'email'      => $request->email,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
             'role_id'    => 3,
@@ -634,15 +639,20 @@ class UserManagerController extends Controller
 
         $request->validate([
             'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir',
+            'email'      => 'required|email|max:255|unique:kasir,email',
             'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp',
             'password'   => 'required|string|min:6',
         ], [
             'nama_kasir.unique' => 'Nama kasir sudah terdaftar, gunakan nama lain.',
+            'email.required'    => 'Email kasir wajib diisi.',
+            'email.email'       => 'Format email kasir tidak valid.',
+            'email.unique'      => 'Email sudah digunakan oleh kasir lain.',
             'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         Kasir::create([
             'nama_kasir' => $request->nama_kasir,
+            'email'      => $request->email,
             'no_hp'      => $request->no_hp,
             'password'   => Hash::make($request->password),
             'role_id'    => 3,
@@ -1396,16 +1406,21 @@ class UserManagerController extends Controller
 
         $request->validate([
             'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir,' . $kasir->id_kasir . ',id_kasir',
+            'email'      => 'required|email|max:255|unique:kasir,email,' . $kasir->id_kasir . ',id_kasir',
             'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp,' . $kasir->id_kasir . ',id_kasir',
             'password'   => 'nullable|string|min:6',
             'status'     => 'required|in:aktif,nonaktif',
         ], [
             'nama_kasir.unique' => 'Nama kasir sudah digunakan oleh kasir lain.',
+            'email.required'    => 'Email kasir wajib diisi.',
+            'email.email'       => 'Format email kasir tidak valid.',
+            'email.unique'      => 'Email sudah digunakan oleh kasir lain.',
             'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         $updateData = [
             'nama_kasir' => $request->nama_kasir,
+            'email'      => $request->email,
             'no_hp'      => $request->no_hp,
             'status'     => $request->status,
         ];
@@ -1437,16 +1452,21 @@ class UserManagerController extends Controller
 
         $request->validate([
             'nama_kasir' => 'required|string|max:100|unique:kasir,nama_kasir,' . $kasir->id_kasir . ',id_kasir',
+            'email'      => 'required|email|max:255|unique:kasir,email,' . $kasir->id_kasir . ',id_kasir',
             'no_hp'      => 'nullable|string|max:20|unique:kasir,no_hp,' . $kasir->id_kasir . ',id_kasir',
             'password'   => 'nullable|string|min:6',
             'status'     => 'required|in:aktif,nonaktif',
         ], [
             'nama_kasir.unique' => 'Nama kasir sudah digunakan oleh kasir lain.',
+            'email.required'    => 'Email kasir wajib diisi.',
+            'email.email'       => 'Format email kasir tidak valid.',
+            'email.unique'      => 'Email sudah digunakan oleh kasir lain.',
             'no_hp.unique'      => 'Nomor HP sudah digunakan oleh kasir lain.',
         ]);
 
         $updateData = [
             'nama_kasir' => $request->nama_kasir,
+            'email'      => $request->email,
             'no_hp'      => $request->no_hp,
             'status'     => $request->status,
         ];

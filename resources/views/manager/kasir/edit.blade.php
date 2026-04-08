@@ -83,6 +83,30 @@
                             @enderror
                         </div>
 
+                        {{-- Email --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Email <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-envelope-fill text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="email"
+                                       name="email"
+                                       value="{{ old('email', $kasir->email) }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('email') border-red-300 @enderror"
+                                       placeholder="Contoh: kasir@kasmini.com"
+                                       required>
+                            </div>
+                            @error('email')
+                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
+                                    <i class="bi bi-exclamation-circle-fill"></i>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+
                         {{-- No HP --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">

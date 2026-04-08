@@ -16,6 +16,7 @@ protected $table = 'kasir';
 
     protected $fillable = [
         'nama_kasir',
+        'email',
         'no_hp',
         'password',
         'gambar',

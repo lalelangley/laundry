@@ -57,8 +57,29 @@
                             @enderror
                         </div>
 
-                        {{-- No Telepon --}}
+                        {{-- Email --}}
                         <div class="lg:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                Email <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <i class="bi bi-envelope-fill text-gray-400 text-lg"></i>
+                                </div>
+                                <input type="email"
+                                       name="email"
+                                       value="{{ old('email') }}"
+                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition outline-none @error('email') border-red-500 @enderror"
+                                       placeholder="Contoh: kasir@kasmini.com"
+                                       required>
+                            </div>
+                            @error('email')
+                                <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- No Telepon --}}
+                        <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-3">
                                 No. Telepon <span class="text-gray-400 text-xs">(Opsional)</span>
                             </label>

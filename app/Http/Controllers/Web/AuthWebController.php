@@ -119,115 +119,57 @@ class AuthWebController extends Controller
     // Syarat: Validasi form sesuai kebutuhan
     // Syarat: Validasi akses setiap role berfungsi dengan baik
     // ============================================================
-        // Memproses login berdasarkan role (super_admin/admin/kasir).
-        // Super Admin dan Admin menggunakan email + password,
-        // Kasir menggunakan no_hp + password.
+        // Memproses login otomatis berdasarkan email.
+        // Sistem menentukan akun admin atau kasir dari email yang dimasukkan.
     // ============================================================
     public function processLogin(Request $request)
     {
-        // ------------------------------------------------------------
-        // Syarat: Terdapat kode program untuk proses percabangan
-        // Ambil login_type dari form (super_admin/admin/kasir)
-        // ------------------------------------------------------------
-        $type = $request->login_type;
+        $request->validate([
+            'email'    => 'required|email',
+            'password' => 'required|string',
+        ], [
+            'email.required'    => 'Email wajib diisi.',
+            'email.email'       => 'Format email tidak valid.',
+            'password.required' => 'Password wajib diisi.',
+        ]);
 
-        // ------------------------------------------------------------
-        // Syarat: Terdapat penanganan error/galat pada kode program
-        // Syarat: Terdapat kode program yang mengidentifikasi data array
-        // Array role yang diizinkan login ke sistem
-        // ------------------------------------------------------------
-        $roleYangDiizinkan = ['super_admin', 'admin', 'kasir'];
-        if (!in_array($type, $roleYangDiizinkan)) {
-            return back()->with('error', 'Role pengguna tidak valid.');
-        }
+        $email = $request->email;
+        $password = $request->password;
 
-        if (in_array($type, ['super_admin', 'admin'], true)) {
-            // ------------------------------------------------------------
-            // Syarat: Validasi form sesuai kebutuhan
-            // Syarat: Terdapat penanganan error/galat pada kode program
-            // Validasi input server-side untuk login admin/super admin
-            // ------------------------------------------------------------
-            $request->validate([
-                'email'          => 'required|email',
-                'password_admin' => 'required|string',
-            ], [
-                'email.required'          => 'Email wajib diisi.',
-                'email.email'             => 'Format email tidak valid.',
-                'password_admin.required' => 'Password wajib diisi.',
-            ]);
-
-            // Cari admin berdasarkan email di database
-            $admin = Admin::where('email', $request->email)->first();
-
-            // ------------------------------------------------------------
-            // Syarat: Terdapat penanganan error/galat pada kode program
-            // Syarat: Terdapat kode program untuk proses percabangan
-            // Cek: admin ditemukan dan password cocok (Hash::check = case-sensitive)
-            // ------------------------------------------------------------
-            if (!$admin || !Hash::check($request->password_admin, $admin->password)) {
+        // Prioritaskan admin bila email ditemukan di dua tabel.
+        $admin = Admin::where('email', $email)->first();
+        if ($admin) {
+            if (!Hash::check($password, $admin->password)) {
                 return back()->with('error', 'Email atau password salah.')
-                    ->withInput(['email' => $request->email, 'login_type' => $type]);
+                    ->withInput(['email' => $email]);
             }
 
-            if ($type === 'super_admin' && (int) $admin->role_id !== 1) {
-                return back()->with('error', 'Akun ini bukan Super Admin.')
-                    ->withInput(['email' => $request->email, 'login_type' => $type]);
-            }
-
-            if ($type === 'admin' && (int) $admin->role_id !== 2) {
-                return back()->with('error', 'Akun ini bukan Admin.')
-                    ->withInput(['email' => $request->email, 'login_type' => $type]);
-            }
-
-            // Percabangan: cek status aktif admin sebelum diizinkan masuk
             if ($admin->status !== 'aktif') {
                 return back()->with('error', 'Akun Anda tidak aktif. Hubungi super admin.')
-                    ->withInput(['login_type' => $type]);
+                    ->withInput(['email' => $email]);
             }
 
-            // Login admin dan regenerate session untuk keamanan
             Auth::guard('admin')->login($admin);
             $request->session()->regenerate();
 
-            // Percabangan: arahkan ke dashboard sesuai role yang dipilih
-            $dashboardRoute = $type === 'super_admin' ? 'admin.dashboard' : 'admin2.dashboard';
+            $dashboardRoute = (int) $admin->role_id === 1 ? 'admin.dashboard' : 'admin2.dashboard';
+
             return redirect()->route($dashboardRoute)
                 ->with('success', 'Selamat datang, ' . $admin->nama . '!');
         }
 
-        if ($type === 'kasir') {
-            // ------------------------------------------------------------
-            // Syarat: Validasi form sesuai kebutuhan
-            // Syarat: Terdapat penanganan error/galat pada kode program
-            // Validasi input server-side untuk login kasir
-            // ------------------------------------------------------------
-            $request->validate([
-                'no_hp'          => 'required|string',
-                'password_kasir' => 'required|string',
-            ], [
-                'no_hp.required'          => 'No. HP wajib diisi.',
-                'password_kasir.required' => 'Password wajib diisi.',
-            ]);
-
-            // Cari kasir berdasarkan no_hp di database
-            $kasir = Kasir::where('no_hp', $request->no_hp)->first();
-
-            // ------------------------------------------------------------
-            // Syarat: Terdapat penanganan error/galat pada kode program
-            // Cek: kasir ditemukan dan password cocok
-            // ------------------------------------------------------------
-            if (!$kasir || !Hash::check($request->password_kasir, $kasir->password)) {
-                return back()->with('error', 'No. HP atau password salah.')
-                    ->withInput(['no_hp' => $request->no_hp, 'login_type' => $type]);
+        $kasir = Kasir::where('email', $email)->first();
+        if ($kasir) {
+            if (!Hash::check($password, $kasir->password)) {
+                return back()->with('error', 'Email atau password salah.')
+                    ->withInput(['email' => $email]);
             }
 
-            // Percabangan: cek status aktif kasir sebelum diizinkan masuk
             if ($kasir->status !== 'aktif') {
                 return back()->with('error', 'Akun Anda tidak aktif. Hubungi admin.')
-                    ->withInput(['login_type' => $type]);
+                    ->withInput(['email' => $email]);
             }
 
-            // Login kasir dan regenerate session untuk keamanan
             Auth::guard('kasir')->login($kasir);
             $request->session()->regenerate();
 
@@ -235,11 +177,8 @@ class AuthWebController extends Controller
                 ->with('success', 'Selamat datang, ' . $kasir->nama_kasir . '!');
         }
 
-        // ------------------------------------------------------------
-        // Syarat: Terdapat penanganan error/galat pada kode program
-        // Fallback jika role tidak dikenali
-        // ------------------------------------------------------------
-        return back()->with('error', 'Role tidak dikenali.');
+        return back()->with('error', 'Email atau password salah.')
+            ->withInput(['email' => $email]);
     }
 
     // ============================================================

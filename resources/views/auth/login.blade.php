@@ -132,81 +132,31 @@
                 <form method="POST" action="{{ route('login.process') }}" onsubmit="return validateForm()">
                     @csrf
 
-                    {{-- Step 1: Pilih Role --}}
-                    <div class="mb-5">
+                    <div class="space-y-4">
                         <label class="block text-gray-700 font-semibold mb-2 text-sm">
-                            <i class="fas fa-users text-yellow-500 mr-1"></i>
-                            Pilih Role
+                            <i class="fas fa-envelope text-yellow-500 mr-1"></i>
+                            Email
+                        </label>
+                        <input type="email" name="email" id="input-email"
+                            value="{{ old('email') }}"
+                            autocomplete="email"
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
+                            placeholder="Masukkan email...">
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-gray-700 font-semibold mb-2 text-sm">
+                            <i class="fas fa-lock text-yellow-500 mr-1"></i> Password
                         </label>
                         <div class="relative">
-                            <select id="role-select" name="login_type"
-                                onchange="onRoleChange(this.value)"
-                                class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200 appearance-none bg-white">
-                                <option value="">-- Pilih role pengguna --</option>
-                                <option value="super_admin" {{ old('login_type') == 'super_admin' ? 'selected' : '' }}>Super Admin</option>
-                                <option value="admin"  {{ old('login_type') == 'admin'  ? 'selected' : '' }}>Admin</option>
-                                <option value="kasir"  {{ old('login_type') == 'kasir'  ? 'selected' : '' }}>Kasir</option>
-                            </select>
-                            <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
-                        </div>
-                    </div>
-                   {{-- Form Admin --}}
-            <div id="form-admin" class="hidden space-y-4">
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-2 text-sm">
-                        <i class="fas fa-envelope text-yellow-500 mr-1"></i> Email
-                    </label>
-                    <input type="email" name="email" id="input-email"
-                        value="{{ old('email') }}"
-                        autocomplete="email"
-                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
-                        placeholder="Masukkan email...">
-                </div>
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-2 text-sm">
-                        <i class="fas fa-lock text-yellow-500 mr-1"></i> Password
-                    </label>
-                    <div class="relative">
-                        {{-- Ganti name jadi password_admin --}}
-                        <input type="password" name="password_admin" id="input-password-admin"
-                            autocomplete="current-password"
-                            class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
-                            placeholder="Masukkan password...">
-                        <button type="button" onclick="togglePassword('input-password-admin','icon-admin')"
-                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                            <i class="fas fa-eye" id="icon-admin"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Form Kasir --}}
-            <div id="form-kasir" class="hidden space-y-4">
-                <div>
-                    <label class="block text-gray-700 font-semibold mb-2 text-sm">
-                        <i class="fas fa-phone text-yellow-500 mr-1"></i> No. HP
-                    </label>
-                    <input type="text" name="no_hp" id="input-nohp"
-                        value="{{ old('no_hp') }}"
-                        autocomplete="tel"
-                        class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
-                        placeholder="Contoh: 08123456789">
-                    </div>
-                        <div>
-                            <label class="block text-gray-700 font-semibold mb-2 text-sm">
-                                <i class="fas fa-lock text-yellow-500 mr-1"></i> Password
-                            </label>
-                            <div class="relative">
-                                {{-- Ganti name jadi password_kasir --}}
-                                <input type="password" name="password_kasir" id="input-password-kasir"
-                                    autocomplete="current-password"
-                                    class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
-                                    placeholder="Masukkan password...">
-                                <button type="button" onclick="togglePassword('input-password-kasir','icon-kasir')"
-                                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
-                                    <i class="fas fa-eye" id="icon-kasir"></i>
-                                </button>
-                            </div>
+                            <input type="password" name="password" id="input-password"
+                                autocomplete="current-password"
+                                class="w-full px-4 py-3 pr-10 rounded-lg border-2 border-gray-200 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200 transition duration-200"
+                                placeholder="Masukkan password...">
+                            <button type="button" onclick="togglePassword('input-password','icon-password')"
+                                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+                                <i class="fas fa-eye" id="icon-password"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -215,7 +165,7 @@
                         <button type="submit"
                             class="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-gray-900 py-3 rounded-lg font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition duration-200">
                             <i class="fas fa-sign-in-alt mr-2"></i>
-                            <span id="btn-label">LOGIN</span>
+                            <span>LOGIN</span>
                         </button>
                     </div>
                 </form>
@@ -224,7 +174,7 @@
                 <div class="mt-6 pt-4 border-t border-gray-200 text-center">
                     <p class="text-gray-600 text-xs flex items-center justify-center">
                         <i class="fas fa-shield-alt text-yellow-500 mr-2"></i>
-                        Login aman dengan password terenkripsi
+                        Login aman dengan email dan password terenkripsi
                     </p>
                 </div>
             </div>
@@ -241,37 +191,6 @@
     <!-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. -->
 
     <script>
-        // Auto restore form saat ada old input (setelah validasi gagal)
-        document.addEventListener('DOMContentLoaded', function () {
-            const role = document.getElementById('role-select').value;
-            if (role) onRoleChange(role);
-        });
-
-        function onRoleChange(role) {
-            const formAdmin = document.getElementById('form-admin');
-            const formKasir = document.getElementById('form-kasir');
-            const btnLabel  = document.getElementById('btn-label');
-
-            resetErrors();
-            hideAlert();
-
-            if (role === 'super_admin' || role === 'admin') {
-                formAdmin.classList.remove('hidden');
-                formAdmin.classList.add('slide-in');
-                formKasir.classList.add('hidden');
-                btnLabel.textContent = role === 'super_admin' ? 'LOGIN SUPER ADMIN' : 'LOGIN ADMIN';
-            } else if (role === 'kasir') {
-                formKasir.classList.remove('hidden');
-                formKasir.classList.add('slide-in');
-                formAdmin.classList.add('hidden');
-                btnLabel.textContent = 'LOGIN KASIR';
-            } else {
-                formAdmin.classList.add('hidden');
-                formKasir.classList.add('hidden');
-                btnLabel.textContent = 'LOGIN';
-            }
-        }
-
         function togglePassword(inputId, iconId) {
             const input = document.getElementById(inputId);
             const icon  = document.getElementById(iconId);
@@ -285,45 +204,25 @@
         }
 
         function validateForm() {
-            const role     = document.getElementById('role-select').value;
             const messages = [];
             let isValid    = true;
 
             resetErrors();
             hideAlert();
 
-            if (!role) {
-                document.getElementById('role-select').classList.add('input-error');
-                messages.push('role pengguna');
+            const email = document.getElementById('input-email');
+            const password = document.getElementById('input-password');
+
+            if (!email.value.trim()) {
+                email.classList.add('input-error');
+                messages.push('email');
                 isValid = false;
             }
 
-            if (role === 'super_admin' || role === 'admin') {
-                const email    = document.getElementById('input-email');
-                const password = document.getElementById('input-password-admin');
-                if (!email.value.trim()) {
-                    email.classList.add('input-error');
-                    messages.push('email');
-                    isValid = false;
-                }
-                if (!password.value.trim()) {
-                    password.classList.add('input-error');
-                    messages.push('password');
-                    isValid = false;
-                }
-            } else if (role === 'kasir') {
-                const nohp     = document.getElementById('input-nohp');
-                const password = document.getElementById('input-password-kasir');
-                if (!nohp.value.trim()) {
-                    nohp.classList.add('input-error');
-                    messages.push('no. HP');
-                    isValid = false;
-                }
-                if (!password.value.trim()) {
-                    password.classList.add('input-error');
-                    messages.push('password');
-                    isValid = false;
-                }
+            if (!password.value.trim()) {
+                password.classList.add('input-error');
+                messages.push('password');
+                isValid = false;
             }
 
             if (!isValid) {
@@ -345,7 +244,7 @@
         }
 
         function resetErrors() {
-            ['role-select','input-email','input-password-admin','input-nohp','input-password-kasir']
+            ['input-email', 'input-password']
                 .forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.classList.remove('input-error');
@@ -353,7 +252,7 @@
         }
 
         window.addEventListener('load', () => {
-            document.getElementById('role-select').focus();
+            document.getElementById('input-email').focus();
         });
     </script>
 </body>
