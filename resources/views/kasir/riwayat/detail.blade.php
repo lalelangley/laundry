@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/kasir/riwayat/detail.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Detail Riwayat Transaksi')
+
 @section('content')
 
 @php
@@ -30,6 +32,7 @@
     } else {
         $statusBayar = 'belum bayar';
     }
+    $canReadyForPickup = in_array($statusBayar, ['lunas', 'DP'], true);
 
     // Cek apakah boleh bayar DP atau harus pelunasan
     $bolehDP = in_array($transaksi->status_transaksi, ['antrian', 'proses']);
@@ -251,10 +254,17 @@
 
                     {{-- Tombol Siap Diambil --}}
                     @if($transaksi->status_transaksi == 'proses')
-                        <a href="{{ route('kasir.riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
-                        class="bg-orange-400 hover:bg-orange-500 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
-                            <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
-                        </a>
+                        @if($canReadyForPickup)
+                            <a href="{{ route('kasir.riwayat.siap_di_ambil', $transaksi->id_transaksi) }}" 
+                            class="bg-orange-400 hover:bg-orange-500 text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
+                                <i class="bi bi-check-circle-fill text-xl"></i> Order Siap Diambil
+                            </a>
+                        @else
+                            <div class="bg-red-50 border border-red-200 text-red-700 py-4 px-5 rounded-xl flex items-start gap-3">
+                                <i class="bi bi-exclamation-triangle-fill text-lg"></i>
+                                <span class="font-semibold">Order belum bisa diambil karena pelanggan belum melakukan pembayaran atau DP.</span>
+                            </div>
+                        @endif
                     @endif
 
                     {{-- Tombol Selesai --}}

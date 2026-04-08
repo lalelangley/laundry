@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/kasir/layanan/tambah_jenis_layanan_create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Tambah Jenis Layanan')
+
 @section('content')
 
 {{-- HEADER --}}

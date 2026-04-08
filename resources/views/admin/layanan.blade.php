@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/admin/layanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Data Layanan')
+
 @section('content')
 
 @php

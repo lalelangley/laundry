@@ -118,10 +118,21 @@ class TelegramNotificationService
             ? \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i')
             : '-';
 
+        $totalBayar = (float) ($transaksi->total_bayar ?? 0);
+        $statusBayar = strtolower((string) ($transaksi->status_bayar ?? ''));
+        $paymentLine = $statusBayar === 'lunas' || $totalBayar > 0
+            ? "Pembayaran Anda sudah tercatat. Pesanan sudah bisa diambil di outlet.\n"
+            : "Pesanan hanya bisa diambil setelah pembayaran minimal DP tercatat.\n";
+
+        if ($statusBayar === 'dp' || ($totalBayar > 0 && $statusBayar !== 'lunas')) {
+            $paymentLine .= "Jika masih ada sisa pembayaran, silakan dilunasi saat pengambilan.\n";
+        }
+
         // [STRING CONCATENATION] Susun pesan multiline untuk pelanggan.
         $message = "Halo {$transaksi->nama_pelanggan},\n\n" .
             "Pesanan laundry Anda dengan ID #{$transaksi->id_transaksi} sudah siap diambil.\n" .
             "Estimasi selesai: {$estimasi}\n" .
+            $paymentLine . "\n" .
             "Silakan datang ke Kasmini Laundry untuk mengambil pesanan Anda.\n\n" .
             "Terima kasih telah menggunakan Kasmini Laundry.";
 

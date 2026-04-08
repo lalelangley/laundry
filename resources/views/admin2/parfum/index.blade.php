@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/admin2/parfum/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Data Parfum')
+
 @section('content')
 
 <div class="min-h-screen bg-gray-50">

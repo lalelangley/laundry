@@ -182,9 +182,28 @@ class RiwayatController extends Controller
         return [
             'sent' => $sent,
             'message' => $sent
-                ? 'Transaksi siap diambil dan notifikasi Telegram berhasil dikirim!'
+                ? 'Transaksi siap diambil dan notifikasi Telegram berhasil dikirim dengan info pembayaran.'
                 : 'Transaksi siap diambil, tapi Telegram menolak pengiriman atau chat pelanggan belum aktif.',
         ];
+    }
+
+    private function hasMinimumPickupPayment(Transaksi $transaksi): bool
+    {
+        $totalBayar = (float) ($transaksi->total_bayar ?? 0);
+        $statusBayar = strtoupper((string) ($transaksi->status_bayar ?? ''));
+
+        return $totalBayar > 0 || in_array($statusBayar, ['LUNAS', 'DP'], true);
+    }
+
+    private function ensurePickupPaymentOrRedirect(Transaksi $transaksi, string $routeName, string $tab)
+    {
+        if ($this->hasMinimumPickupPayment($transaksi)) {
+            return null;
+        }
+
+        return redirect()
+            ->route($routeName, ['tab' => $tab])
+            ->with('error', 'Pesanan belum bisa diambil karena pelanggan belum melakukan pembayaran atau DP.');
     }
 
     // =============================
@@ -454,6 +473,9 @@ class RiwayatController extends Controller
         requirePermission('riwayat', 'edit');
 
         $trx                       = Transaksi::findOrFail($id);
+        if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'riwayat.index', 'proses')) {
+            return $guard;
+        }
         $trx->status_transaksi     = 'siap_di_ambil';
         $trx->save();
 
@@ -1025,6 +1047,9 @@ class RiwayatController extends Controller
         requirePermission('riwayat', 'edit');
 
         $trx                   = Transaksi::findOrFail($id);
+        if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'kasir.riwayat.index', 'proses')) {
+            return $guard;
+        }
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
 
@@ -1392,6 +1417,9 @@ class RiwayatController extends Controller
         requirePermission('riwayat', 'edit');
 
         $trx                   = Transaksi::findOrFail($id);
+        if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'admin2.riwayat.index', 'proses')) {
+            return $guard;
+        }
         $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
 

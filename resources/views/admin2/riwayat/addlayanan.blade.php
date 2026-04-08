@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/admin2/riwayat/addlayanan.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Tambah Layanan')
+
 @section('content')
 
 <meta name="csrf-token" content="{{ csrf_token() }}">

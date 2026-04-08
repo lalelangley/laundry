@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/admin/tambah_jenis_layanan_edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Edit Jenis Layanan')
+
 @section('content')
 
 {{-- HEADER --}}

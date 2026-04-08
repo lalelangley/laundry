@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/kasir/pesanan_online/listonlinedriver.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Pilih Driver Online')
+
 @section('content')
 {{-- HEADER --}}
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}

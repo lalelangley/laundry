@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/kasir/satuan/create.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Tambah Satuan')
+
 @section('content')
 
 {{-- HEADER --}}

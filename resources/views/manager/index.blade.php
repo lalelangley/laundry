@@ -1,5 +1,7 @@
 {{-- FE-DOC: Template frontend untuk resources/views/manager/index.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
+
+@section('title', 'Manajemen Pengguna')
 @section('content')
 
 @php

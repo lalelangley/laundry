@@ -365,7 +365,7 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
         Route::get('/{id}/proses', [RiwayatController::class, 'prosesOrderKasir'])
             ->middleware('permission:edit')
             ->name('proses');
-        Route::get('/{id}/batal', [RiwayatController::class, 'batalOrderKasir'])
+        Route::patch('/{id}/batal', [RiwayatController::class, 'batalOrderKasir'])
             ->middleware('permission:edit')
             ->name('batal');
         Route::get('/{id}/selesai', [RiwayatController::class, 'selesaiOrderKasir'])

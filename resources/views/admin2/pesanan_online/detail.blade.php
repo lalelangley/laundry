@@ -1,6 +1,8 @@
 {{-- FE-DOC: Template frontend untuk resources/views/admin2/pesanan_online/detail.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
 
+@section('title', 'Detail Pesanan Online')
+
 @section('content')
 <div class="min-h-screen bg-gray-50 pb-10">
 {{-- FE-DOC: Blok CSS khusus halaman ini. --}}

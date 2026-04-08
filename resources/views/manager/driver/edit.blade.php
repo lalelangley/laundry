@@ -1,5 +1,7 @@
 {{-- FE-DOC: Template frontend untuk resources/views/manager/driver/edit.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
 @extends('layouts.master')
+
+@section('title', 'Edit Driver')
 @section('content')
 <div class="min-h-screen bg-gray-50">
     {{-- HEADER --}}

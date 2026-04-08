@@ -7,6 +7,8 @@
      Role: Admin
 ============================================================ --}}
 @extends('layouts.master')
+
+@section('title', 'Edit Riwayat Transaksi')
 @section('content')
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
