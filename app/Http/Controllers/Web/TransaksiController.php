@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
@@ -125,6 +126,8 @@ public function setPelangganKasir($id)
             'nama_pelanggan' => $p->nama_pelanggan,
             'no_hp'          => $p->no_hp,
             'email'          => $p->email,
+            'telegram_chat_id'=> $p->telegram_chat_id,
+            'telegram_username' => $p->telegram_username,
             'foto'           => $p->gambar 
                 ? (str_starts_with($p->gambar, 'pelanggan/') 
                     ? $p->gambar 
@@ -369,6 +372,12 @@ public function bayar(Request $request)
             $diskon = $totalAwal * ($diskon / 100);
         }
 
+        if ($diskon > $totalAwal) {
+            return response()->json([
+                'message' => 'Diskon tidak boleh lebih besar dari total harga.'
+            ], 422);
+        }
+
         $totalAkhir = max($totalAwal - $diskon, 0);
 
         $totalBayar = $dp;
@@ -445,6 +454,7 @@ public function bayar(Request $request)
             'nama'         => $pelanggan['nama_pelanggan'],
             'hp'           => $pelanggan['no_hp'],
             'email'        => $pelanggan['email'] ?? null,
+            'telegram_chat_id' => $pelanggan['telegram_chat_id'] ?? null,
             'status_bayar' => $statusBayar,
             'diskon'       => $diskon,
             'total_bayar'  => $totalBayar,
@@ -538,6 +548,12 @@ public function bayarKasir(Request $request)
             $diskon = $totalAwal * ($diskon / 100);
         }
 
+        if ($diskon > $totalAwal) {
+            return response()->json([
+                'message' => 'Diskon tidak boleh lebih besar dari total harga.'
+            ], 422);
+        }
+
         $totalAkhir = max($totalAwal - $diskon, 0);
 
         $totalBayar = $dp;
@@ -614,6 +630,7 @@ public function bayarKasir(Request $request)
             'nama'         => $pelanggan['nama_pelanggan'],
             'hp'           => $pelanggan['no_hp'],
             'email'        => $pelanggan['email'] ?? null,
+            'telegram_chat_id' => $pelanggan['telegram_chat_id'] ?? null,
             'status_bayar' => $statusBayar,
             'diskon'       => $diskon,
             'total_bayar'  => $totalBayar,
@@ -830,6 +847,12 @@ public function bayarAdmin2(Request $request)
         $tipeDiskon = $request->input('tipe_diskon', 'nominal');
         if ($tipeDiskon === 'percent') {
             $diskon = $totalAwal * ($diskon / 100);
+        }
+
+        if ($diskon > $totalAwal) {
+            return response()->json([
+                'message' => 'Diskon tidak boleh lebih besar dari total harga.'
+            ], 422);
         }
 
         $totalAkhir = max($totalAwal - $diskon, 0);
@@ -1288,7 +1311,12 @@ public function confirmKasir()
         }
 
         $botToken = config('services.telegram.bot_token');
-        $chatId = trim((string) ($validated['recipient'] ?? config('services.telegram.default_chat_id')));
+        $storedChatId = trim((string) ($transaksi->pelanggan?->telegram_chat_id ?? ''));
+        $storedTelegramUsername = $transaksi->pelanggan?->telegram_username;
+        $rawRecipient = trim((string) ($validated['recipient'] ?? ''));
+        $fallbackRecipient = trim((string) config('services.telegram.default_chat_id'));
+        $chatId = '';
+        $telegramUsername = $storedTelegramUsername;
 
         if (empty($botToken)) {
             return response()->json([
@@ -1297,10 +1325,30 @@ public function confirmKasir()
             ], 422);
         }
 
+        if ($rawRecipient !== '') {
+            $resolvedTelegram = $this->resolveTelegramRecipient($rawRecipient);
+            $chatId = $resolvedTelegram['chat_id'];
+            $telegramUsername = $resolvedTelegram['username'] ?? $telegramUsername;
+        } elseif ($storedChatId !== '') {
+            $chatId = $storedChatId;
+        } elseif ($fallbackRecipient !== '') {
+            $resolvedTelegram = $this->resolveTelegramRecipient($fallbackRecipient);
+            $chatId = $resolvedTelegram['chat_id'];
+            $telegramUsername = $resolvedTelegram['username'] ?? $telegramUsername;
+            $rawRecipient = $fallbackRecipient;
+        }
+
+        if ($rawRecipient === '' && $storedChatId === '' && $fallbackRecipient === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode Telegram belum diisi dan akun Telegram pelanggan belum terhubung.'
+            ], 422);
+        }
+
         if ($chatId === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Chat ID Telegram belum diisi.'
+                'message' => 'Kode Telegram tidak valid atau sudah kedaluwarsa. Jika pelanggan pernah terhubung, cek data Telegram pelanggan. Jika belum, minta pelanggan kirim /start lagi ke bot untuk mendapatkan kode baru.'
             ], 422);
         }
 
@@ -1345,7 +1393,7 @@ public function confirmKasir()
             ], 500);
         }
 
-        $this->storeTelegramChatIdForPelanggan($transaksi, $chatId);
+        $this->storeTelegramChatIdForPelanggan($transaksi, $chatId, $telegramUsername);
 
         return response()->json([
             'success' => true,
@@ -1353,7 +1401,38 @@ public function confirmKasir()
         ]);
     }
 
-    private function storeTelegramChatIdForPelanggan(Transaksi $transaksi, string $chatId): void
+    private function resolveTelegramRecipient(string $recipient): array
+    {
+        if ($recipient === '') {
+            return [
+                'chat_id' => '',
+                'username' => null,
+            ];
+        }
+
+        $payload = Cache::store('file')->get($this->telegramCodeCacheKey($recipient));
+
+        if (is_array($payload) && !empty($payload['chat_id'])) {
+            return [
+                'chat_id' => (string) $payload['chat_id'],
+                'username' => $payload['username'] ?? null,
+            ];
+        }
+
+        if (preg_match('/^-?\d+$/', $recipient)) {
+            return [
+                'chat_id' => $recipient,
+                'username' => null,
+            ];
+        }
+
+        return [
+            'chat_id' => '',
+            'username' => null,
+        ];
+    }
+
+    private function storeTelegramChatIdForPelanggan(Transaksi $transaksi, string $chatId, ?string $telegramUsername = null): void
     {
         if ($chatId === '') {
             return;
@@ -1385,6 +1464,9 @@ public function confirmKasir()
         }
 
         $payload = ['telegram_chat_id' => $chatId];
+        if (!empty($telegramUsername)) {
+            $payload['telegram_username'] = $telegramUsername;
+        }
 
         if (!$transaksi->id_pelanggan || (int) $transaksi->id_pelanggan !== (int) $pelanggan->id_pelanggan) {
             $transaksi->update(['id_pelanggan' => $pelanggan->id_pelanggan]);
@@ -1394,6 +1476,11 @@ public function confirmKasir()
         if (empty($pelanggan->telegram_chat_id) || (string) $pelanggan->telegram_chat_id !== $chatId) {
             $pelanggan->update($payload);
         }
+    }
+
+    private function telegramCodeCacheKey(string $code): string
+    {
+        return 'telegram_link_code:' . trim($code);
     }
 
     private function buildShareMessage(Transaksi $transaksi): string

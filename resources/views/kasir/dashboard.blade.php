@@ -9,7 +9,7 @@
 <div class="bg-[#ffcc00] p-4 rounded-b-3xl shadow-lg">
     <div class="flex items-center justify-between">
         <!-- Toggle Sidebar -->
-        <div onclick="toggleSidebar()" class="text-3xl font-bold cursor-pointer">≡</div>
+        <div onclick="toggleSidebar()" class="text-3xl font-bold cursor-pointer lg:hidden">≡</div>
 
         <!-- Logo -->
         <img src="{{ asset('images/dashboard_logo.png') }}" class="w-40" alt="logo">

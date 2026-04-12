@@ -19,6 +19,11 @@
     @stack('styles')   {{-- ← TAMBAH INI --}}
     <!-- FE-DOC: Blok CSS khusus halaman ini. -->
     <style>
+        :root {
+            --desktop-sidebar-width: 280px;
+            --desktop-sidebar-collapsed-width: 96px;
+        }
+
         body { 
             font-family: 'Poppins', sans-serif;
         }
@@ -69,8 +74,35 @@
         .page-content.show {
             opacity: 1;
         }
+
+        @media (min-width: 1024px) {
+            body.sidebar-collapsed .page-content {
+                margin-left: var(--desktop-sidebar-collapsed-width);
+            }
+
+            .desktop-docked-bar {
+                left: calc(var(--desktop-sidebar-width) + 1rem);
+                right: 1rem;
+                width: auto;
+                bottom: 1rem;
+                border-radius: 1.5rem;
+            }
+
+            body.sidebar-collapsed .desktop-docked-bar {
+                left: calc(var(--desktop-sidebar-collapsed-width) + 1rem);
+            }
+        }
     </style>
 </head>
+
+@php
+    $routeName = \Illuminate\Support\Facades\Route::currentRouteName() ?? '';
+    $isReportPage = \Illuminate\Support\Str::startsWith($routeName, [
+        'laporan.',
+        'admin2.laporan.',
+        'kasir.laporan.',
+    ]);
+@endphp
 
 <body class="bg-gray-100">
     {{-- 🔄 GLOBAL LOADING --}}
@@ -78,13 +110,22 @@
         <div class="spinner"></div>
     </div>
 
-    {{-- Sidebar --}}
-    @include('layouts.sidebar')
-    
-
-    {{-- Main Content --}}
-    <div class="min-h-screen relative z-[1] page-content">
-        @yield('content')
+    <div class="min-h-screen">
+        {{-- Sidebar --}}
+        @include('layouts.sidebar')
+        
+        {{-- Main Content --}}
+        <div class="min-h-screen relative z-[1] page-content transition-all duration-300 lg:ml-[280px] lg:p-4 {{ $isReportPage ? 'bg-[#ececec]' : '' }}">
+            @if($isReportPage)
+                <div class="min-h-screen w-full bg-white lg:rounded-[28px] lg:shadow-sm lg:overflow-hidden">
+                    @yield('content')
+                </div>
+            @else
+                <div class="min-h-screen lg:rounded-[28px] lg:overflow-hidden">
+                    @yield('content')
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- Bootstrap JS --}}

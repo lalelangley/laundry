@@ -128,7 +128,7 @@
 @endif
 
 {{-- BUTTON TAMBAH --}}
-<div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5">
+<div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5 desktop-docked-bar z-40 lg:bottom-4 lg:rounded-[28px]">
     <a href="{{ route('admin2.pengeluaran.create') }}"
        class="w-full block text-center bg-yellow-400 text-black py-4 rounded-3xl text-lg font-bold shadow hover:bg-yellow-500 transition">
         Tambah Pengeluaran

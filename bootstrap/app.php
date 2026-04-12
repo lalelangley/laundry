@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
 
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->validateCsrfTokens(except: [
+            'telegram/webhook',
+        ]);
 
         // GROUP API MIDDLEWARE
         $middleware->group('api', [

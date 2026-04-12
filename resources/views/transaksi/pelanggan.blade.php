@@ -18,25 +18,25 @@
 {{-- SEARCH --}}
 {{-- FE-DOC: Input pencarian ini membantu user menemukan data spesifik berdasarkan kata kunci. --}}
 <form method="GET" class="px-5 mt-5">
-    <div class="bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow hover:shadow-lg transition-all">
-        <i class="bi bi-search text-yellow-500 text-xl mr-3"></i>
+    <div class="bg-white rounded-2xl px-4 py-3 flex flex-col gap-3 shadow hover:shadow-lg transition-all lg:flex-row lg:items-center">
+        <i class="bi bi-search text-yellow-500 text-xl lg:mr-1"></i>
         <input type="text"
                placeholder="Cari pelanggan..." 
                class="w-full focus:outline-none text-lg"
                name="search"
                value="{{ request('search') }}">
-        <select name="sort" class="rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold outline-none">
+        <select name="sort" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold outline-none sm:w-auto">
             <option value="nama_asc" {{ request('sort', 'nama_asc') === 'nama_asc' ? 'selected' : '' }}>Nama A-Z</option>
             <option value="nama_desc" {{ request('sort') === 'nama_desc' ? 'selected' : '' }}>Nama Z-A</option>
             <option value="terbaru" {{ request('sort') === 'terbaru' ? 'selected' : '' }}>Terbaru</option>
             <option value="terlama" {{ request('sort') === 'terlama' ? 'selected' : '' }}>Terlama</option>
         </select>
-        <button class="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded-xl font-semibold transition-all">Terapkan</button>
+        <button class="w-full bg-yellow-400 hover:bg-yellow-500 px-5 py-3 rounded-xl font-semibold transition-all sm:w-auto sm:py-2.5 lg:min-w-[120px]">Terapkan</button>
     </div>
 </form>
 
 {{-- LIST --}}
-<div class="px-5 mt-6 space-y-4 mb-24" id="listPelanggan">
+<div class="px-5 mt-6 space-y-4 mb-28 lg:mb-36" id="listPelanggan">
 
     @foreach ($pelanggan as $item)
     <a href="{{ route('transaksi.setPelanggan', $item->id_pelanggan) }}"
@@ -82,10 +82,10 @@
 @endif
 
 {{-- BUTTON TAMBAH --}}
-<div class="fixed bottom-5 left-0 right-0 px-6">
+<div class="fixed bottom-5 left-0 right-0 px-6 desktop-docked-bar z-40">
     <a href="{{ route('pelanggan.create') }}?from=transaksi"
-       class="bg-yellow-400 w-full block text-center py-4 rounded-full text-xl font-semibold 
-              shadow-lg hover:bg-yellow-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+       class="bg-yellow-400 w-full block text-center py-4 rounded-full text-lg font-semibold 
+              shadow-lg hover:bg-yellow-500 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 lg:max-w-sm lg:ml-auto">
         Tambah Pelanggan
     </a>
 </div>

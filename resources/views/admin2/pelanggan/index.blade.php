@@ -87,7 +87,7 @@
 @endif
 
 {{-- BUTTON TAMBAH --}}
-<div class="fixed bottom-5 left-0 right-0 px-6">
+<div class="fixed bottom-5 left-0 right-0 px-6 desktop-docked-bar z-40">
     <a href="{{ route('pelanggan.create') }}"
        class="bg-yellow-400 w-full block text-center py-4 rounded-full text-xl font-semibold shadow-lg hover:bg-yellow-500 transition-all">
         Tambah Pelanggan

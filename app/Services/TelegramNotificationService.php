@@ -52,10 +52,16 @@ class TelegramNotificationService
                 Log::warning('TelegramNotificationService: Telegram API menolak request.', [
                     'chat_id' => $chatId,
                     'response' => $response->json(),
+                    'status' => $response->status(),
                 ]);
 
                 return false;
             }
+
+            Log::info('TelegramNotificationService: pesan berhasil dikirim.', [
+                'chat_id' => $chatId,
+                'telegram_response' => $response->json(),
+            ]);
 
             return true;
         } catch (\Throwable $e) {
@@ -86,7 +92,7 @@ class TelegramNotificationService
 
         // [PERCABANGAN] Format estimasi jika kolom tanggal tersedia.
         $estimasi = $transaksi->tgl_estimasi
-            ? \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i')
+            ? \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y')
             : '-';
 
         // [PERCABANGAN] Isi pesan dibedakan jika status akan diantar atau tidak.
@@ -115,7 +121,7 @@ class TelegramNotificationService
 
         // [METHOD] Format tanggal estimasi agar lebih mudah dibaca user.
         $estimasi = $transaksi->tgl_estimasi
-            ? \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i')
+            ? \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y')
             : '-';
 
         $totalBayar = (float) ($transaksi->total_bayar ?? 0);

@@ -54,7 +54,7 @@
         </div>
 
         {{-- BUTTON SIMPAN FIXED --}}
-        <div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5">
+        <div class="fixed bottom-0 left-0 w-full bg-gray-100 px-6 py-5 desktop-docked-bar z-40 lg:bottom-4 lg:rounded-[28px]">
             <button type="submit"
                 class="w-full bg-green-600 text-white py-4 rounded-3xl text-xl font-bold shadow hover:bg-green-700 transition">
                 Simpan
