@@ -2,246 +2,255 @@
 @extends('layouts.master')
 
 @section('title', 'Edit Manajemen Pengguna')
+
 @section('content')
-<div class="min-h-screen bg-gray-50">
-    {{-- HEADER --}}
-   <div class="bg-yellow-400 px-8 py-6 rounded-b-3xl flex items-center gap-4 shadow-lg">
-        <a href="{{ route('manager.index') }}" class="text-white text-3xl font-bold hover:opacity-80 transition">
-            <i class="bi bi-arrow-left"></i>
-        </a>
-        <span class="text-2xl font-bold text-white">Edit Kasir</span>
-    </div>
-
-    {{-- FORM SECTION --}}
-    <div class="px-12 py-10">
-        {{-- Card --}}
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            {{-- Card Header --}}
-             <div class="bg-gradient-to-r from-yellow-50 to-white px-12 py-10 border-b border-gray-200">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-5">
-                        <div class="w-16 h-16 bg-gradient-to-br from-yellow-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
-                            <i class="bi bi-pencil-square text-white text-2xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-900">Edit Data Kasir</h3>
-                            <p class="text-sm text-gray-600 mt-1">Update informasi kasir: <strong>{{ $kasir->nama_kasir }}</strong></p>
-                        </div>
-                    </div>
-                    <div class="bg-emerald-50 px-5 py-3 rounded-xl border border-emerald-200">
-                        <p class="text-xs text-emerald-600 font-medium">ID Kasir</p>
-                        <p class="text-xl font-bold text-emerald-700">#{{ $kasir->id_kasir }}</p>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Card Body --}}
-            <div class="px-12 py-12">
-                {{-- Alert Error --}}
-                @if($errors->any())
-                <div class="mb-8 bg-red-50 border-2 border-red-200 rounded-xl p-6">
-                    <div class="flex items-start gap-3">
-                        <i class="bi bi-exclamation-triangle-fill text-red-600 text-xl flex-shrink-0"></i>
-                        <div>
-                            <h3 class="font-bold text-red-900 mb-2">Terdapat Kesalahan!</h3>
-                            <ul class="text-sm text-red-700 space-y-1 list-disc list-inside">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-                <form action="{{ route('manager.kasir.update', $kasir->id_kasir) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        {{-- Nama Kasir --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                Nama Kasir <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-person text-gray-400 text-lg"></i>
-                                </div>
-                                <input type="text" 
-                                       name="nama_kasir"
-                                       value="{{ old('nama_kasir', $kasir->nama_kasir) }}"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('nama_kasir') border-red-300 @enderror" 
-                                       placeholder="Contoh: Siti Nurhaliza"
-                                       required>
-                            </div>
-                            @error('nama_kasir')
-                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                    <i class="bi bi-exclamation-circle-fill"></i>
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                        </div>
-
-                        {{-- Email --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                Email <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-envelope-fill text-gray-400 text-lg"></i>
-                                </div>
-                                <input type="email"
-                                       name="email"
-                                       value="{{ old('email', $kasir->email) }}"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('email') border-red-300 @enderror"
-                                       placeholder="Contoh: kasir@kasmini.com"
-                                       required>
-                            </div>
-                            @error('email')
-                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                    <i class="bi bi-exclamation-circle-fill"></i>
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                        </div>
-
-                        {{-- No HP --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                No HP <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-telephone text-gray-400 text-lg"></i>
-                                </div>
-                                <div class="absolute inset-y-0 left-14 flex items-center pointer-events-none text-gray-500 font-medium">
-                                    +62
-                                </div>
-                                <input type="tel" 
-                                       name="no_hp"
-                                       value="{{ old('no_hp', $kasir->no_hp) }}"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-24 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('no_hp') border-red-300 @enderror"
-                                       placeholder="81234567890"
-                                       pattern="[0-9]+"
-                                       maxlength="15">
-                            </div>
-                            @error('no_hp')
-                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                    <i class="bi bi-exclamation-circle-fill"></i>
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                <i class="bi bi-info-circle"></i>
-                                Format: 81234567890 (tanpa 0 di depan)
-                            </p>
-                        </div>
-
-                        {{-- Password --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                Password Baru <span class="text-gray-500 text-xs font-normal">(Opsional)</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-lock-fill text-gray-400 text-lg"></i>
-                                </div>
-                                <input type="password" 
-                                       name="password"
-                                       id="password"
-                                       class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-14 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none @error('password') border-red-300 @enderror"
-                                       placeholder="Kosongkan jika tidak ingin mengubah"
-                                       minlength="6">
-                                <button type="button" 
-                                        onclick="togglePassword()"
-                                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-gray-600 transition">
-                                    <i class="bi bi-eye-fill" id="toggleIcon"></i>
-                                </button>
-                            </div>
-                            @error('password')
-                                <p class="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                    <i class="bi bi-exclamation-circle-fill"></i>
-                                    {{ $message }}
-                                </p>
-                            @enderror
-                            <p class="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                <i class="bi bi-info-circle"></i>
-                                Kosongkan jika tidak ingin mengubah password
-                            </p>
-                        </div>
-
-                        {{-- Status --}}
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-3">
-                                Status <span class="text-red-500">*</span>
-                            </label>
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-toggle-on text-gray-400 text-lg"></i>
-                                </div>
-                                <select name="status" 
-                                        class="w-full border-2 border-gray-300 rounded-xl pl-14 pr-6 py-4 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition outline-none appearance-none bg-white" 
-                                        required>
-                                    <option value="aktif" {{ old('status', $kasir->status) === 'aktif' ? 'selected' : '' }}>✓ Aktif - Siap Bertugas</option>
-                                    <option value="nonaktif" {{ old('status', $kasir->status) === 'nonaktif' ? 'selected' : '' }}>✕ Nonaktif - Tidak Bertugas</option>
-                                </select>
-                                <div class="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
-                                    <i class="bi bi-chevron-down text-gray-400"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Info Terakhir Update --}}
-                        <div class="lg:col-span-2 bg-gray-50 rounded-xl p-6 border border-gray-200">
-                            <div class="flex items-center gap-3">
-                                <i class="bi bi-clock-history text-gray-400 text-xl"></i>
-                                <div class="text-sm text-gray-600">
-                                    <p class="font-semibold text-gray-900">Terakhir Diupdate:</p>
-                                    <p>{{ $kasir->updated_at->format('d M Y, H:i') }} WIB</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Card Footer / Buttons --}}
-                    <div class="flex items-center justify-between gap-4 mt-12 pt-10 border-t border-gray-200">
-                        <a href="{{ route('manager.index') }}"
-                           class="px-8 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
-                            <i class="bi bi-x-circle"></i>
-                            <span>Batal</span>
-                        </a>
-                        <button type="submit"
-                                class="px-10 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-emerald-500 hover:from-yellow-500 hover:to-emerald-600 text-white font-bold transition inline-flex items-center gap-2 shadow-lg shadow-emerald-200">
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Update Kasir</span>
-                        </button>
-                    </div>
-                </form>
+<div class="min-h-screen bg-slate-50">
+    <div class="bg-yellow-400 px-5 py-5 shadow-lg sm:px-8 sm:py-6">
+        <div class="mx-auto flex max-w-6xl items-center gap-4">
+            <a href="{{ route('manager.index') }}" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70 text-2xl font-bold text-gray-900 transition hover:bg-white">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-gray-700">User Manager</p>
+                <h1 class="truncate text-2xl font-bold text-gray-900 sm:text-3xl">Edit Kasir</h1>
             </div>
         </div>
+    </div>
 
-        {{-- Info Card --}}
-        <div class="mt-8 bg-amber-50 border-2 border-amber-200 rounded-xl p-6 flex items-start gap-4">
-            <i class="bi bi-info-circle-fill text-amber-600 text-xl flex-shrink-0 mt-1"></i>
-            <div class="text-sm text-amber-800">
-                <p class="font-semibold mb-2">Catatan Update</p>
-                <p>Perubahan data kasir akan langsung berlaku di sistem. Jika password diubah, kasir harus menggunakan password baru untuk login. Pastikan data sudah benar sebelum menyimpan perubahan.</p>
-            </div>
+    <div class="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section class="overflow-hidden rounded-[28px] bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)]">
+                <div class="border-b border-slate-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-white px-6 py-7 sm:px-10">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-gray-900 text-2xl text-yellow-400 shadow-lg">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Edit Data Kasir</h2>
+                                <p class="mt-1 text-sm text-slate-600">Perbarui informasi akun untuk <strong>{{ $kasir->nama_kasir }}</strong>.</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 lg:w-auto">
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">ID Kasir</p>
+                            <p class="mt-1 text-2xl font-bold text-slate-900">#{{ $kasir->id_kasir }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-7 sm:px-10 sm:py-10">
+                    @if ($errors->any())
+                        <div class="mb-8 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+                            <div class="flex items-start gap-3">
+                                <i class="bi bi-exclamation-triangle-fill mt-0.5 text-lg text-red-500"></i>
+                                <div>
+                                    <p class="font-semibold text-red-700">Perubahan belum bisa disimpan.</p>
+                                    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-red-600">
+                                        @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    <form action="{{ route('manager.kasir.update', $kasir->id_kasir) }}" method="POST" class="space-y-8">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700">
+                                    Nama Kasir <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-lg {{ $errors->has('nama_kasir') ? 'text-red-400' : 'text-slate-400' }}">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        name="nama_kasir"
+                                        value="{{ old('nama_kasir', $kasir->nama_kasir) }}"
+                                        class="w-full rounded-2xl border-2 bg-white py-4 pl-12 pr-4 text-slate-900 outline-none transition {{ $errors->has('nama_kasir') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-100' : 'border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                        placeholder="Contoh: Siti Nurhaliza"
+                                        required
+                                    >
+                                </div>
+                                @error('nama_kasir')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700">
+                                    Email <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-lg {{ $errors->has('email') ? 'text-red-400' : 'text-slate-400' }}">
+                                        <i class="bi bi-envelope-fill"></i>
+                                    </span>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value="{{ old('email', $kasir->email) }}"
+                                        class="w-full rounded-2xl border-2 bg-white py-4 pl-12 pr-4 text-slate-900 outline-none transition {{ $errors->has('email') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-100' : 'border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                        placeholder="Contoh: kasir@kasmini.com"
+                                        required
+                                    >
+                                </div>
+                                @error('email')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700">
+                                    No HP <span class="text-xs font-normal text-slate-400">(Opsional)</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-lg {{ $errors->has('no_hp') ? 'text-red-400' : 'text-slate-400' }}">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <span class="pointer-events-none absolute inset-y-0 left-12 flex items-center text-sm font-semibold text-slate-500">+62</span>
+                                    <input
+                                        type="tel"
+                                        name="no_hp"
+                                        value="{{ old('no_hp', $kasir->no_hp) }}"
+                                        class="w-full rounded-2xl border-2 bg-white py-4 pl-24 pr-4 text-slate-900 outline-none transition {{ $errors->has('no_hp') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-100' : 'border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                        placeholder="81234567890"
+                                        pattern="[0-9]+"
+                                        maxlength="15"
+                                    >
+                                </div>
+                                @error('no_hp')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-2 text-xs text-slate-500">Gunakan format tanpa angka `0` di depan.</p>
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-sm font-semibold text-slate-700">
+                                    Password Baru <span class="text-xs font-normal text-slate-400">(Opsional)</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-lg {{ $errors->has('password') ? 'text-red-400' : 'text-slate-400' }}">
+                                        <i class="bi bi-lock-fill"></i>
+                                    </span>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        id="password"
+                                        class="w-full rounded-2xl border-2 bg-white py-4 pl-12 pr-14 text-slate-900 outline-none transition {{ $errors->has('password') ? 'border-red-300 bg-red-50 focus:border-red-400 focus:ring-4 focus:ring-red-100' : 'border-slate-200 focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100' }}"
+                                        placeholder="Kosongkan jika tidak ingin mengubah"
+                                        minlength="6"
+                                    >
+                                    <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 transition hover:text-slate-700">
+                                        <i class="bi bi-eye-fill text-lg" id="toggleIcon"></i>
+                                    </button>
+                                </div>
+                                @error('password')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-2 text-xs text-slate-500">Isi hanya jika kamu ingin mengganti password login kasir.</p>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="mb-2 block text-sm font-semibold text-slate-700">
+                                    Status <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-lg text-slate-400">
+                                        <i class="bi bi-toggle-on"></i>
+                                    </span>
+                                    <select
+                                        name="status"
+                                        class="w-full appearance-none rounded-2xl border-2 border-slate-200 bg-white py-4 pl-12 pr-12 text-slate-900 outline-none transition focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100"
+                                        required
+                                    >
+                                        <option value="aktif" {{ old('status', $kasir->status) === 'aktif' ? 'selected' : '' }}>Aktif - Siap Bertugas</option>
+                                        <option value="nonaktif" {{ old('status', $kasir->status) === 'nonaktif' ? 'selected' : '' }}>Nonaktif - Tidak Bertugas</option>
+                                    </select>
+                                    <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-5">
+                            <div class="flex items-start gap-3">
+                                <i class="bi bi-clock-history mt-0.5 text-lg text-slate-500"></i>
+                                <div class="text-sm text-slate-600">
+                                    <p class="font-semibold text-slate-800">Terakhir diperbarui</p>
+                                    <p class="mt-1">{{ optional($kasir->updated_at)->format('d M Y, H:i') ?? '-' }} WIB</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+                            <a href="{{ route('manager.index') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
+                                <i class="bi bi-x-circle"></i>
+                                <span>Batal</span>
+                            </a>
+                            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 px-7 py-3 font-bold text-white shadow-lg shadow-slate-300 transition hover:bg-slate-800">
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>Update Kasir</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <aside class="space-y-5">
+                <div class="rounded-[28px] border border-amber-100 bg-gradient-to-br from-amber-50 to-yellow-50 px-6 py-6 shadow-sm">
+                    <div class="flex items-start gap-4">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-xl text-white">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Catatan Update</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">Perubahan akan langsung berlaku. Jika password diubah, kasir harus login ulang dengan password baru.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Ringkasan Akun</p>
+                    <dl class="mt-4 space-y-4 text-sm text-slate-700">
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-slate-500">Nama</dt>
+                            <dd class="text-right font-semibold text-slate-900">{{ $kasir->nama_kasir ?? '-' }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-slate-500">Email</dt>
+                            <dd class="text-right font-semibold text-slate-900">{{ $kasir->email ?? '-' }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-slate-500">Status Saat Ini</dt>
+                            <dd class="text-right">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ ($kasir->status ?? '') === 'aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
+                                    {{ ucfirst($kasir->status ?? '-') }}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            </aside>
         </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
-{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
-// Toggle Password Visibility
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.getElementById('toggleIcon');
-    
+
+    if (!passwordInput || !toggleIcon) return;
+
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         toggleIcon.classList.remove('bi-eye-fill');
@@ -253,19 +262,14 @@ function togglePassword() {
     }
 }
 
-// Format Phone Number (hanya angka)
-document.querySelector('input[name="no_hp"]').addEventListener('input', function(e) {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const phoneInput = document.querySelector('input[name="no_hp"]');
 
-// Konfirmasi sebelum submit
-document.querySelector('form').addEventListener('submit', function(e) {
-    const nama = document.querySelector('input[name="nama_kasir"]').value;
-    const confirm = window.confirm(`Yakin ingin mengupdate data kasir "${nama}"?`);
-    
-    if (!confirm) {
-        e.preventDefault();
-    }
+    if (!phoneInput) return;
+
+    phoneInput.addEventListener('input', (event) => {
+        event.target.value = event.target.value.replace(/[^0-9]/g, '');
+    });
 });
 </script>
 @endpush
