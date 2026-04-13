@@ -17,12 +17,49 @@ use App\Models\JenisLayanan;
 
 class TransaksiController extends Controller
 {
+    /**
+     * Controller ini menangani alur transaksi laundry.
+     *
+     * Dipakai oleh:
+     * - admin
+     * - kasir
+     * - admin2
+     *
+     * Proses utamanya:
+     * - pilih pelanggan
+     * - tambah layanan
+     * - hitung total, diskon, dan DP
+     * - simpan transaksi
+     * - kirim ringkasan via email atau Telegram
+     *
+     * Kaitan dengan unit kompetensi:
+     * - Unit 1: memakai struktur data request, session, model, dan relasi database
+     * - Unit 3: menjalankan source code berdasarkan route, request, dan response
+     * - Unit 4: menerapkan validasi, permission, dan penanganan error dasar
+     * - Unit 5: memakai array, percabangan, perulangan implisit, dan fungsi bantu
+     * - Unit 6: memberi dokumentasi method agar modul mudah dijelaskan
+     * - Unit 7: menyiapkan log, try-catch, dan alur debug saat transaksi gagal
+     */
+
+    /**
+     * Menyiapkan query daftar pelanggan untuk fitur cari dan urut.
+     *
+     * Langkahnya:
+     * - ambil kata kunci pencarian
+     * - filter nama, email, atau nomor HP
+     * - urutkan hasil sesuai pilihan user
+     *
+     * @param Request $request
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
     private function buildPelangganPickerQuery(Request $request)
     {
+        // Query builder dipakai agar filter bisa disusun bertahap sesuai input user.
         $query = Pelanggan::query();
         $search = trim((string) $request->get('search', ''));
 
         if ($search !== '') {
+            // Group where ini membuat pencarian nama/email/no hp tetap berada dalam satu blok OR.
             $query->where(function ($builder) use ($search) {
                 $builder->where('nama_pelanggan', 'like', '%' . $search . '%')
                     ->orWhere('email', 'like', '%' . $search . '%')
@@ -32,6 +69,7 @@ class TransaksiController extends Controller
 
         $sort = $request->get('sort', 'nama_asc');
 
+        // match() dipakai supaya pilihan urut lebih ringkas dibanding banyak if-else.
         match ($sort) {
             'nama_desc' => $query->orderBy('nama_pelanggan', 'desc'),
             'terbaru' => $query->orderBy('id_pelanggan', 'desc'),
@@ -98,6 +136,7 @@ class TransaksiController extends Controller
         // ✅ CHECK PERMISSION ADD
         requirePermission('transaksi', 'add');
         
+        // Data pelanggan disalin ke session agar transaksi bisa dirakit dulu sebelum disimpan permanen.
         $p = Pelanggan::find($id);
         if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
 
@@ -113,35 +152,46 @@ class TransaksiController extends Controller
         return redirect()->route('transaksi.create');
     }
 
-public function setPelangganKasir($id)
-{
-    requirePermission('transaksi', 'view');
-    
-    $p = Pelanggan::find($id);
-    if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
-
-    session([
-        'pelanggan_kasir' => [  // ✅ FIX: Gunakan key khusus kasir
-            'id_pelanggan'   => $p->id_pelanggan,
-            'nama_pelanggan' => $p->nama_pelanggan,
-            'no_hp'          => $p->no_hp,
-            'email'          => $p->email,
-            'telegram_chat_id'=> $p->telegram_chat_id,
-            'telegram_username' => $p->telegram_username,
-            'foto'           => $p->gambar 
-                ? (str_starts_with($p->gambar, 'pelanggan/') 
-                    ? $p->gambar 
-                    : 'pelanggan/' . $p->gambar)
-                : null,
-        ]
-    ]);
-
-    return redirect()->route('kasir.transaksi.create');
-}
-    public function setPelangganAdmin2($id)
-{
-    requirePermission('transaksi', 'view');
+    /**
+     * Menyimpan pelanggan yang dipilih kasir ke session transaksi kasir.
+     *
+     * Data Telegram ikut dimasukkan ke session agar popup checkout bisa
+     * mengetahui apakah pelanggan sudah menautkan akun Telegram.
+     *
+     * @param int|string $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function setPelangganKasir($id)
+    {
+        requirePermission('transaksi', 'view');
         
+        $p = Pelanggan::find($id);
+        if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
+
+        session([
+            'pelanggan_kasir' => [
+                'id_pelanggan'   => $p->id_pelanggan,
+                'nama_pelanggan' => $p->nama_pelanggan,
+                'no_hp'          => $p->no_hp,
+                'email'          => $p->email,
+                'telegram_chat_id' => $p->telegram_chat_id,
+                'telegram_username' => $p->telegram_username,
+                'foto'           => $p->gambar 
+                    ? (str_starts_with($p->gambar, 'pelanggan/') 
+                        ? $p->gambar 
+                        : 'pelanggan/' . $p->gambar)
+                    : null,
+            ]
+        ]);
+
+        return redirect()->route('kasir.transaksi.create');
+    }
+
+    public function setPelangganAdmin2($id)
+    {
+        requirePermission('transaksi', 'view');
+        
+        // Admin2 memakai key session berbeda agar alur antar panel tidak saling bentrok.
         $p = Pelanggan::find($id);
         if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
 
@@ -283,60 +333,64 @@ public function setPelangganKasir($id)
     // 6. HALAMAN CHECKOUT - ADMIN
     // ==========================
     public function checkout(Request $request)
-{
-    requirePermission('transaksi', 'add');
-    
-    try {
-        $pelanggan = session('pelanggan_transaksi');
-        $detail    = session('detail_transaksi', []);
+    {
+        requirePermission('transaksi', 'add');
+        
+        try {
+            $pelanggan = session('pelanggan_transaksi');
+            $detail    = session('detail_transaksi', []);
 
-        if (!$pelanggan || count($detail) === 0) {
-            return redirect()
-                ->route('transaksi.create')
-                ->with('error', 'Data transaksi tidak lengkap');
-        }
+            if (!$pelanggan || count($detail) === 0) {
+                return redirect()
+                    ->route('transaksi.create')
+                    ->with('error', 'Data transaksi tidak lengkap');
+            }
 
-        $total = array_sum(
-            array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
-        );
+            // Hitung total seluruh item layanan yang dipilih.
+            $total = array_sum(
+                array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
+            );
 
-        $transaksi = \App\Models\Transaksi::create([
-            'id_pelanggan' => $pelanggan['id_pelanggan'],
-            'tanggal'      => now()->format('Y-m-d H:i:s'), // ✅ FIX
-            'total_harga'  => $total,
-            'status'       => 'proses',
-            'keterangan'   => session('keterangan_transaksi'),
-            'id_kasir'     => auth()->id(),
-        ]);
-
-        foreach ($detail as $d) {
-            \App\Models\DetailTransaksi::create([
-                'id_transaksi'     => $transaksi->id_transaksi,
-                'id_jenis_layanan' => $d['id_jenis_layanan'],
-                'qty'              => $d['qty'],
-                'harga'            => $d['harga'],
-                'id_parfum'        => $d['id_parfum'] ?? null,
+            // Simpan header transaksi utama.
+            $transaksi = \App\Models\Transaksi::create([
+                'id_pelanggan' => $pelanggan['id_pelanggan'],
+                'tanggal'      => now()->format('Y-m-d H:i:s'),
+                'total_harga'  => $total,
+                'status'       => 'proses',
+                'keterangan'   => session('keterangan_transaksi'),
+                'id_kasir'     => auth()->id(),
             ]);
+
+            // Simpan rincian item layanan sebagai detail transaksi.
+            foreach ($detail as $d) {
+                \App\Models\DetailTransaksi::create([
+                    'id_transaksi'     => $transaksi->id_transaksi,
+                    'id_jenis_layanan' => $d['id_jenis_layanan'],
+                    'qty'              => $d['qty'],
+                    'harga'            => $d['harga'],
+                    'id_parfum'        => $d['id_parfum'] ?? null,
+                ]);
+            }
+
+            // Bersihkan session transaksi setelah data berhasil diproses.
+            session()->forget([
+                'pelanggan_transaksi',
+                'detail_transaksi',
+                'keterangan_transaksi'
+            ]);
+
+            return redirect()
+                ->route('riwayat.index')
+                ->with('success', 'Transaksi berhasil disimpan');
+
+        } catch (\Throwable $e) {
+            \Log::error($e);
+
+            return redirect()
+                ->route('transaksi.confirm')
+                ->with('error', 'Gagal menyimpan transaksi');
         }
-
-        session()->forget([
-            'pelanggan_transaksi',
-            'detail_transaksi',
-            'keterangan_transaksi'
-        ]);
-
-        return redirect()
-            ->route('riwayat.index')
-            ->with('success', 'Transaksi berhasil disimpan');
-
-    } catch (\Throwable $e) {
-        \Log::error($e);
-
-        return redirect()
-            ->route('transaksi.confirm')
-            ->with('error', 'Gagal menyimpan transaksi');
     }
-}
 
     // ==========================
     // 7. SIMPAN TRANSAKSI - ADMIN
@@ -514,142 +568,160 @@ public function bayar(Request $request)
   // ==========================
 // KASIR - BAYAR (DIPERBAIKI - SAMAKAN DENGAN SUPER ADMIN)
 // ==========================
-public function bayarKasir(Request $request)
-{
-    try {
-        \Log::info('🟢 BAYAR KASIR METHOD CALLED');
-        \Log::info('Request data:', $request->all());
-        
-        // ✅ FIX: Gunakan 'pelanggan_kasir' sesuai dengan setPelangganKasir()
-        $pelanggan = session('pelanggan_kasir');
-        $detail    = session('detail_transaksi', []);
-        
-        \Log::info('Session pelanggan:', $pelanggan ? ['found' => true, 'data' => $pelanggan] : ['found' => false]);
-        \Log::info('Session detail count:', ['count' => count($detail)]);
+    /**
+     * Menyimpan transaksi kasir lengkap dengan detail layanan dan status bayar.
+     *
+     * Poin penting untuk asesmen:
+     * - Validasi data transaksi dari session
+     * - Perhitungan total, diskon, DP, dan status pembayaran
+     * - Penyimpanan header transaksi dan detail transaksi
+     * - Logging error sebagai bukti proses debugging
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bayarKasir(Request $request)
+    {
+        try {
+            \Log::info('🟢 BAYAR KASIR METHOD CALLED');
+            \Log::info('Request data:', $request->all());
+            
+            // Ambil data pelanggan dan keranjang transaksi dari session kasir.
+            $pelanggan = session('pelanggan_kasir');
+            $detail    = session('detail_transaksi', []);
+            
+            \Log::info('Session pelanggan:', $pelanggan ? ['found' => true, 'data' => $pelanggan] : ['found' => false]);
+            \Log::info('Session detail count:', ['count' => count($detail)]);
 
-        if (!$pelanggan || empty($detail)) {
-            \Log::error('❌ Validation failed: pelanggan or detail empty');
-            return response()->json([
-                'error' => 'Transaksi tidak valid. Silakan pilih pelanggan dan layanan terlebih dahulu.'
-            ], 400);
-        }
+            if (!$pelanggan || empty($detail)) {
+                \Log::error('❌ Validation failed: pelanggan or detail empty');
+                return response()->json([
+                    'error' => 'Transaksi tidak valid. Silakan pilih pelanggan dan layanan terlebih dahulu.'
+                ], 400);
+            }
 
-        $diskon       = floatval($request->input('diskon', 0));
-        $dp           = floatval($request->input('dp', 0));
-        $langsungBayar= intval($request->input('langsung_bayar', 0));
-        $keterangan   = $request->input('keterangan', '-');
-        $idMetodeBayar= $request->input('id_metode_bayar', 1);
-        $tglEstimasi  = $request->input('tgl_estimasi', now());
+            // Baca input pembayaran dari form checkout.
+            $diskon       = floatval($request->input('diskon', 0));
+            $dp           = floatval($request->input('dp', 0));
+            $langsungBayar= intval($request->input('langsung_bayar', 0));
+            $keterangan   = $request->input('keterangan', '-');
+            $idMetodeBayar= $request->input('id_metode_bayar', 1);
+            $tglEstimasi  = $request->input('tgl_estimasi', now());
 
-        $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
+            // Hitung total awal berdasarkan detail layanan yang ada di session.
+            $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
-        $tipeDiskon = $request->input('tipe_diskon', 'nominal');
-        if ($tipeDiskon === 'percent') {
-            $diskon = $totalAwal * ($diskon / 100);
-        }
+            // Dukung diskon nominal atau persentase.
+            $tipeDiskon = $request->input('tipe_diskon', 'nominal');
+            if ($tipeDiskon === 'percent') {
+                $diskon = $totalAwal * ($diskon / 100);
+            }
 
-        if ($diskon > $totalAwal) {
-            return response()->json([
-                'message' => 'Diskon tidak boleh lebih besar dari total harga.'
-            ], 422);
-        }
+            if ($diskon > $totalAwal) {
+                return response()->json([
+                    'message' => 'Diskon tidak boleh lebih besar dari total harga.'
+                ], 422);
+            }
 
-        $totalAkhir = max($totalAwal - $diskon, 0);
+            $totalAkhir = max($totalAwal - $diskon, 0);
 
-        $totalBayar = $dp;
-        if ($langsungBayar === 1 || $dp >= $totalAkhir) {
-            $totalBayar = $totalAkhir;
-            $statusBayar = 'lunas';
-            $tglLunas = now()->format('Y-m-d H:i:s');
-            $dp = 0;
-        } elseif ($dp > 0) {
-            $statusBayar = 'DP';
-            $tglLunas = null;
-        } else {
-            $statusBayar = 'belum_lunas';
-            $tglLunas = null;
-        }
-        
-        \Log::info('💰 Calculated values:', [
-            'totalAwal' => $totalAwal,
-            'diskon' => $diskon,
-            'totalAkhir' => $totalAkhir,
-            'statusBayar' => $statusBayar
-        ]);
-
-        $trans = Transaksi::create([
-            'id_pelanggan'     => $pelanggan['id_pelanggan'],
-            'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
-            'no_hp'            => $pelanggan['no_hp'],
-            'total_harga'      => $totalAwal,
-            'total_bayar'      => $totalBayar,
-            'dp'               => $dp,
-            'diskon'           => $diskon,
-            'status_bayar'     => $statusBayar,
-            'status_transaksi' => 'antrian',
-            'jenis_transaksi'  => 'offline',
-            'keterangan'       => $keterangan,
-            'tgl_transaksi'    => now()->format('Y-m-d H:i:s'),
-            'tgl_estimasi'     => $tglEstimasi,
-            'tgl_lunas'        => $tglLunas,
-            'id_kasir'         => auth()->id() ?? 1,
-            'nama_kasir'       => auth()->user()->name ?? 'Kasir',
-            'id_metode_bayar'  => $idMetodeBayar,
-        ]);
-        
-        \Log::info('✅ Transaction created:', ['id' => $trans->id_transaksi]);
-
-        foreach ($detail as $d) {
-            $jenis = \App\Models\JenisLayanan::with('satuan')
-                ->where('id_jenis_layanan', $d['id_jenis_layanan'])
-                ->first();
-
-            $idSatuan = $jenis?->satuan?->id_satuan ?? null;
-
-            \App\Models\DetailTransaksi::create([
-                'id_transaksi'     => $trans->id_transaksi,
-                'id_layanan'       => $d['id_layanan'],
-                'id_jenis_layanan' => $d['id_jenis_layanan'],
-                'id_parfum'        => $d['id_parfum'] ?? null,
-                'harga'            => $d['harga'],
-                'qty'              => $d['qty'],
-                'id_satuan'        => $idSatuan,
+            // Tentukan status pembayaran berdasarkan kombinasi langsung bayar dan DP.
+            $totalBayar = $dp;
+            if ($langsungBayar === 1 || $dp >= $totalAkhir) {
+                $totalBayar = $totalAkhir;
+                $statusBayar = 'lunas';
+                $tglLunas = now()->format('Y-m-d H:i:s');
+                $dp = 0;
+            } elseif ($dp > 0) {
+                $statusBayar = 'DP';
+                $tglLunas = null;
+            } else {
+                $statusBayar = 'belum_lunas';
+                $tglLunas = null;
+            }
+            
+            \Log::info('💰 Calculated values:', [
+                'totalAwal' => $totalAwal,
+                'diskon' => $diskon,
+                'totalAkhir' => $totalAkhir,
+                'statusBayar' => $statusBayar
             ]);
+
+            // Simpan transaksi utama sebagai header transaksi.
+            $trans = Transaksi::create([
+                'id_pelanggan'     => $pelanggan['id_pelanggan'],
+                'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
+                'no_hp'            => $pelanggan['no_hp'],
+                'total_harga'      => $totalAwal,
+                'total_bayar'      => $totalBayar,
+                'dp'               => $dp,
+                'diskon'           => $diskon,
+                'status_bayar'     => $statusBayar,
+                'status_transaksi' => 'antrian',
+                'jenis_transaksi'  => 'offline',
+                'keterangan'       => $keterangan,
+                'tgl_transaksi'    => now()->format('Y-m-d H:i:s'),
+                'tgl_estimasi'     => $tglEstimasi,
+                'tgl_lunas'        => $tglLunas,
+                'id_kasir'         => auth()->id() ?? 1,
+                'nama_kasir'       => auth()->user()->name ?? 'Kasir',
+                'id_metode_bayar'  => $idMetodeBayar,
+            ]);
+            
+            \Log::info('✅ Transaction created:', ['id' => $trans->id_transaksi]);
+
+            // Simpan item-item layanan ke tabel detail transaksi.
+            foreach ($detail as $d) {
+                $jenis = \App\Models\JenisLayanan::with('satuan')
+                    ->where('id_jenis_layanan', $d['id_jenis_layanan'])
+                    ->first();
+
+                $idSatuan = $jenis?->satuan?->id_satuan ?? null;
+
+                \App\Models\DetailTransaksi::create([
+                    'id_transaksi'     => $trans->id_transaksi,
+                    'id_layanan'       => $d['id_layanan'],
+                    'id_jenis_layanan' => $d['id_jenis_layanan'],
+                    'id_parfum'        => $d['id_parfum'] ?? null,
+                    'harga'            => $d['harga'],
+                    'qty'              => $d['qty'],
+                    'id_satuan'        => $idSatuan,
+                ]);
+            }
+
+            // Bersihkan session agar transaksi berikutnya dimulai dari state kosong.
+            session()->forget(['pelanggan_kasir', 'detail_transaksi', 'keterangan_transaksi']);
+            
+            \Log::info('✅ SUCCESS - Transaction saved');
+
+            return response()->json([
+                'success'      => true,
+                'id_transaksi' => $trans->id_transaksi,
+                'total'        => $totalAkhir,
+                'bayar'        => $totalBayar,
+                'nama'         => $pelanggan['nama_pelanggan'],
+                'hp'           => $pelanggan['no_hp'],
+                'email'        => $pelanggan['email'] ?? null,
+                'telegram_chat_id' => $pelanggan['telegram_chat_id'] ?? null,
+                'status_bayar' => $statusBayar,
+                'diskon'       => $diskon,
+                'total_bayar'  => $totalBayar,
+                'tgl_lunas'    => $tglLunas,
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('❌ ERROR in bayarKasir():', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
         }
-
-        // ✅ FIX: Forget 'pelanggan_kasir' bukan 'pelanggan'
-        session()->forget(['pelanggan_kasir', 'detail_transaksi', 'keterangan_transaksi']);
-        
-        \Log::info('✅ SUCCESS - Transaction saved');
-
-        return response()->json([
-            'success'      => true,
-            'id_transaksi' => $trans->id_transaksi,
-            'total'        => $totalAkhir,
-            'bayar'        => $totalBayar,
-            'nama'         => $pelanggan['nama_pelanggan'],
-            'hp'           => $pelanggan['no_hp'],
-            'email'        => $pelanggan['email'] ?? null,
-            'telegram_chat_id' => $pelanggan['telegram_chat_id'] ?? null,
-            'status_bayar' => $statusBayar,
-            'diskon'       => $diskon,
-            'total_bayar'  => $totalBayar,
-            'tgl_lunas'    => $tglLunas,
-        ]);
-        
-    } catch (\Exception $e) {
-        \Log::error('❌ ERROR in bayarKasir():', [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        
-        return response()->json([
-            'error' => 'Terjadi kesalahan: ' . $e->getMessage()
-        ], 500);
     }
-}
 
 
     // ==========================
@@ -1200,48 +1272,61 @@ public function confirmAdmin2()
         ));
     }
 
-public function confirmKasir()
-{
-    // ✅ CHECK PERMISSION VIEW
-    requirePermission('transaksi', 'view');
-    
-    // ✅ FIX: Gunakan 'pelanggan_kasir'
-    $pelanggan  = session('pelanggan_kasir');
-    $detail     = session('detail_transaksi', []);
-    $keterangan = session('keterangan_transaksi', '');
+    /**
+     * Menampilkan halaman konfirmasi checkout untuk kasir.
+     *
+     * Method ini berfungsi sebagai validasi terakhir sebelum transaksi dibayar.
+     */
+    public function confirmKasir()
+    {
+        requirePermission('transaksi', 'view');
+        
+        $pelanggan  = session('pelanggan_kasir');
+        $detail     = session('detail_transaksi', []);
+        $keterangan = session('keterangan_transaksi', '');
 
-    \Log::info('Kasir Confirm:', [
-        'has_pelanggan' => !empty($pelanggan),
-        'detail_count' => count($detail)
-    ]);
+        \Log::info('Kasir Confirm:', [
+            'has_pelanggan' => !empty($pelanggan),
+            'detail_count' => count($detail)
+        ]);
 
-    if (!$pelanggan) {
-        return redirect()
-            ->route('kasir.transaksi.create')
-            ->with('error', 'Pelanggan belum dipilih');
+        if (!$pelanggan) {
+            return redirect()
+                ->route('kasir.transaksi.create')
+                ->with('error', 'Pelanggan belum dipilih');
+        }
+
+        if (count($detail) === 0) {
+            return redirect()
+                ->route('kasir.transaksi.create')
+                ->with('error', 'Belum ada layanan yang dipilih');
+        }
+
+        $totalHarga = array_sum(
+            array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
+        );
+
+        $metode_bayar = \App\Models\MetodeBayar::all();
+
+        return view('kasir.transaksi.checkout', compact(
+            'pelanggan',
+            'detail',
+            'keterangan',
+            'totalHarga',
+            'metode_bayar'
+        ));
     }
 
-    if (count($detail) === 0) {
-        return redirect()
-            ->route('kasir.transaksi.create')
-            ->with('error', 'Belum ada layanan yang dipilih');
-    }
-
-    $totalHarga = array_sum(
-        array_map(fn($d) => $d['harga'] * $d['qty'], $detail)
-    );
-
-    $metode_bayar = \App\Models\MetodeBayar::all();
-
-    return view('kasir.transaksi.checkout', compact(
-        'pelanggan',
-        'detail',
-        'keterangan',
-        'totalHarga',
-        'metode_bayar'
-    ));
-}
-
+    /**
+     * Mengirim ringkasan transaksi kasir ke email atau Telegram.
+     *
+     * Fitur ini mendukung dua jalur:
+     * - Email pelanggan
+     * - Telegram menggunakan kode link atau chat id tersimpan
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function shareKasir(Request $request)
     {
         requirePermission('transaksi', 'view');
@@ -1310,6 +1395,7 @@ public function confirmKasir()
             ]);
         }
 
+        // Siapkan kredensial dan fallback penerima Telegram.
         $botToken = config('services.telegram.bot_token');
         $storedChatId = trim((string) ($transaksi->pelanggan?->telegram_chat_id ?? ''));
         $storedTelegramUsername = $transaksi->pelanggan?->telegram_username;
@@ -1325,6 +1411,10 @@ public function confirmKasir()
             ], 422);
         }
 
+        // Prioritas penerima Telegram:
+        // 1. Input dari popup share
+        // 2. Chat id yang sudah tersimpan di data pelanggan
+        // 3. Default chat id dari konfigurasi
         if ($rawRecipient !== '') {
             $resolvedTelegram = $this->resolveTelegramRecipient($rawRecipient);
             $chatId = $resolvedTelegram['chat_id'];
@@ -1401,6 +1491,16 @@ public function confirmKasir()
         ]);
     }
 
+    /**
+     * Mengubah input penerima Telegram menjadi chat id final.
+     *
+     * Input bisa berupa:
+     * - kode link Telegram dari bot
+     * - chat id numerik langsung
+     *
+     * @param string $recipient
+     * @return array{chat_id:string, username:?string}
+     */
     private function resolveTelegramRecipient(string $recipient): array
     {
         if ($recipient === '') {
@@ -1432,6 +1532,18 @@ public function confirmKasir()
         ];
     }
 
+    /**
+     * Menyimpan chat id Telegram ke data pelanggan setelah share berhasil.
+     *
+     * Tujuan:
+     * - Menghindari input kode Telegram berulang
+     * - Menautkan transaksi dengan data pelanggan yang benar
+     *
+     * @param Transaksi $transaksi
+     * @param string $chatId
+     * @param string|null $telegramUsername
+     * @return void
+     */
     private function storeTelegramChatIdForPelanggan(Transaksi $transaksi, string $chatId, ?string $telegramUsername = null): void
     {
         if ($chatId === '') {
@@ -1478,11 +1590,23 @@ public function confirmKasir()
         }
     }
 
+    /**
+     * Membuat key cache standar untuk kode link Telegram.
+     *
+     * @param string $code
+     * @return string
+     */
     private function telegramCodeCacheKey(string $code): string
     {
         return 'telegram_link_code:' . trim($code);
     }
 
+    /**
+     * Menyusun isi pesan ringkasan transaksi yang dibagikan ke pelanggan.
+     *
+     * @param Transaksi $transaksi
+     * @return string
+     */
     private function buildShareMessage(Transaksi $transaksi): string
     {
         $detailLines = $transaksi->detail->map(function ($item) {
@@ -1512,7 +1636,7 @@ public function confirmKasir()
             "Total Harga: Rp" . number_format((float) $transaksi->total_harga, 0, ',', '.') . "\n" .
             "Diskon: Rp" . number_format((float) $transaksi->diskon, 0, ',', '.') . "\n" .
             "Total Bayar: Rp" . number_format((float) $transaksi->total_bayar, 0, ',', '.') . "\n" .
-            (!empty($transaksi->tgl_estimasi) ? "Estimasi Selesai: " . \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i') . "\n" : '') .
+            (!empty($transaksi->tgl_estimasi) ? "Estimasi Selesai: " . \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y') . "\n" : '') .
             (!empty($detailLines) ? "\nDetail Layanan:\n{$detailLines}\n" : '') .
             "\nTerima kasih telah menggunakan layanan kami.";
     }

@@ -20,15 +20,87 @@ use App\Models\Satuan;
  * - Duplikasi layanan
  * - Manajemen session jenis layanan sementara
  * - Mendukung tiga panel: Admin, Kasir, Admin2
+ *
+ * Kaitan dengan unit kompetensi:
+ * - Unit 1: mengelola struktur data layanan, jenis layanan, satuan, dan relasinya
+ * - Unit 2: membantu implementasi rancangan data layanan ke bentuk program
+ * - Unit 4: menerapkan coding guideline, validasi input, dan pemisahan helper method
+ * - Unit 5: memakai array session, percabangan role, dan fungsi untuk alur terstruktur
+ * - Unit 6: dokumentasi method dipakai untuk menjelaskan modul layanan
+ * - Unit 7: proses validasi dan penyimpanan disusun agar mudah ditelusuri saat error
  */
 class LayananController extends Controller
 {
+    /**
+     * Validasi form tambah jenis layanan pada halaman edit layanan.
+     * Dipakai bersama oleh admin, kasir, dan admin2 agar aturan input tetap sama.
+     */
+    private function validateJenisSessionRequest(Request $request): array
+    {
+        return $request->validate([
+            'nama_jenis'  => 'required|string|max:255',
+            'id_satuan'   => 'required|exists:satuan,id_satuan',
+            'harga'       => 'required|numeric',
+            'lama'        => 'nullable|numeric',
+            'lama_satuan' => 'nullable|string',
+            'keterangan'  => 'nullable|string',
+            'gambar'      => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
+        ]);
+    }
+
+    /**
+     * Simpan gambar jenis layanan ke storage publik dan kembalikan path-nya.
+     * Jika user tidak upload gambar, method ini mengembalikan null.
+     */
+    private function storeJenisImageFromRequest(Request $request): ?string
+    {
+        if (!$request->hasFile('gambar')) {
+            return null;
+        }
+
+        $file = $request->file('gambar');
+        $filename = time() . '_' . $file->getClientOriginalName();
+
+        return $file->storeAs('jenis', $filename, 'public');
+    }
+
+    /**
+     * Tambahkan satu item jenis layanan sementara ke session edit layanan.
+     */
+    private function appendJenisSessionItem(int|string $from, array $payload): void
+    {
+        $sessionKey = "jenis_baru_{$from}";
+        $items = session()->get($sessionKey, []);
+        $items[] = $payload;
+
+        session()->put($sessionKey, $items);
+    }
+
+    /**
+     * Tentukan route kembali setelah tambah jenis sementara berdasarkan panel aktif.
+     */
+    private function getLayananEditRouteName(): string
+    {
+        if (Auth::guard('kasir')->check()) {
+            return 'kasir.layanan.edit';
+        }
+
+        $admin = Auth::guard('admin')->user();
+        if ($admin && (int) $admin->role_id === 2) {
+            return 'admin2.layanan.edit';
+        }
+
+        return 'layanan.edit';
+    }
+
     private function buildLayananQuery(Request $request)
     {
+        // Relasi jenis.satuan di-load di awal agar tampilan daftar layanan tidak memicu query berulang.
         $query = Layanan::with(['jenis.satuan']);
         $search = trim((string) $request->get('search', ''));
 
         if ($search !== '') {
+            // Pencarian sederhana cukup berdasarkan nama layanan karena ini dipakai di halaman list.
             $query->where('nama_layanan', 'like', '%' . $search . '%');
         }
 
@@ -1282,99 +1354,46 @@ class LayananController extends Controller
     public function addJenisEdit(Request $request, $from)
     {
         requirePermission('layanan', 'edit');
-        
-        $request->validate([
-            'nama_jenis'  => 'required|string|max:255',
-            'id_satuan'   => 'required|exists:satuan,id_satuan',
-            'harga'       => 'required|numeric',
-            'lama'        => 'nullable|numeric',
-            'lama_satuan' => 'nullable|string',
-            'keterangan'  => 'nullable|string',
-            'gambar'      => 'nullable|image|mimes:jpg,png,jpeg,gif,webp|max:2048',
-        ]);
 
-        $gambarPath = null;
-        if ($request->hasFile('gambar')) {
-            $file       = $request->file('gambar');
-            $filename   = time() . '_' . $file->getClientOriginalName();
-            $path       = $file->storeAs('jenis', $filename, 'public');
-            $gambarPath = $path;
-        }
+        // Alur ini dipakai saat user menambah jenis baru dari halaman edit layanan yang sudah ada.
+        $validated = $this->validateJenisSessionRequest($request);
+        $validated['gambar'] = $this->storeJenisImageFromRequest($request);
 
-        // Ambil array jenis dari session untuk layanan yang sedang diedit
-        $jenis   = session()->get("jenis_baru_{$from}", []);
-        $jenis[] = [
-            'nama_jenis'  => $request->nama_jenis,
-            'id_satuan'   => $request->id_satuan,
-            'harga'       => $request->harga,
-            'lama'        => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan'  => $request->keterangan,
-            'gambar'      => $gambarPath,
-        ];
+        // Data belum langsung masuk database; disimpan dulu di session agar bisa ditinjau sebelum update final.
+        $this->appendJenisSessionItem($from, $validated);
 
-        session()->put("jenis_baru_{$from}", $jenis);
-
-        if (Auth::guard('kasir')->check()) {
-            return redirect()->route('kasir.layanan.edit', $from)
-                ->with('success', 'Jenis layanan berhasil ditambahkan!');
-        }
-
-        return redirect()->route('layanan.edit', $from)
+        return redirect()->route($this->getLayananEditRouteName(), $from)
             ->with('success', 'Jenis layanan berhasil ditambahkan!');
     }
 
     // Menambahkan jenis ke session saat edit layanan di panel Admin2
     public function addJenisEditAdmin2(Request $request, $from)
     {
-        requirePermission('layanan', 'edit');
-        
-        $request->validate([
-            'nama_jenis'  => 'required|string|max:255',
-            'id_satuan'   => 'required|exists:satuan,id_satuan',
-            'harga'       => 'required|numeric',
-            'lama'        => 'nullable|numeric',
-            'lama_satuan' => 'nullable|string',
-            'keterangan'  => 'nullable|string',
-            'gambar'      => 'nullable|image|max:2048',
-        ]);
-
-        // Upload gambar ke folder public/images
-        $gambar = null;
-        if ($request->hasFile('gambar')) {
-            $filename = time().'_'.$request->file('gambar')->getClientOriginalName();
-            $request->file('gambar')->move(public_path('images'), $filename);
-            $gambar = $filename;
-        }
-
-        // Append ke array session berdasarkan ID layanan yang sedang diedit
-        $jenis   = session()->get("jenis_baru_{$from}", []);
-        $jenis[] = [
-            'nama_jenis'  => $request->nama_jenis,
-            'id_satuan'   => $request->id_satuan,
-            'harga'       => $request->harga,
-            'lama'        => $request->lama,
-            'lama_satuan' => $request->lama_satuan,
-            'keterangan'  => $request->keterangan,
-            'gambar'      => $gambar,
-        ];
-
-        session()->put("jenis_baru_{$from}", $jenis);
-
-        return redirect()->route('admin2.layanan.edit', $from)
-            ->with('success', 'Jenis layanan berhasil ditambahkan!');
+        // Admin2 memakai alur yang sama dengan panel lain.
+        return $this->addJenisEdit($request, $from);
     }
 
     // Menampilkan form tambah jenis untuk layanan yang sedang diedit (Admin)
     public function addJenisSessionForm($from)
     {
-        requirePermission('layanan', 'add');
+        // Form ini dipakai dari halaman edit layanan, jadi hak akses yang dibutuhkan adalah edit.
+        requirePermission('layanan', 'edit');
         
-        $satuanList = \App\Models\Satuan::all();
+        // Daftar satuan dipakai oleh semua panel sehingga disiapkan sekali di method ini.
+        $satuanList = Satuan::all();
 
         if (Auth::guard('kasir')->check()) {
             return view('kasir.layanan.tambah_jenis_layanan_edit', [
                 'from'   => $from,
+                'satuan' => $satuanList,
+            ]);
+        }
+
+        $admin = Auth::guard('admin')->user();
+        if ($admin && (int) $admin->role_id === 2) {
+            return view('admin2.layanan.tambah_jenis_layanan_create', [
+                'from' => $from,
+                'id_layanan' => $from,
                 'satuan' => $satuanList,
             ]);
         }

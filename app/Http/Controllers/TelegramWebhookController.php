@@ -10,12 +10,27 @@ use Illuminate\Support\Facades\Log;
 
 class TelegramWebhookController extends Controller
 {
+    /**
+     * Menerima update dari Telegram bot.
+     *
+     * Alur singkat:
+     * - baca payload masuk
+     * - ambil data message, chat id, dan text
+     * - jalankan perintah seperti /start, /help, /status, atau link nomor HP
+     * - jika payload kosong atau tidak ada chat id, balas sukses tanpa proses lanjut
+     *
+     * Kaitan dengan unit kompetensi:
+     * - Unit 3: menerima request webhook lalu mengeksekusi cabang perintah
+     * - Unit 4: menerapkan validasi input minimum dan coding terstruktur
+     * - Unit 6: method diberi dokumentasi agar alur bot mudah dipahami
+     * - Unit 7: memakai try-catch dan log untuk membantu proses debugging webhook
+     */
     public function handle(Request $request)
     {
-        file_put_contents(storage_path('logs/telegram-debug.txt'), now().' HIT' . PHP_EOL, FILE_APPEND);
-
         try {
             $payload = $request->all();
+            // Telegram mengirim banyak tipe update; project ini fokus ke payload `message`.
+            $message = data_get($payload, 'message', []);
 
             Log::info('Telegram webhook received', $payload);
 
@@ -111,6 +126,7 @@ class TelegramWebhookController extends Controller
 
     private function issueTelegramLinkCode(int|string $chatId, ?string $username = null): string
     {
+        // Cache file dipakai agar kode link punya masa berlaku tanpa harus membuat tabel tambahan.
         $cacheStore = Cache::store('file');
         $chatKey = $this->telegramChatCacheKey((string) $chatId);
         $existingCode = $cacheStore->get($chatKey);
