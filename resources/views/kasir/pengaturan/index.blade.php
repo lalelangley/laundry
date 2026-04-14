@@ -377,10 +377,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition';
                     
                     // ✅ BUILD HTML WITH CONDITIONAL DELETE BUTTON
+                    const downloadUrl = `{{ url('kasir/pengaturan/backups/download') }}/${encodeURIComponent(backup.filename)}`;
                     let actionsHTML = `
-                        <a href="{{ url('kasir/pengaturan/backups/download') }}/${backup.filename}" 
-                           class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1"
-                           download>
+                        <a href="${downloadUrl}" 
+                           class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1">
                             <i class="bi bi-download"></i>
                             Download
                         </a>

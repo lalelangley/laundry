@@ -53,7 +53,7 @@
                                 <tr>
                                     <td style="padding:14px 20px;">
                                         <span style="font-size:14px;color:#9a3412;">Estimasi Selesai</span>
-                                        <div style="margin-top:4px;font-size:16px;font-weight:700;color:#7c2d12;">{{ \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i') }}</div>
+                                        <div style="margin-top:4px;font-size:16px;font-weight:700;color:#7c2d12;">{{ \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y') }}</div>
                                     </td>
                                 </tr>
                                 @endif

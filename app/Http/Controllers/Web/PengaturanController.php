@@ -898,15 +898,23 @@ class PengaturanController extends Controller
     private function processDownloadBackup($filename)
     {
         $backupPath = storage_path('app/private/Laravel/Laravel');
-        $filePath   = $backupPath . '/' . $filename;
+        $safeFilename = basename((string) $filename);
+        $filePath   = $backupPath . '/' . $safeFilename;
 
         // Kembalikan 404 jika file tidak ditemukan
         if (!file_exists($filePath)) {
             abort(404, 'File backup tidak ditemukan');
         }
 
+        // Pastikan nama file hasil unduhan selalu memakai ekstensi .zip.
+        $downloadName = str_ends_with(strtolower($safeFilename), '.zip')
+            ? $safeFilename
+            : $safeFilename . '.zip';
+
         // Kirim file sebagai response download ke browser
-        return response()->download($filePath);
+        return response()->download($filePath, $downloadName, [
+            'Content-Type' => 'application/zip',
+        ]);
     }
 
     /**

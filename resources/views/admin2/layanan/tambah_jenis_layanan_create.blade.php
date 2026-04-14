@@ -5,10 +5,20 @@
 
 @section('content')
 
+@php
+    $isSessionEdit = !empty($from);
+    $backRoute = $isSessionEdit
+        ? route('admin2.layanan.edit', $from)
+        : route('admin2.layanan.create');
+    $formAction = $isSessionEdit
+        ? route('admin2.layanan.jenis.add.edit', $from)
+        : route('admin2.layanan.jenis.store', ['id_layanan' => $id_layanan ?? 0]);
+@endphp
+
 {{-- HEADER --}}
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl flex items-center gap-3 shadow">
-    <a href="{{ route('admin2.layanan.create') }}" class="text-black text-3xl font-bold">
+    <a href="{{ $backRoute }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
     </a>
     <span class="text-xl font-bold">Tambah Jenis Layanan</span>
@@ -32,7 +42,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin2.layanan.jenis.store', ['id_layanan' => $id_layanan ?? 0]) }}" 
+    <form action="{{ $formAction }}" 
           method="POST" 
           enctype="multipart/form-data"
           class="bg-white p-6 rounded-2xl shadow-lg space-y-5">
@@ -147,7 +157,7 @@
 
         {{-- Buttons --}}
         <div class="flex justify-between items-center pt-4">
-            <a href="{{ route('admin2.layanan.create') }}"
+            <a href="{{ $backRoute }}"
                class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold transition inline-flex items-center gap-2">
                 <i class="bi bi-x-circle"></i>
                 <span>Batal</span>

@@ -164,7 +164,7 @@ class TransaksiShareController extends Controller
             "Total Harga: Rp" . number_format((float) $transaksi->total_harga, 0, ',', '.') . "\n" .
             "Diskon: Rp" . number_format((float) $transaksi->diskon, 0, ',', '.') . "\n" .
             "Total Bayar: Rp" . number_format((float) $transaksi->total_bayar, 0, ',', '.') . "\n" .
-            (!empty($transaksi->tgl_estimasi) ? "Estimasi Selesai: " . \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y H:i') . "\n" : '') .
+            (!empty($transaksi->tgl_estimasi) ? "Estimasi Selesai: " . \Carbon\Carbon::parse($transaksi->tgl_estimasi)->format('d/m/Y') . "\n" : '') .
             (!empty($detailLines) ? "\nDetail Layanan:\n{$detailLines}\n" : '') .
             "\nTerima kasih telah menggunakan layanan kami.";
     }
