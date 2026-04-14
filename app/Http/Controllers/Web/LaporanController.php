@@ -9,11 +9,16 @@ use App\Models\Transaksi;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\BladeTableExport;
 use App\Exports\TransaksiExport;
 use Illuminate\Support\Facades\Auth;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+
 
 /**
  * LaporanController
@@ -38,19 +43,10 @@ use Carbon\Carbon;
  * - Laporan Pelanggan
  * - Laporan Satuan
  * - Laporan Driver
- * - Export Excel menggunakan Laravel Excel
- * - Export transaksi memakai class export khusus
- * - Export laporan lain memakai Blade table yang dikirim ke Laravel Excel
+ * - Export Excel menggunakan PhpSpreadsheet (manual, cell by cell)
+ * - Export Transaksi menggunakan Maatwebsite\Excel + class TransaksiExport
  * - Export PDF menggunakan barryvdh/laravel-dompdf
  * - Export CSV menggunakan native PHP fputcsv + response()->stream()
- *
- * Kaitan dengan unit kompetensi:
- * - Unit 1: memanfaatkan query, agregasi, relasi data, dan filter laporan
- * - Unit 3: menunjukkan eksekusi source code dari request sampai file download
- * - Unit 4: menerapkan struktur method yang terpisah untuk query, export, dan helper
- * - Unit 5: memakai array, switch/match, dan perulangan untuk membentuk data laporan
- * - Unit 6: menjadi bukti dokumentasi fungsi/modul program
- * - Unit 7: membantu debugging karena setiap format export dipisah dan mudah diuji
  */
 class LaporanController extends Controller
 {
@@ -1977,7 +1973,7 @@ class LaporanController extends Controller
         requirePermission('laporan', 'view');
 
         // [PERCABANGAN] Default ke Excel jika format tidak dispesifikasikan
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
 
         // [OBJECT + METHOD] Bangun query dengan filter opsional
         $query = Pengeluaran::query();
@@ -2023,7 +2019,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
 
         $query = Pengeluaran::query();
 
@@ -2062,7 +2058,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
 
         $query = Pengeluaran::query();
 
@@ -2094,35 +2090,178 @@ class LaporanController extends Controller
     // =========================================
 
     /**
-     * Menghasilkan file Excel laporan pengeluaran.
+     * [PRIVATE METHOD] exportPengeluaranExcel()
+     * Menghasilkan file Excel laporan pengeluaran menggunakan PhpSpreadsheet.
      *
-     * Pola yang dipakai:
-     * - data disusun dulu di controller
-     * - tabel dirender lewat Blade
-     * - Laravel Excel mengubah view itu jadi file .xlsx
+     * Library: PhpOffice\PhpSpreadsheet (manual, cell by cell — berbeda dari Maatwebsite\Excel)
+     * Cara kerja PhpSpreadsheet:
+     * 1. Buat object Spreadsheet (workbook)
+     * 2. Akses sheet aktif (worksheet)
+     * 3. Set nilai cell satu per satu dengan setCellValue()
+     * 4. Apply styling (warna, font, border, alignment)
+     * 5. Auto-size kolom
+     * 6. Kirim ke browser via php://output (stream)
+     *
+     * Konsep yang digunakan:
+     * - Object       : $spreadsheet dan $sheet adalah object dari PhpSpreadsheet
+     * - Array        : $headers adalah array berisi nama kolom header tabel
+     * - Perulangan   : foreach untuk iterasi $headers dan foreach untuk iterasi data
+     * - Percabangan  : if untuk mengecek ketersediaan filter tanggal
+     * - Method       : setCellValue(), getStyle(), getFill(), setFillType(), dll
+     *
+     * Struktur file:
+     * - Baris 1  : Judul laporan (merged, bold, size 16)
+     * - Baris 2  : Periode laporan
+     * - Baris 3  : Tanggal cetak
+     * - Baris 5  : Header tabel (background kuning)
+     * - Baris 6+ : Data pengeluaran
+     * - Baris N  : Total nominal (background oranye)
+     *
+     * @param  \Illuminate\Support\Collection  $pengeluaran  Data pengeluaran dari database
+     * @param  \Illuminate\Http\Request         $request      Request untuk mendapatkan filter
+     * @return void  Output langsung ke browser via php://output
      */
     private function exportPengeluaranExcel($pengeluaran, $request)
     {
-        $rows = $pengeluaran->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                Carbon::parse($item->tanggal_pengeluaran)->format('d/m/Y'),
-                $item->nama_pengeluaran,
-                (float) $item->nominal,
-            ];
-        })->all();
+        /**
+         * [OBJECT] Instansiasi object Spreadsheet dari PhpSpreadsheet.
+         * Spreadsheet = workbook (seluruh file Excel).
+         * getActiveSheet() mengembalikan object Worksheet (satu lembar sheet).
+         */
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Pengeluaran',
-            ['No', 'Tanggal', 'Nama Pengeluaran', 'Nominal'],
-            $rows,
-            'Laporan_Pengeluaran_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($request->dari, $request->sampai),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', '', (float) $pengeluaran->sum('nominal')]
-        );
+        // [METHOD] Set metadata dokumen (author, judul, deskripsi)
+        $spreadsheet->getProperties()
+            ->setCreator('Laundry System')
+            ->setTitle('Laporan Pengeluaran')
+            ->setSubject('Laporan Pengeluaran')
+            ->setDescription('Laporan data pengeluaran');
+
+        // Baris 1: Judul laporan, di-merge beberapa kolom dan di-center
+        $sheet->setCellValue('A1', 'LAPORAN PENGELUARAN');
+        $sheet->mergeCells('A1:D1'); // [METHOD] Gabungkan kolom A s/d D di baris 1
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Baris 2: Periode laporan
+        $dateRange = 'Periode: ';
+        // [PERCABANGAN - if] Cek apakah filter tanggal tersedia
+        if ($request->dari && $request->sampai) {
+            $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y')
+                . ' - '
+                . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+        } else {
+            $dateRange .= 'Semua Data'; // [PERCABANGAN - else] Tidak ada filter → tampilkan "Semua Data"
+        }
+        $sheet->setCellValue('A2', $dateRange);
+        $sheet->mergeCells('A2:D2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Baris 3: Tanggal dan waktu cetak (diformat menggunakan Carbon object)
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:D3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        /**
+         * [ARRAY] $headers adalah array berisi nama kolom header tabel.
+         * Array digunakan untuk menghindari penulisan setCellValue() berulang secara manual.
+         * Setiap elemen array = satu header kolom.
+         */
+        $row = 5;
+        $headers = ['No', 'Tanggal', 'Nama Pengeluaran', 'Nominal']; // [ARRAY] daftar header
+        $column = 'A';
+
+        /**
+         * [PERULANGAN - foreach] Iterasi setiap elemen array $headers.
+         * Untuk setiap header: set nilai cell, warna latar, font bold, dan alignment.
+         * $column++ secara implisit menginkremen huruf kolom: A → B → C → D
+         */
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . $row, $header);
+
+            // [METHOD] Atur background header: warna kuning (FCD34D = Tailwind Yellow-400)
+            $sheet->getStyle($column . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D');
+
+            $sheet->getStyle($column . $row)->getFont()->setBold(true);
+            $sheet->getStyle($column . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $column++; // Pindah ke kolom berikutnya (A → B → C → dst)
+        }
+
+        // Data dimulai dari baris 6
+        $row = 6;
+        $no = 1;           // Nomor urut (variabel counter)
+        $totalNominal = 0; // Akumulator untuk total nominal
+
+        /**
+         * [PERULANGAN - foreach] Iterasi setiap item pengeluaran dari database.
+         * $pengeluaran adalah Collection Laravel (hasil query Eloquent).
+         * Setiap iterasi: tulis satu baris data ke Excel dan tambahkan ke total.
+         */
+        foreach ($pengeluaran as $item) {
+            // Set nilai setiap cell dalam satu baris
+            $sheet->setCellValue('A' . $row, $no++); // Nomor urut, auto-increment
+            $sheet->setCellValue('B' . $row, \Carbon\Carbon::parse($item->tanggal_pengeluaran)->format('d/m/Y'));
+            $sheet->setCellValue('C' . $row, $item->nama_pengeluaran);
+            $sheet->setCellValue('D' . $row, $item->nominal);
+
+            // [METHOD] Format angka dengan pemisah ribuan (1.000.000, bukan 1000000)
+            $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+            // Center-align kolom nomor dan tanggal
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+
+            $totalNominal += $item->nominal; // [PERULANGAN] Akumulasi total nominal
+            $row++;                          // Pindah ke baris berikutnya
+        }
+
+        // Baris terakhir: Total dengan background oranye (FED7AA = Tailwind Orange-200)
+        $sheet->setCellValue('C' . $row, 'TOTAL');
+        $sheet->setCellValue('D' . $row, $totalNominal);
+        $sheet->getStyle('C' . $row . ':D' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('C' . $row . ':D' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+        $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('#,##0');
+
+        /**
+         * [ARRAY + PERULANGAN] Tambahkan border tipis ke seluruh area tabel.
+         * range('A', 'D') menghasilkan array ['A', 'B', 'C', 'D'].
+         * foreach iterasi setiap kolom untuk set auto-size.
+         */
+        $sheet->getStyle('A5:D' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // [PERULANGAN - foreach + ARRAY] Auto-fit lebar semua kolom A s/d D
+        foreach (range('A', 'D') as $col) { // range() menghasilkan array ['A','B','C','D']
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Kirim file langsung ke browser menggunakan HTTP headers
+        $fileName = 'Laporan_Pengeluaran_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+
+        // Set header HTTP agar browser mengenali response sebagai file download
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+
+        /**
+         * [OBJECT] Instansiasi object Writer untuk menulis file Excel.
+         * save('php://output') → stream file langsung ke browser tanpa menyimpan ke disk.
+         * php://output adalah stream output PHP yang terhubung ke response HTTP.
+         */
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit; // Hentikan eksekusi setelah file terkirim
     }
 
     /**
@@ -2312,7 +2451,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
 
         /**
          * [METHOD CALL] Memanggil private method getPelangganData() untuk mendapatkan data.
@@ -2344,7 +2483,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
         $data   = $this->getPelangganData($request); // [METHOD CALL] Ambil data via helper
 
         // [PERCABANGAN - switch]
@@ -2370,7 +2509,7 @@ class LaporanController extends Controller
     {
         requirePermission('laporan', 'view');
 
-        $format = $request->format ?? 'excel';
+        $format = $request->input('format', 'excel');
         $data   = $this->getPelangganData($request); // [METHOD CALL] Ambil data via helper
 
         // [PERCABANGAN - switch]
@@ -2456,36 +2595,144 @@ class LaporanController extends Controller
     }
 
     /**
-     * Menghasilkan file Excel laporan pelanggan.
+     * [PRIVATE METHOD] exportPelangganExcel()
+     * Menghasilkan file Excel laporan pelanggan menggunakan PhpSpreadsheet.
+     * Menggunakan 5 kolom: No, Nama Pelanggan, No HP, Total Transaksi, Total Belanja.
      *
-     * Polanya sama seperti export Excel lain:
-     * - susun baris tabel
-     * - kirim ke Blade
-     * - download lewat Laravel Excel
+     * Konsep yang digunakan:
+     * - Object     : $spreadsheet dan $sheet adalah object PhpSpreadsheet
+     * - Array      : $headers adalah array berisi nama kolom
+     * - Perulangan : foreach untuk header dan foreach untuk data
+     * - Percabangan: if untuk filter tanggal
+     *
+     * @param  \Illuminate\Support\Collection  $data     Data pelanggan
+     * @param  \Illuminate\Http\Request         $request  Request untuk filter
+     * @return void
      */
     private function exportPelangganExcel($data, $request)
     {
-        $rows = $data->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                $item->nama_pelanggan,
-                $item->no_hp,
-                (int) $item->total_transaksi,
-                (float) $item->total_belanja,
-            ];
-        })->all();
+        // [OBJECT] Instansiasi object Spreadsheet (workbook Excel)
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Pelanggan',
-            ['No', 'Nama Pelanggan', 'No HP', 'Total Transaksi', 'Total Belanja'],
-            $rows,
-            'Laporan_Pelanggan_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($request->dari, $request->sampai),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', '', '', (float) $data->sum('total_belanja')]
+        $spreadsheet->getProperties()
+            ->setCreator('Laundry System')
+            ->setTitle('Laporan Pelanggan')
+            ->setSubject('Laporan Pelanggan')
+            ->setDescription('Laporan data pelanggan');
+
+        $sheet->setCellValue('A1', 'LAPORAN PELANGGAN');
+        $sheet->mergeCells('A1:E1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
+
+        // [PERCABANGAN] Tentukan teks periode
+        $dateRange = 'Periode: ';
+        if ($request->dari && $request->sampai) {
+            $dateRange .= \Carbon\Carbon::parse($request->dari)->format('d/m/Y')
+                . ' - '
+                . \Carbon\Carbon::parse($request->sampai)->format('d/m/Y');
+        } else {
+            $dateRange .= 'Semua Data';
+        }
+        $sheet->setCellValue('A2', $dateRange);
+        $sheet->mergeCells('A2:E2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:E3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $row = 5;
+
+        /**
+         * [ARRAY] Daftar nama header kolom tabel.
+         * 5 kolom: A (No), B (Nama), C (HP), D (Transaksi), E (Belanja).
+         */
+        $headers = ['No', 'Nama Pelanggan', 'No HP', 'Total Transaksi', 'Total Belanja'];
+        $column = 'A';
+
+        /**
+         * [PERULANGAN - foreach] Tulis setiap header ke cell Excel dengan styling kuning.
+         */
+        foreach ($headers as $header) {
+            $sheet->setCellValue($column . $row, $header);
+            $sheet->getStyle($column . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D'); // Kuning
+            $sheet->getStyle($column . $row)->getFont()->setBold(true);
+            $sheet->getStyle($column . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $column++;
+        }
+
+        $row = 6;
+        $no = 1;
+        $totalBelanja = 0;
+
+        /**
+         * [PERULANGAN - foreach] Iterasi setiap pelanggan dan tulis ke Excel.
+         * $totalBelanja diakumulasi untuk ditampilkan di baris total.
+         */
+        foreach ($data as $item) {
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nama_pelanggan);
+            $sheet->setCellValue('C' . $row, $item->no_hp);
+            $sheet->setCellValue('D' . $row, $item->total_transaksi);
+            $sheet->setCellValue('E' . $row, $item->total_belanja);
+
+            $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+
+            $totalBelanja += $item->total_belanja; // Akumulasi
+            $row++;
+        }
+
+        // Baris total dengan background oranye
+        $sheet->setCellValue('D' . $row, 'TOTAL');
+        $sheet->setCellValue('E' . $row, $totalBelanja);
+        $sheet->getStyle('D' . $row . ':E' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('D' . $row . ':E' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+        $sheet->getStyle('E' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->getStyle('A5:E' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        /**
+         * [PERULANGAN - foreach + ARRAY] Auto-size semua kolom A s/d E.
+         * range('A', 'E') menghasilkan array ['A', 'B', 'C', 'D', 'E'].
+         */
+        foreach (range('A', 'E') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'Laporan_Pelanggan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+
+        // [OBJECT + METHOD] Writer untuk menulis dan stream file ke browser
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
@@ -2604,10 +2851,18 @@ class LaporanController extends Controller
     // =========================================
 
     /**
-     * Mengekspor laporan kinerja kasir.
+     * [METHOD] exportKasir()
+     * Mengekspor laporan kinerja kasir ke Excel untuk Admin.
      *
-     * Jika format `pdf`, data dikirim ke DomPDF.
-     * Jika format `excel`, data dirender sebagai tabel Blade lalu diunduh via Laravel Excel.
+     * Konsep yang digunakan:
+     * - Object     : $spreadsheet, $sheet → object PhpSpreadsheet
+     * - Array      : $headers (10 kolom header), $stats (ringkasan), data kasir
+     * - Perulangan : map() untuk kalkulasi per kasir, foreach untuk render Excel
+     * - Percabangan: Implicit dalam where(), whereIn()
+     * - Method     : map(), sortByDesc(), setCellValue(), dll
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void  Output langsung ke browser
      */
     public function exportKasir(Request $request)
     {
@@ -2657,36 +2912,129 @@ class LaporanController extends Controller
 
         $data = $data->sortByDesc('total_pendapatan')->values();
 
-        if ($request->format === 'pdf') {
+        if ($request->input('format') === 'pdf') {
             return $this->exportKasirPdf($data, $tglAwal, $tglAkhir);
         }
 
-        $rows = $data->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                $item->nama_kasir,
-                $item->no_hp,
-                (int) $item->antrian,
-                (int) $item->proses,
-                (int) $item->siap_ambil,
-                (int) $item->selesai,
-                (int) $item->batal,
-                (int) $item->total_transaksi,
-                (float) $item->total_pendapatan,
-            ];
-        })->all();
+        // [OBJECT] Buat spreadsheet Excel baru
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Kinerja Kasir',
-            ['No', 'Nama Kasir', 'No HP', 'Antrian', 'Proses', 'Siap Ambil', 'Selesai', 'Batal', 'Total Transaksi', 'Total Pendapatan'],
-            $rows,
-            'Laporan_Kasir_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($tglAwal, $tglAkhir),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', '', '', '', '', '', '', '', (float) $data->sum('total_pendapatan')]
+        // Judul laporan
+        $sheet->setCellValue('A1', 'LAPORAN KINERJA KASIR');
+        $sheet->mergeCells('A1:J1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
+
+        $periode = 'Periode: '
+            . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y')
+            . ' - '
+            . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+        $sheet->setCellValue('A2', $periode);
+        $sheet->mergeCells('A2:J2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:J3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $row = 5;
+
+        /**
+         * [ARRAY] Header tabel kasir: 10 kolom (A sampai J).
+         * Array menyimpan semua nama kolom agar bisa diiterasi.
+         */
+        $headers = [
+            'No', 'Nama Kasir', 'No HP', 'Antrian', 'Proses',
+            'Siap Ambil', 'Selesai', 'Batal', 'Total Transaksi', 'Total Pendapatan'
+        ];
+        $col = 'A';
+
+        /**
+         * [PERULANGAN - foreach] Tulis header kolom satu per satu dengan styling.
+         */
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D');
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $col++;
+        }
+
+        $row = 6;
+        $no = 1;
+        $totalPendapatan = 0;
+
+        /**
+         * [PERULANGAN - foreach] Tulis data setiap kasir ke Excel.
+         * 10 kolom per baris: A s/d J.
+         */
+        foreach ($data as $item) {
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nama_kasir);
+            $sheet->setCellValue('C' . $row, $item->no_hp);
+            $sheet->setCellValue('D' . $row, $item->antrian);
+            $sheet->setCellValue('E' . $row, $item->proses);
+            $sheet->setCellValue('F' . $row, $item->siap_ambil);
+            $sheet->setCellValue('G' . $row, $item->selesai);
+            $sheet->setCellValue('H' . $row, $item->batal);
+            $sheet->setCellValue('I' . $row, $item->total_transaksi);
+            $sheet->setCellValue('J' . $row, $item->total_pendapatan);
+
+            $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+
+            $totalPendapatan += $item->total_pendapatan; // Akumulasi total
+            $row++;
+        }
+
+        // Baris total
+        $sheet->setCellValue('I' . $row, 'TOTAL');
+        $sheet->setCellValue('J' . $row, $totalPendapatan);
+        $sheet->getStyle('I' . $row . ':J' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('I' . $row . ':J' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+        $sheet->getStyle('J' . $row)->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('I' . $row)->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->getStyle('A5:J' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        /**
+         * [PERULANGAN - foreach + ARRAY] Auto-size kolom A s/d J.
+         * range('A', 'J') menghasilkan array ['A','B','C','D','E','F','G','H','I','J'].
+         */
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'Laporan_Kasir_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
@@ -2711,10 +3059,17 @@ class LaporanController extends Controller
     // =========================================
 
     /**
-     * Mengekspor laporan metode pembayaran.
+     * [METHOD] exportBayar()
+     * Mengekspor laporan metode pembayaran ke Excel untuk Admin.
      *
-     * Format PDF memakai DomPDF.
-     * Format Excel memakai Laravel Excel dengan Blade table.
+     * Konsep yang digunakan:
+     * - Object     : $spreadsheet, $sheet → PhpSpreadsheet objects
+     * - Array      : $headers (3 kolom: No, Metode, Total)
+     * - Perulangan : foreach untuk header dan foreach untuk data
+     * - Method     : leftJoin(), select(), groupBy(), setCellValue(), dll
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
      */
     public function exportBayar(Request $request)
     {
@@ -2746,29 +3101,98 @@ class LaporanController extends Controller
             ->orderBy('metode_bayar.id_metode_bayar')
             ->get();
 
-        if ($request->format === 'pdf') {
+        if ($request->input('format') === 'pdf') {
             return $this->exportBayarPdf($data, $tglAwal, $tglAkhir);
         }
 
-        $rows = $data->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                $item->nama_metode_bayar,
-                (int) $item->total_penggunaan,
-            ];
-        })->all();
+        // [OBJECT] Buat spreadsheet baru
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Metode Pembayaran',
-            ['No', 'Metode Pembayaran', 'Total Penggunaan'],
-            $rows,
-            'Laporan_Metode_Bayar_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($tglAwal, $tglAkhir),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', (int) $data->sum('total_penggunaan')]
+        $sheet->setCellValue('A1', 'LAPORAN METODE PEMBAYARAN');
+        $sheet->mergeCells('A1:C1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
+
+        $periode = 'Periode: '
+            . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y')
+            . ' - '
+            . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+        $sheet->setCellValue('A2', $periode);
+        $sheet->mergeCells('A2:C2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:C3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $row = 5;
+
+        // [ARRAY] Header kolom tabel (3 kolom: A, B, C)
+        $headers = ['No', 'Metode Pembayaran', 'Total Penggunaan'];
+        $col = 'A';
+
+        // [PERULANGAN - foreach] Render header dengan styling kuning
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D');
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $col++;
+        }
+
+        $row = 6;
+        $no = 1;
+        $totalPenggunaan = 0;
+
+        // [PERULANGAN - foreach] Tulis setiap metode bayar ke Excel
+        foreach ($data as $item) {
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nama_metode_bayar);
+            $sheet->setCellValue('C' . $row, $item->total_penggunaan);
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $totalPenggunaan += $item->total_penggunaan; // Akumulasi
+            $row++;
+        }
+
+        // Baris total
+        $sheet->setCellValue('B' . $row, 'TOTAL');
+        $sheet->setCellValue('C' . $row, $totalPenggunaan);
+        $sheet->getStyle('B' . $row . ':C' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('B' . $row . ':C' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+
+        $sheet->getStyle('A5:C' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // [PERULANGAN + ARRAY] Auto-size kolom A s/d C
+        foreach (range('A', 'C') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'Laporan_Metode_Bayar_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
@@ -2802,10 +3226,19 @@ class LaporanController extends Controller
     // =========================================
 
     /**
-     * Mengekspor laporan satuan.
+     * [METHOD] exportSatuan()
+     * Mengekspor laporan satuan ke Excel untuk Admin.
      *
-     * Query tetap sama, hanya cara membuat file Excel yang diseragamkan
-     * ke Laravel Excel + Blade table.
+     * Konsep yang digunakan:
+     * - Object     : $spreadsheet, $sheet → PhpSpreadsheet objects
+     * - Array      : $headers (3 kolom: No, Nama Satuan, Total Qty)
+     * - Perulangan : foreach untuk header dan foreach untuk data
+     * - Method     : leftJoin(), COALESCE(), setCellValue(), dll
+     *
+     * Menggunakan COALESCE agar satuan tanpa transaksi tetap muncul dengan qty = 0.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
      */
    public function exportSatuan(Request $request)
     {
@@ -2834,29 +3267,91 @@ class LaporanController extends Controller
             ->get();
 
         // [PERCABANGAN] Cek format DULU sebelum bikin spreadsheet
-        if ($request->format === 'pdf') {
+        if ($request->input('format') === 'pdf') {
             return $this->exportSatuanPdf($data, $tglAwal, $tglAkhir);
         }
 
-        $rows = $data->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                $item->nama_satuan,
-                (float) $item->total_qty,
-            ];
-        })->all();
+        // ── EXCEL ──
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Satuan',
-            ['No', 'Nama Satuan', 'Total Qty'],
-            $rows,
-            'Laporan_Satuan_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($tglAwal, $tglAkhir),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', (float) $data->sum('total_qty')]
+        $sheet->setCellValue('A1', 'LAPORAN SATUAN');
+        $sheet->mergeCells('A1:C1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
+
+        $periode = 'Periode: '
+            . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y')
+            . ' - '
+            . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+        $sheet->setCellValue('A2', $periode);
+        $sheet->mergeCells('A2:C2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:C3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $row = 5;
+        $headers = ['No', 'Nama Satuan', 'Total Qty'];
+        $col = 'A';
+
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D');
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $col++;
+        }
+
+        $row = 6;
+        $no = 1;
+        $totalQty = 0;
+
+        foreach ($data as $item) {
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nama_satuan);
+            $sheet->setCellValue('C' . $row, $item->total_qty);
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('C' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $totalQty += $item->total_qty;
+            $row++;
+        }
+
+        $sheet->setCellValue('B' . $row, 'TOTAL');
+        $sheet->setCellValue('C' . $row, $totalQty);
+        $sheet->getStyle('B' . $row . ':C' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('B' . $row . ':C' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+        $sheet->getStyle('A5:C' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        foreach (range('A', 'C') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'Laporan_Satuan_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
@@ -2910,12 +3405,20 @@ class LaporanController extends Controller
     // =========================================
 
     /**
-     * Mengekspor laporan kinerja driver.
+     * [METHOD] exportDriver()
+     * Mengekspor laporan kinerja driver ke Excel untuk Admin.
      *
-     * Perhitungan data tetap dari query yang sama.
-     * Output file memakai pola yang seragam:
-     * - PDF lewat DomPDF
-     * - Excel lewat Laravel Excel + Blade table
+     * Konsep yang digunakan:
+     * - Object     : $spreadsheet, $sheet → PhpSpreadsheet objects
+     * - Array      : $headers (9 kolom header tabel)
+     * - Perulangan : foreach untuk header dan foreach untuk data driver
+     * - Method     : CASE WHEN (SQL), setCellValue(), getStyle(), dll
+     *
+     * Menggunakan CASE WHEN dalam SQL untuk menghitung berbagai status
+     * pengiriman dalam satu query yang efisien (menghindari N+1 query).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
      */
     public function exportDriver(Request $request)
     {
@@ -2924,58 +3427,109 @@ class LaporanController extends Controller
         ['data' => $data, 'tglAwal' => $tglAwal, 'tglAkhir' => $tglAkhir] =
             $this->getDriverReportData($request);
 
-        if ($request->format === 'pdf') {
+        if ($request->input('format') === 'pdf') {
             return $this->exportDriverPdf($data, $tglAwal, $tglAkhir);
         }
 
-        $rows = $data->values()->map(function ($item, $index) {
-            return [
-                $index + 1,
-                $item->nama_driver,
-                $item->no_telp,
-                (int) $item->total_pengiriman,
-                (int) $item->total_pickup,
-                (int) $item->total_antar,
-                (int) $item->terkirim,
-                (int) $item->gagal,
-                (int) $item->dalam_proses,
-            ];
-        })->all();
+        // [OBJECT] Buat spreadsheet baru
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        return $this->downloadExcelTable(
-            'Laporan Kinerja Driver',
-            ['No', 'Nama Driver', 'No HP', 'Total Pengiriman', 'Pickup', 'Antar', 'Terkirim', 'Gagal', 'Dalam Proses'],
-            $rows,
-            'Laporan_Driver_' . Carbon::now()->format('Y-m-d_His') . '.xlsx',
-            [
-                'Periode' => $this->formatPeriod($tglAwal, $tglAkhir),
-                'Dicetak' => Carbon::now()->format('d/m/Y H:i:s'),
-            ],
-            ['TOTAL', '', '', (int) $data->sum('total_pengiriman'), '', '', '', '', '']
+        $sheet->setCellValue('A1', 'LAPORAN KINERJA DRIVER');
+        $sheet->mergeCells('A1:I1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
-    }
 
-    private function downloadExcelTable(
-        string $title,
-        array $headings,
-        array $rows,
-        string $fileName,
-        array $meta = [],
-        ?array $footerRow = null
-    ) {
-        return Excel::download(
-            new BladeTableExport($title, $headings, $rows, $meta, $footerRow),
-            $fileName
+        $periode = 'Periode: '
+            . \Carbon\Carbon::parse($tglAwal)->format('d/m/Y')
+            . ' - '
+            . \Carbon\Carbon::parse($tglAkhir)->format('d/m/Y');
+        $sheet->setCellValue('A2', $periode);
+        $sheet->mergeCells('A2:I2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
-    }
 
-    private function formatPeriod(?string $from, ?string $to): string
-    {
-        if (!$from || !$to) {
-            return 'Semua Data';
+        $sheet->setCellValue('A3', 'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A3:I3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+        $row = 5;
+
+        /**
+         * [ARRAY] Header 9 kolom tabel driver (A sampai I).
+         * Menggunakan array agar bisa diiterasi, bukan hardcode 9x setCellValue().
+         */
+        $headers = [
+            'No', 'Nama Driver', 'No HP', 'Total Pengiriman',
+            'Pickup', 'Antar', 'Terkirim', 'Gagal', 'Dalam Proses'
+        ];
+        $col = 'A';
+
+        // [PERULANGAN - foreach] Render header kolom dengan styling kuning
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('FCD34D');
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $col++;
         }
 
-        return Carbon::parse($from)->format('d/m/Y') . ' - ' . Carbon::parse($to)->format('d/m/Y');
+        $row = 6;
+        $no = 1;
+        $totalPengiriman = 0;
+
+        // [PERULANGAN - foreach] Tulis data setiap driver ke Excel
+        foreach ($data as $item) {
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, $item->nama_driver);
+            $sheet->setCellValue('C' . $row, $item->no_telp);
+            $sheet->setCellValue('D' . $row, $item->total_pengiriman);
+            $sheet->setCellValue('E' . $row, $item->total_pickup);
+            $sheet->setCellValue('F' . $row, $item->total_antar);
+            $sheet->setCellValue('G' . $row, $item->terkirim);
+            $sheet->setCellValue('H' . $row, $item->gagal);
+            $sheet->setCellValue('I' . $row, $item->dalam_proses);
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+            );
+            $totalPengiriman += $item->total_pengiriman; // Akumulasi
+            $row++;
+        }
+
+        // Baris total
+        $sheet->setCellValue('C' . $row, 'TOTAL');
+        $sheet->setCellValue('D' . $row, $totalPengiriman);
+        $sheet->getStyle('C' . $row . ':D' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('C' . $row . ':D' . $row)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('FED7AA');
+        $sheet->getStyle('A5:I' . $row)->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // [PERULANGAN + ARRAY] Auto-size kolom A s/d I
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $fileName = 'Laporan_Driver_' . \Carbon\Carbon::now()->format('Y-m-d_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     /**
