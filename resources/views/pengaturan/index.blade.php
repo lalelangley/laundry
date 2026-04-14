@@ -315,7 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 data.backups.forEach(backup => {
                     const div = document.createElement('div');
                     div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition';
-                    let actionsHTML = `<a href="{{ url('/pengaturan/backups/download') }}/${backup.filename}" class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1" download><i class="bi bi-download"></i> Download</a>`;
+                    const downloadUrl = `{{ url('admin/pengaturan/backups/download') }}/${encodeURIComponent(backup.filename)}`;
+                    let actionsHTML = `<a href="${downloadUrl}" class="px-3 py-2 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition flex items-center gap-1"><i class="bi bi-download"></i> Download</a>`;
                     if (permissions.can_delete_backup) {
                         actionsHTML += `<button onclick="deleteBackup('${backup.filename}')" class="ml-2 px-3 py-2 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition flex items-center gap-1"><i class="bi bi-trash"></i> Hapus</button>`;
                     }

@@ -39,6 +39,13 @@ class TransaksiController extends Controller
      * - Unit 5: memakai array, percabangan, perulangan implisit, dan fungsi bantu
      * - Unit 6: memberi dokumentasi method agar modul mudah dijelaskan
      * - Unit 7: menyiapkan log, try-catch, dan alur debug saat transaksi gagal
+     *
+     * Catatan istilah untuk presentasi/ujian:
+     * - Semua function yang berada di dalam class ini disebut METHOD.
+     * - Method public dipanggil dari route/HTTP request lalu mengatur alur transaksi.
+     * - Method private dipakai sebagai helper method/fungsi bantu internal controller.
+     * - "Fungsi" berarti kegunaan dari method.
+     * - "Prosedur" berarti urutan langkah yang dikerjakan di dalam method.
      */
 
     /**
@@ -83,6 +90,17 @@ class TransaksiController extends Controller
     // ==========================
     // 1. HALAMAN AWAL TRANSAKSI - ADMIN
     // ==========================
+    /**
+     * METHOD public: index()
+     * Fungsi:
+     * - menampilkan halaman awal transaksi admin
+     * - membaca pelanggan dan keranjang transaksi dari session
+     *
+     * Prosedur:
+     * - cek permission view
+     * - reset detail transaksi bila bukan mode keep
+     * - kirim data session ke view admin.transaksi.index
+     */
     public function index(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
@@ -101,6 +119,18 @@ class TransaksiController extends Controller
     // ==========================
     // 2. HALAMAN CREATE - ADMIN
     // ==========================
+    /**
+     * METHOD public: create()
+     * Fungsi:
+     * - menampilkan form/create transaksi admin
+     * - menghitung total sementara dari item yang masih ada di session
+     *
+     * Prosedur:
+     * - cek permission view
+     * - ambil pelanggan, detail, dan keterangan dari session
+     * - hitung total harga dari array detail_transaksi
+     * - tampilkan view transaksi.create
+     */
     public function create()
     {
         // Halaman awal transaksi cukup butuh akses view.
@@ -120,6 +150,17 @@ class TransaksiController extends Controller
     // ==========================
     // 3. PILIH PELANGGAN - ADMIN
     // ==========================
+    /**
+     * METHOD public: pilihPelanggan()
+     * Fungsi:
+     * - menampilkan daftar pelanggan yang bisa dipilih untuk transaksi admin
+     *
+     * Prosedur:
+     * - cek permission view
+     * - panggil helper method buildPelangganPickerQuery()
+     * - paginate hasil query
+     * - kirim ke view transaksi.pelanggan
+     */
     public function pilihPelanggan(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
@@ -131,6 +172,18 @@ class TransaksiController extends Controller
         return view('transaksi.pelanggan', compact('pelanggan'));
     }
 
+    /**
+     * METHOD public: setPelanggan()
+     * Fungsi:
+     * - menyimpan pelanggan terpilih ke session transaksi admin
+     *
+     * Prosedur:
+     * - cek permission add
+     * - cari pelanggan berdasarkan id
+     * - jika tidak ada, kembalikan error
+     * - salin data penting pelanggan ke session
+     * - redirect ke halaman create transaksi
+     */
     public function setPelanggan($id)
     {
         // ✅ CHECK PERMISSION ADD
@@ -153,10 +206,15 @@ class TransaksiController extends Controller
     }
 
     /**
-     * Menyimpan pelanggan yang dipilih kasir ke session transaksi kasir.
+     * METHOD public: setPelangganKasir()
+     * Fungsi:
+     * - menyimpan pelanggan yang dipilih kasir ke session transaksi kasir
      *
-     * Data Telegram ikut dimasukkan ke session agar popup checkout bisa
-     * mengetahui apakah pelanggan sudah menautkan akun Telegram.
+     * Prosedur:
+     * - cek permission view
+     * - cari pelanggan
+     * - salin identitas pelanggan beserta data Telegram ke session pelanggan_kasir
+     * - redirect ke halaman create transaksi kasir
      *
      * @param int|string $id
      * @return \Illuminate\Http\RedirectResponse
@@ -187,6 +245,17 @@ class TransaksiController extends Controller
         return redirect()->route('kasir.transaksi.create');
     }
 
+    /**
+     * METHOD public: setPelangganAdmin2()
+     * Fungsi:
+     * - menyimpan pelanggan terpilih ke session transaksi panel admin2
+     *
+     * Prosedur:
+     * - cek permission view
+     * - cari pelanggan
+     * - simpan data pelanggan ke key session khusus admin2
+     * - redirect ke halaman create admin2
+     */
     public function setPelangganAdmin2($id)
     {
         requirePermission('transaksi', 'view');
@@ -214,6 +283,19 @@ class TransaksiController extends Controller
     // ==========================
     // 4. TAMBAH LAYANAN - ADMIN
     // ==========================
+    /**
+     * METHOD public: addLayanan()
+     * Fungsi:
+     * - menambahkan satu layanan ke keranjang transaksi admin
+     *
+     * Prosedur:
+     * - cek permission add
+     * - cari layanan beserta jenis dan satuannya
+     * - tentukan jenis layanan yang dipilih
+     * - bentuk item cart dari request + data database
+     * - simpan item ke session detail_transaksi
+     * - kembalikan response JSON
+     */
     public function addLayanan(Request $request, $id)
     {
         // ✅ CHECK PERMISSION ADD
@@ -258,7 +340,18 @@ class TransaksiController extends Controller
     // ==========================
     
     /**
-     * ✅ REMOVE LAYANAN BY INDEX (ADMIN)
+     * METHOD public: remove()
+     * Fungsi:
+     * - menghapus item layanan pada cart admin berdasarkan index array session
+     *
+     * Prosedur:
+     * - cek permission edit
+     * - ambil cart dari session
+     * - hapus item berdasarkan index
+     * - rapikan ulang index array
+     * - simpan kembali ke session
+     * - redirect back dengan pesan sukses
+     *
      * @param int $index - Index array (0, 1, 2, dst)
      */
     public function remove($index)
@@ -282,7 +375,10 @@ class TransaksiController extends Controller
     }
     
     /**
-     * ✅ REMOVE LAYANAN BY INDEX (ADMIN2)
+     * METHOD public: removeAdmin2()
+     * Fungsi:
+     * - menghapus item layanan pada cart admin2
+     *
      * @param int $index - Index array
      */
     public function removeAdmin2($index)
@@ -306,7 +402,10 @@ class TransaksiController extends Controller
     }
     
     /**
-     * ✅ REMOVE LAYANAN BY INDEX (KASIR)
+     * METHOD public: removeKasir()
+     * Fungsi:
+     * - menghapus item layanan pada cart kasir
+     *
      * @param int $index - Index array
      */
     public function removeKasir($index)
@@ -332,6 +431,21 @@ class TransaksiController extends Controller
     // ==========================
     // 6. HALAMAN CHECKOUT - ADMIN
     // ==========================
+    /**
+     * METHOD public: checkout()
+     * Fungsi:
+     * - menyimpan transaksi admin dari data session ke database
+     *
+     * Prosedur:
+     * - cek permission add
+     * - ambil pelanggan dan detail dari session
+     * - validasi data transaksi tidak kosong
+     * - hitung total
+     * - simpan header transaksi
+     * - simpan setiap detail item ke tabel detail_transaksi
+     * - hapus session transaksi
+     * - redirect ke riwayat
+     */
     public function checkout(Request $request)
     {
         requirePermission('transaksi', 'add');
@@ -395,8 +509,25 @@ class TransaksiController extends Controller
     // ==========================
     // 7. SIMPAN TRANSAKSI - ADMIN
     // ==========================
-public function bayar(Request $request)
-{
+    /**
+     * METHOD public: bayar()
+     * Fungsi:
+     * - memproses pembayaran transaksi admin secara lengkap
+     * - menghitung diskon, DP, status bayar, lalu menyimpan transaksi dan detailnya
+     *
+     * Prosedur:
+     * - baca pelanggan dan keranjang dari session
+     * - validasi transaksi tidak kosong
+     * - baca input diskon, DP, metode bayar, dan estimasi
+     * - hitung total awal dan total akhir
+     * - tentukan status bayar: lunas, DP, atau belum_lunas
+     * - simpan transaksi utama
+     * - simpan detail transaksi satu per satu
+     * - hapus session transaksi
+     * - kirim response JSON sukses/gagal
+     */
+    public function bayar(Request $request)
+    {
     try {
         \Log::info('🟢 BAYAR METHOD CALLED');
         \Log::info('Request data:', $request->all());
@@ -527,11 +658,17 @@ public function bayar(Request $request)
             'error' => 'Terjadi kesalahan: ' . $e->getMessage()
         ], 500);
     }
-}
+    }
 
     // ==========================
     // KASIR - CREATE TRANSAKSI
     // ==========================
+    /**
+     * METHOD public: createKasir()
+     * Fungsi:
+     * - menampilkan form transaksi kasir
+     * - membaca data transaksi sementara milik kasir dari session
+     */
     public function createKasir()
 {
     // Halaman awal transaksi cukup butuh akses view.
@@ -551,6 +688,11 @@ public function bayar(Request $request)
     // ==========================
     // KASIR - PILIH PELANGGAN
     // ==========================
+    /**
+     * METHOD public: pelangganKasir()
+     * Fungsi:
+     * - menampilkan daftar pelanggan untuk transaksi kasir
+     */
     public function pelangganKasir(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
@@ -569,13 +711,18 @@ public function bayar(Request $request)
 // KASIR - BAYAR (DIPERBAIKI - SAMAKAN DENGAN SUPER ADMIN)
 // ==========================
     /**
-     * Menyimpan transaksi kasir lengkap dengan detail layanan dan status bayar.
+     * METHOD public: bayarKasir()
+     * Fungsi:
+     * - menyimpan transaksi kasir lengkap dengan detail layanan dan status bayar
      *
-     * Poin penting untuk asesmen:
-     * - Validasi data transaksi dari session
-     * - Perhitungan total, diskon, DP, dan status pembayaran
-     * - Penyimpanan header transaksi dan detail transaksi
-     * - Logging error sebagai bukti proses debugging
+     * Prosedur:
+     * - ambil pelanggan_kasir dan detail_transaksi dari session
+     * - validasi transaksi tidak kosong
+     * - hitung total, diskon, DP, dan status bayar
+     * - simpan header transaksi
+     * - simpan item detail transaksi
+     * - kosongkan session kasir
+     * - kirim JSON hasil pembayaran
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -727,6 +874,11 @@ public function bayar(Request $request)
     // ==========================
     // ADMIN2 - CREATE TRANSAKSI
     // ==========================
+    /**
+     * METHOD public: createAdmin2()
+     * Fungsi:
+     * - menampilkan form transaksi untuk panel admin2
+     */
     public function createAdmin2()
     {
         // Halaman awal transaksi cukup butuh akses view.
@@ -747,6 +899,11 @@ public function bayar(Request $request)
     // ==========================
     // ADMIN2 - PILIH PELANGGAN
     // ==========================
+    /**
+     * METHOD public: pelangganAdmin2()
+     * Fungsi:
+     * - menampilkan daftar pelanggan untuk transaksi admin2
+     */
     public function pelangganAdmin2(Request $request)
     {
         // ✅ CHECK PERMISSION VIEW
@@ -758,9 +915,14 @@ public function bayar(Request $request)
         return view('admin2.transaksi.pelanggan', compact('pelanggan'));
     }
 
-    // ==========================
+// ==========================
 // KASIR - CHECKOUT (DIPERBAIKI)
 // ==========================
+/**
+ * METHOD public: checkoutKasir()
+ * Fungsi:
+ * - menyimpan transaksi checkout kasir langsung dari session ke database
+ */
 public function checkoutKasir(Request $request)
 {
     requirePermission('transaksi', 'add');
@@ -826,6 +988,11 @@ public function checkoutKasir(Request $request)
 // =============================
 // ADMIN2 - CHECKOUT (DIPERBAIKI)
 // =============================
+/**
+ * METHOD public: checkoutAdmin2()
+ * Fungsi:
+ * - menyimpan transaksi checkout admin2 dari session ke database
+ */
  public function checkoutAdmin2(Request $request)
 {
     requirePermission('transaksi', 'add');
@@ -887,6 +1054,12 @@ public function checkoutKasir(Request $request)
 // =============================
 // ADMIN2 - BAYAR (DIPERBAIKI - SAMAKAN DENGAN SUPER ADMIN)
 // =============================
+/**
+ * METHOD public: bayarAdmin2()
+ * Fungsi:
+ * - memproses pembayaran transaksi admin2
+ * - alurnya sama seperti admin, tetapi memakai session pelanggan_transaksi
+ */
 public function bayarAdmin2(Request $request)
 {
     try {
@@ -1023,6 +1196,11 @@ public function bayarAdmin2(Request $request)
 // =============================
 // ADMIN2 - CONFIRM (DIPERBAIKI)
 // =============================
+/**
+ * METHOD public: confirmAdmin2()
+ * Fungsi:
+ * - menampilkan halaman konfirmasi checkout admin2 sebelum proses bayar
+ */
 public function confirmAdmin2()
 {
     requirePermission('transaksi', 'view');
@@ -1067,6 +1245,11 @@ public function confirmAdmin2()
     // ==========================
     // ADD LAYANAN METHODS
     // ==========================
+    /**
+     * METHOD public: addLayananKasir()
+     * Fungsi:
+     * - menambahkan layanan ke cart transaksi kasir
+     */
     public function addLayananKasir(Request $request, $id)
     {
         // ✅ CHECK PERMISSION ADD
@@ -1107,6 +1290,11 @@ public function confirmAdmin2()
         ]);
     }
 
+    /**
+     * METHOD public: addLayananAdmin2()
+     * Fungsi:
+     * - menambahkan layanan ke cart transaksi admin2
+     */
     public function addLayananAdmin2(Request $request, $id)
     {
         // ✅ CHECK PERMISSION ADD
@@ -1150,6 +1338,19 @@ public function confirmAdmin2()
     // ==========================
     // ADD JENIS METHODS
     // ==========================
+    /**
+     * METHOD public: addJenis()
+     * Fungsi:
+     * - menambahkan jenis layanan tertentu ke cart transaksi
+     *
+     * Prosedur:
+     * - validasi qty dan parfum
+     * - cari jenis layanan
+     * - load relasi layanan dan satuan
+     * - bentuk item cart
+     * - simpan ke session detail_transaksi
+     * - kirim response JSON
+     */
     public function addJenis(Request $request, $idJenis)
     {
         // ✅ CHECK PERMISSION ADD
@@ -1215,6 +1416,11 @@ public function confirmAdmin2()
         }
     }
 
+    /**
+     * METHOD public: addJenisKasir()
+     * Fungsi:
+     * - wrapper method untuk memakai logika addJenis() pada panel kasir
+     */
     public function addJenisKasir(Request $request, $idJenis)
     {
         // ✅ CHECK PERMISSION ADD
@@ -1224,6 +1430,11 @@ public function confirmAdmin2()
         return $this->addJenis($request, $idJenis);
     }
 
+    /**
+     * METHOD public: addJenisAdmin2()
+     * Fungsi:
+     * - wrapper method untuk memakai logika addJenis() pada panel admin2
+     */
     public function addJenisAdmin2(Request $request, $idJenis)
     {
         // ✅ CHECK PERMISSION ADD
@@ -1236,6 +1447,12 @@ public function confirmAdmin2()
     // ==========================
     // CONFIRM METHODS
     // ==========================
+    /**
+     * METHOD public: confirm()
+     * Fungsi:
+     * - menampilkan halaman konfirmasi checkout admin
+     * - validasi pelanggan dan detail sudah dipilih sebelum bayar
+     */
     public function confirm()
     {
         // ✅ CHECK PERMISSION VIEW
@@ -1273,9 +1490,15 @@ public function confirmAdmin2()
     }
 
     /**
-     * Menampilkan halaman konfirmasi checkout untuk kasir.
+     * METHOD public: confirmKasir()
+     * Fungsi:
+     * - menampilkan halaman konfirmasi checkout untuk kasir
      *
-     * Method ini berfungsi sebagai validasi terakhir sebelum transaksi dibayar.
+     * Prosedur:
+     * - ambil pelanggan dan detail dari session kasir
+     * - validasi data transaksi
+     * - hitung total harga
+     * - tampilkan view checkout kasir
      */
     public function confirmKasir()
     {
@@ -1318,11 +1541,17 @@ public function confirmAdmin2()
     }
 
     /**
-     * Mengirim ringkasan transaksi kasir ke email atau Telegram.
+     * METHOD public: shareKasir()
+     * Fungsi:
+     * - mengirim ringkasan transaksi kasir ke email atau Telegram
      *
-     * Fitur ini mendukung dua jalur:
-     * - Email pelanggan
-     * - Telegram menggunakan kode link atau chat id tersimpan
+     * Prosedur:
+     * - validasi request channel dan id transaksi
+     * - ambil data transaksi lengkap
+     * - bangun isi pesan share
+     * - jika channel email, validasi email dan kirim via Mail
+     * - jika channel Telegram, resolve chat id lalu kirim via HTTP API
+     * - simpan chat id pelanggan jika pengiriman Telegram sukses
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -1492,11 +1721,12 @@ public function confirmAdmin2()
     }
 
     /**
-     * Mengubah input penerima Telegram menjadi chat id final.
+     * METHOD private/helper: resolveTelegramRecipient()
+     * Fungsi:
+     * - helper method untuk mengubah input penerima Telegram menjadi chat id final
      *
-     * Input bisa berupa:
-     * - kode link Telegram dari bot
-     * - chat id numerik langsung
+     * Karena private, method ini tidak dipanggil route langsung.
+     * Ia hanya dipakai oleh method lain di controller ini.
      *
      * @param string $recipient
      * @return array{chat_id:string, username:?string}
@@ -1533,11 +1763,12 @@ public function confirmAdmin2()
     }
 
     /**
-     * Menyimpan chat id Telegram ke data pelanggan setelah share berhasil.
+     * METHOD private/helper: storeTelegramChatIdForPelanggan()
+     * Fungsi:
+     * - helper method untuk menyimpan chat id Telegram ke data pelanggan
+     *   setelah proses share berhasil
      *
-     * Tujuan:
-     * - Menghindari input kode Telegram berulang
-     * - Menautkan transaksi dengan data pelanggan yang benar
+     * Karena private, method ini adalah fungsi bantu internal controller.
      *
      * @param Transaksi $transaksi
      * @param string $chatId
