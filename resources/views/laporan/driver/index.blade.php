@@ -2,70 +2,47 @@
 @extends('layouts.master')
 @section('title', 'Laporan Driver')
 @section('content')
-
-<div class="min-h-screen bg-gray-50">
-    {{-- HEADER --}}
-{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
-    <div class="bg-yellow-400 px-5 py-5 md:px-8 md:py-6 rounded-b-3xl shadow-lg sticky top-0 z-10">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-3 md:gap-4 min-w-0">
-                <a href="{{ route('laporan.index') }}" class="text-black text-2xl md:text-3xl font-bold hover:opacity-80 transition">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <div class="min-w-0">
-                    <h1 class="text-xl md:text-2xl font-bold text-gray-900">Laporan Driver</h1>
-                    <p class="text-sm text-gray-700 mt-1">Monitor performa pengiriman driver</p>
-                </div>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('laporan.driver.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
-                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2.5 rounded-full transition-all shadow text-sm">
-                    <i class="bi bi-file-earmark-pdf text-xl"></i>
-                    PDF
-                </a>
-                <a href="{{ route('laporan.driver.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}" 
-                   class="flex items-center gap-2 font-semibold bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2.5 rounded-full transition-all shadow text-sm">
-                    <i class="bi bi-file-earmark-spreadsheet text-xl"></i>
-                    Excel
-                </a>
-            </div>
+<div class="min-h-screen bg-gray-100 pb-28">
+<div class="bg-yellow-400 px-5 py-4 rounded-b-3xl sticky top-0 z-20 shadow">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
+            <a href="{{ route('laporan.index') }}" class="text-2xl font-bold hover:scale-110 transition-transform">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h1 class="text-lg font-bold">Laporan Driver</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('laporan.driver.export') }}?dari={{ $tglAwal }}&sampai={{ $tglAkhir }}"
+               class="flex items-center gap-1.5 text-sm font-semibold bg-white bg-opacity-30 hover:bg-opacity-50 px-3 py-2 rounded-full transition-all">
+                <i class="bi bi-file-earmark-spreadsheet text-green-700"></i>
+                <span class="hidden sm:inline">Excel</span>
+            </a>
+            <a href="{{ route('laporan.driver.export', ['dari' => $tglAwal, 'sampai' => $tglAkhir, 'format' => 'pdf']) }}"
+               class="flex items-center gap-1.5 text-sm font-semibold bg-white bg-opacity-30 hover:bg-opacity-50 px-3 py-2 rounded-full transition-all">
+                <i class="bi bi-file-earmark-pdf text-red-600"></i>
+                <span class="hidden sm:inline">PDF</span>
+            </a>
         </div>
     </div>
+</div>
 
-    <form method="GET" action="{{ route('laporan.driver.index') }}" id="filterForm" class="px-5 md:px-8 mt-6 space-y-4">
-
-        {{-- FILTER TANGGAL --}}
-{{-- FE-DOC: Dua input tanggal biasanya menjadi filter utama untuk semua data laporan per periode. --}}
-        <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
-                <i class="bi bi-calendar-event"></i>
-                <input type="date" 
-                       name="dari" 
-                       id="dari"
-                       value="{{ $tglAwal }}"
-                       class="bg-transparent outline-none w-full font-semibold cursor-pointer">
-            </div>
-
-            <span class="font-bold text-gray-700 hidden xl:block">s/d</span>
-
-            <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-6 py-4 flex items-center gap-3 font-semibold min-w-0">
-                <i class="bi bi-calendar-event"></i>
-                <input type="date" 
-                       name="sampai" 
-                       id="sampai"
-                       value="{{ $tglAkhir }}"
-                       class="bg-transparent outline-none w-full font-semibold cursor-pointer">
-            </div>
-            
-            <div class="flex flex-wrap gap-3">
-            <a href="{{ route('laporan.driver.index') }}" 
-               class="bg-gray-200 hover:bg-gray-300 px-4 py-4 rounded-full transition-all"
-               title="Reset Filter">
+<form method="GET" action="{{ route('laporan.driver.index') }}" id="filterForm" class="px-6 mt-6 space-y-3">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center">
+        <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-4 py-3 flex items-center gap-2 font-semibold min-w-0">
+            <i class="bi bi-calendar-event"></i>
+            <input type="date" name="dari" id="dari" value="{{ $tglAwal }}" class="bg-transparent outline-none w-full font-semibold cursor-pointer">
+        </div>
+        <span class="font-bold text-gray-700 hidden xl:block">s/d</span>
+        <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-4 py-3 flex items-center gap-2 font-semibold min-w-0">
+            <i class="bi bi-calendar-event"></i>
+            <input type="date" name="sampai" id="sampai" value="{{ $tglAkhir }}" class="bg-transparent outline-none w-full font-semibold cursor-pointer">
+        </div>
+        <div class="flex flex-wrap gap-3 xl:mr-4">
+            <button type="button" id="resetBtn" class="bg-gray-200 hover:bg-gray-300 px-4 py-3 rounded-full transition-all" title="Reset Filter">
                 <i class="bi bi-arrow-clockwise font-bold"></i>
-            </a>
+            </button>
             <div class="relative w-full sm:w-auto">
-                <select name="sort" onchange="this.form.submit()" class="bg-white rounded-full px-4 py-4 pr-12 text-sm font-semibold outline-none shadow w-full sm:w-auto appearance-none">
+                <select name="sort" id="sort" class="bg-white rounded-full px-4 py-3 pr-12 text-sm font-semibold outline-none shadow w-full sm:w-auto appearance-none">
                     <option value="total_tertinggi" {{ request('sort', 'total_tertinggi') === 'total_tertinggi' ? 'selected' : '' }}>Total Tertinggi</option>
                     <option value="total_terendah" {{ request('sort') === 'total_terendah' ? 'selected' : '' }}>Total Terendah</option>
                     <option value="sukses_tertinggi" {{ request('sort') === 'sukses_tertinggi' ? 'selected' : '' }}>Sukses Tertinggi</option>
@@ -74,280 +51,153 @@
                 </select>
                 <i class="bi bi-chevron-down pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
             </div>
-            </div>
         </div>
+    </div>
+</form>
 
-        {{-- STATISTICS CARDS --}}
-{{-- FE-DOC: Kartu statistik dipakai untuk merangkum KPI utama dari laporan yang sedang dibuka. --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {{-- Total Driver Aktif --}}
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-blue-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex-1">
-                        <p class="text-sm text-gray-500 font-semibold mb-2">Total Driver Aktif</p>
-                        <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_driver_aktif'] }}</h3>
-                    </div>
-                    <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-person-badge text-3xl text-blue-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Total Pengiriman --}}
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-purple-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex-1">
-                        <p class="text-sm text-gray-500 font-semibold mb-2">Total Pengiriman</p>
-                        <h3 class="text-3xl font-bold text-gray-900">{{ $stats['total_pengiriman'] }}</h3>
-                        <div class="flex flex-wrap gap-3 mt-2">
-                            <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 font-semibold rounded-full">
-                                {{ $stats['total_pickup'] }} Pickup
-                            </span>
-                            <span class="text-xs px-2 py-1 bg-teal-100 text-teal-700 font-semibold rounded-full">
-                                {{ $stats['total_antar'] }} Antar
-                            </span>
-                        </div>
-                    </div>
-                    <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-truck text-3xl text-purple-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Berhasil Terkirim --}}
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-green-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex-1">
-                        <p class="text-sm text-gray-500 font-semibold mb-2">Berhasil Terkirim</p>
-                        <h3 class="text-3xl font-bold text-green-600">{{ $stats['total_terkirim'] }}</h3>
-                        @if($stats['total_pengiriman'] > 0)
-                            <p class="text-xs text-gray-500 mt-2 font-semibold">
-                                <i class="bi bi-graph-up-arrow text-green-500"></i>
-                                {{ number_format(($stats['total_terkirim'] / $stats['total_pengiriman']) * 100, 1) }}% Success
-                            </p>
-                        @endif
-                    </div>
-                    <div class="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-check-circle text-3xl text-green-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Gagal & Dalam Proses --}}
-            <div class="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-orange-500 hover:shadow-xl transition-shadow">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex-1 text-left">
-                        <p class="text-sm text-gray-500 font-bold mb-2">Status</p>
-                        <div class="space-y-1 text-left">
-                            <h3 class="text-3xl font-bold text-orange-500 leading-none">{{ $stats['total_proses'] }}</h3>
-                            <p class="text-sm font-bold text-gray-700">Proses</p>
-                        </div>
-                    </div>
-                    <div class="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <i class="bi bi-hourglass-split text-3xl text-orange-600"></i>
-                    </div>
-                </div>
-            </div>
+<div class="px-6 mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white rounded-xl p-4 shadow border-2 border-blue-400">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-blue-100 rounded-full flex items-center justify-center"><i class="bi bi-person-badge text-blue-600 text-xl"></i></div>
+            <div><div class="text-xs text-gray-500 font-semibold">Total Driver Aktif</div><div class="text-2xl font-bold text-gray-800">{{ $stats['total_driver_aktif'] }}</div></div>
         </div>
-    </form>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow border-2 border-purple-400">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-purple-100 rounded-full flex items-center justify-center"><i class="bi bi-truck text-purple-600 text-xl"></i></div>
+            <div><div class="text-xs text-gray-500 font-semibold">Total Pengiriman</div><div class="text-2xl font-bold text-purple-600">{{ $stats['total_pengiriman'] }}</div></div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow border-2 border-green-400">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-green-100 rounded-full flex items-center justify-center"><i class="bi bi-check-circle text-green-600 text-xl"></i></div>
+            <div><div class="text-xs text-gray-500 font-semibold">Berhasil Terkirim</div><div class="text-2xl font-bold text-green-600">{{ $stats['total_terkirim'] }}</div></div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow border-2 border-orange-400">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-orange-100 rounded-full flex items-center justify-center"><i class="bi bi-hourglass-split text-orange-600 text-xl"></i></div>
+            <div><div class="text-xs text-gray-500 font-semibold">Dalam Proses</div><div class="text-2xl font-bold text-orange-600">{{ $stats['total_proses'] }}</div></div>
+        </div>
+    </div>
+</div>
 
-    {{-- TABLE --}}
-{{-- FE-DOC: Tabel atau daftar utama berisi detail data hasil filter dan sorting. --}}
-    <div class="px-5 md:px-8 pb-10 mt-6">
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            {{-- Table Header --}}
-{{-- FE-DOC: Header tabel memberikan konteks kolom dan biasanya memuat ringkasan periode aktif. --}}
-            <div class="px-5 md:px-8 py-5 bg-gradient-to-r from-yellow-50 to-white border-b border-gray-200">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
-                            <i class="bi bi-graph-up text-white text-xl"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <h2 class="text-lg font-bold text-gray-900">Performa Driver</h2>
-                            <p class="text-sm text-gray-500">
-                                Periode: <span class="font-semibold">{{ \Carbon\Carbon::parse($tglAwal)->format('d M Y') }}</span> - 
-                                <span class="font-semibold">{{ \Carbon\Carbon::parse($tglAkhir)->format('d M Y') }}</span>
-                            </p>
-                        </div>
-                    </div>
-                    <div class="text-sm text-gray-500">
-                        <span class="font-semibold text-gray-700">{{ $stats['total_driver_aktif'] }}</span> Driver
-                    </div>
-                </div>
-            </div>
-
-            {{-- Table --}}
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[820px]">
-                    <thead>
-                        <tr class="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">No</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Driver</th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                <div class="flex flex-col items-center">
-                                    <i class="bi bi-truck text-purple-600 text-lg mb-1"></i>
-                                    <span>Total</span>
+<div class="px-6 mt-5">
+    <div class="bg-white rounded-xl overflow-hidden shadow">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[980px]">
+                <thead>
+                    <tr class="bg-yellow-400 border-b border-yellow-500">
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">No</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">Driver</th>
+                        <th class="px-4 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Total</th>
+                        <th class="px-4 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Pickup</th>
+                        <th class="px-4 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Antar</th>
+                        <th class="px-4 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Delivered</th>
+                        <th class="px-4 py-4 text-center text-xs font-bold text-gray-900 uppercase tracking-wider">Proses</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse($data as $index => $driver)
+                        <tr class="hover:bg-yellow-50 transition-colors">
+                            <td class="px-6 py-4 text-center text-gray-500 font-semibold">{{ ($data->firstItem() ?? 1) + $index }}</td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shrink-0">
+                                        <i class="bi bi-person-fill text-white"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-900">{{ $driver->nama_driver }}</p>
+                                        <p class="text-sm text-gray-500">{{ $driver->no_telp ?? '-' }}</p>
+                                    </div>
                                 </div>
-                            </th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                <div class="flex flex-col items-center">
-                                    <i class="bi bi-box-seam text-orange-600 text-lg mb-1"></i>
-                                    <span>Pickup</span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                <div class="flex flex-col items-center">
-                                    <i class="bi bi-send text-teal-600 text-lg mb-1"></i>
-                                    <span>Antar</span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                <div class="flex flex-col items-center">
-                                    <i class="bi bi-check-circle text-green-600 text-lg mb-1"></i>
-                                    <span>Delivered</span>
-                                </div>
-                            </th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                <div class="flex flex-col items-center">
-                                    <i class="bi bi-hourglass-split text-orange-600 text-lg mb-1"></i>
-                                    <span>Proses</span>
-                                </div>
-                            </th>
+                            </td>
+                            <td class="px-4 py-4 text-center font-bold text-purple-600">{{ $driver->total_pengiriman }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-orange-600">{{ $driver->total_pickup }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-teal-600">{{ $driver->total_antar }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-green-600">{{ $driver->terkirim }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-orange-600">{{ $driver->dalam_proses }}</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        @forelse($data as $index => $driver)
-                            <tr class="hover:bg-yellow-50 transition-colors">
-                                <td class="px-6 py-5 text-gray-900 font-bold text-center">
-                                    <span class="inline-flex items-center justify-center w-8 h-8 
-                                        {{ $index == 0 ? 'bg-yellow-400 text-white' : '' }}
-                                        {{ $index == 1 ? 'bg-gray-300 text-white' : '' }}
-                                        {{ $index == 2 ? 'bg-orange-300 text-white' : '' }}
-                                        {{ $index > 2 ? 'bg-gray-100 text-gray-600' : '' }}
-                                        rounded-full text-sm font-bold">
-                                        {{ ($data->firstItem() ?? 1) + $index }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                                            <i class="bi bi-person-fill text-white text-2xl"></i>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-gray-900 text-base">{{ $driver->nama_driver }}</p>
-                                            <p class="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                                <i class="bi bi-telephone-fill text-yellow-500"></i>
-                                                {{ $driver->no_telp ?? '-' }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-5 text-center">
-                                    <span class="inline-flex items-center justify-center w-14 h-14 bg-purple-500 text-white font-bold text-xl rounded-xl shadow-md">
-                                        {{ $driver->total_pengiriman }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5 text-center">
-                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-orange-100 text-orange-700 border-2 border-orange-200">
-                                        {{ $driver->total_pickup }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5 text-center">
-                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-teal-100 text-teal-700 border-2 border-teal-200">
-                                        {{ $driver->total_antar }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5 text-center">
-                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-green-100 text-green-700 border-2 border-green-200">
-                                        {{ $driver->terkirim }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-5 text-center">
-                                    <span class="inline-flex items-center justify-center min-w-[3rem] px-4 py-2 rounded-lg text-base font-bold bg-orange-100 text-orange-700 border-2 border-orange-200">
-                                        {{ $driver->dalam_proses }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="px-6 py-16 text-center">
-                                    <div class="flex flex-col items-center gap-4">
-                                        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
-                                            <i class="bi bi-inbox text-5xl text-gray-300"></i>
-                                        </div>
-                                        <div>
-                                            <p class="text-gray-500 font-bold text-lg">Belum ada data driver</p>
-                                            <p class="text-sm text-gray-400 mt-2">Data akan muncul setelah ada pengiriman dengan driver</p>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-20 text-gray-400">
+                                <i class="bi bi-inbox text-6xl mb-3 block text-gray-300"></i>
+                                <p class="font-semibold text-lg">Belum ada data driver</p>
+                                <p class="text-sm mt-1">Data akan muncul setelah ada pengiriman dengan driver</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    @if(method_exists($data, 'links'))
-    <div class="px-8 pb-10">
-        {{ $data->appends(request()->query())->links() }}
+@if(method_exists($data, 'hasPages') && $data->hasPages())
+<div class="px-6 mt-4 pb-4">
+    <div class="px-5 mt-6 flex items-center justify-center gap-2">
+        <p class="text-sm text-gray-500 font-semibold">Menampilkan {{ $data->firstItem() }}-{{ $data->lastItem() }} dari {{ $data->total() }} data</p>
+        <div class="flex items-center gap-2">
+            @if ($data->onFirstPage())
+                <span class="px-3 py-2 rounded-full bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed"><i class="bi bi-chevron-left"></i></span>
+            @else
+                <a href="{{ $data->previousPageUrl() }}" class="px-3 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold transition-all"><i class="bi bi-chevron-left"></i></a>
+            @endif
+            @foreach ($data->getUrlRange(max(1, $data->currentPage()-2), min($data->lastPage(), $data->currentPage()+2)) as $page => $url)
+                <a href="{{ $url }}" class="w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold transition-all {{ $page == $data->currentPage() ? 'bg-yellow-400 text-gray-900 shadow' : 'bg-white hover:bg-yellow-50 text-gray-600 shadow-sm' }}">{{ $page }}</a>
+            @endforeach
+            @if ($data->hasMorePages())
+                <a href="{{ $data->nextPageUrl() }}" class="px-3 py-2 rounded-full bg-yellow-400 hover:bg-yellow-500 text-sm font-semibold transition-all"><i class="bi bi-chevron-right"></i></a>
+            @else
+                <span class="px-3 py-2 rounded-full bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed"><i class="bi bi-chevron-right"></i></span>
+            @endif
+        </div>
     </div>
-    @endif
+</div>
+@endif
 </div>
 
 @if(session('success'))
-{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Berhasil!',
-        text: '{{ session('success') }}',
-        confirmButtonColor: '#F4C047',
-        customClass: {
-            popup: 'rounded-2xl',
-            confirmButton: 'rounded-xl px-6 py-3 font-bold'
-        }
-    });
+Swal.fire({
+    icon: 'success',
+    title: 'Berhasil!',
+    text: '{{ session('success') }}',
+    confirmButtonColor: '#F4C047'
+});
 </script>
 @endif
-
 @endsection
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const filterForm = document.getElementById('filterForm');
+    const resetBtn = document.getElementById('resetBtn');
     const dariInput = document.getElementById('dari');
     const sampaiInput = document.getElementById('sampai');
-
-    // Auto submit when date changes
-    dariInput.addEventListener('change', function() {
-        if (this.value && sampaiInput.value) {
-            filterForm.submit();
-        }
-    });
-
-    sampaiInput.addEventListener('change', function() {
-        if (this.value && dariInput.value) {
-            filterForm.submit();
-        }
-    });
-
-    // Validate date range
+    const sortInput = document.getElementById('sort');
     dariInput.addEventListener('change', function() {
         if (sampaiInput.value && this.value > sampaiInput.value) {
             alert('Tanggal mulai tidak boleh lebih besar dari tanggal akhir');
             this.value = '';
+            return;
         }
+        if (this.value && sampaiInput.value) filterForm.submit();
     });
-
     sampaiInput.addEventListener('change', function() {
         if (dariInput.value && this.value < dariInput.value) {
             alert('Tanggal akhir tidak boleh lebih kecil dari tanggal mulai');
             this.value = '';
+            return;
         }
+        if (this.value && dariInput.value) filterForm.submit();
+    });
+    resetBtn.addEventListener('click', function() {
+        window.location.href = '{{ route("laporan.driver.index") }}';
+    });
+    sortInput.addEventListener('change', function() {
+        filterForm.submit();
     });
 });
 </script>

@@ -122,9 +122,15 @@
             <label class="font-semibold">Proses</label>
             <div class="grid grid-cols-3 gap-3 mt-2">
                 @foreach ($prosesList as $p)
-                    <label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:bg-gray-100">
-                        <input type="checkbox" name="proses[]" value="{{ $p }}">
-                        <span>{{ $p }}</span>
+                    <label class="cursor-pointer">
+                        <input type="checkbox"
+                               name="proses[]"
+                               value="{{ $p }}"
+                               class="peer sr-only"
+                               {{ in_array($p, old('proses', [])) ? 'checked' : '' }}>
+                        <div class="flex items-center justify-center rounded-xl border-2 border-gray-200 bg-white px-3 py-3 text-sm font-semibold text-gray-700 transition-all peer-checked:border-yellow-400 peer-checked:bg-yellow-100 peer-checked:text-black hover:border-yellow-300 hover:bg-yellow-50">
+                            {{ $p }}
+                        </div>
                     </label>
                 @endforeach
             </div>
@@ -141,4 +147,3 @@
     </form>
 </div>
 @endsection
-

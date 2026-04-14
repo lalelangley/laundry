@@ -181,7 +181,7 @@ $keterangan = session('keterangan_transaksi', '');
     $totalHarga = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 @endphp
 
-<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
+<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50 desktop-docked-bar lg:bottom-4 lg:rounded-[28px]">
     <div>
         <p class="text-sm">Total Harga</p>
         <p class="text-2xl font-bold">Rp. {{ number_format($totalHarga, 0, ',', '.') }}</p>

@@ -54,7 +54,16 @@
         {{-- PROSES --}}
         @php
             $prosesList = ['Cuci', 'Kering', 'Setrika'];
-            $selectedProses = old('proses', explode(',', $layanan->proses));
+            $rawProses = $layanan->proses ?? '';
+            if (is_string($rawProses) && \Illuminate\Support\Str::startsWith(trim($rawProses), '[')) {
+                $selectedProses = json_decode($rawProses, true) ?: [];
+            } else {
+                $parts = explode(',', trim($rawProses, "[]\"' "));
+                $selectedProses = array_filter(array_map('trim', $parts), fn($s) => !empty($s));
+            }
+            if (old('proses')) {
+                $selectedProses = old('proses');
+            }
         @endphp
 
         <label class="block font-semibold text-lg mb-3">Proses</label>

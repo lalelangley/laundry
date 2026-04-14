@@ -55,12 +55,51 @@ class RiwayatController extends Controller
                 'j.keterangan as keterangan_jenis',
                 'l.nama_layanan',
                 's.nama_satuan as satuan',
-                // FIX: pakai COALESCE agar jika d.harga = 0/NULL, fallback ke j.harga
                 DB::raw('COALESCE(NULLIF(d.harga, 0), j.harga, 0) AS harga_efektif'),
                 DB::raw('(d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)) AS total_harga')
             )
             ->where('d.id_transaksi', $id)
             ->get();
+    }
+
+    // =============================
+    // HELPER - RECALCULATE STATUS BAYAR
+    // Dipanggil setiap kali total_harga berubah (tambah/hapus item).
+    // FIX: Mencegah status tetap 'lunas' padahal total_harga sudah berubah.
+    // =============================
+    private function recalculateStatusBayar(Transaksi $transaksi): void
+    {
+        $totalBayar   = (float) ($transaksi->total_bayar ?? 0);
+        $totalTagihan = (float) $transaksi->total_harga - (float) ($transaksi->diskon ?? 0);
+
+        if ($totalBayar <= 0) {
+            $transaksi->status_bayar = 'belum_lunas';
+            $transaksi->tgl_lunas    = null;
+        } elseif ($totalBayar >= $totalTagihan) {
+            $transaksi->status_bayar = 'lunas';
+            // Pertahankan tgl_lunas yang sudah ada jika memang sudah lunas
+            if (!$transaksi->tgl_lunas) {
+                $transaksi->tgl_lunas = now();
+            }
+        } else {
+            $transaksi->status_bayar = 'DP';
+            $transaksi->tgl_lunas    = null;
+        }
+    }
+
+    // =============================
+    // HELPER - HITUNG ULANG TOTAL HARGA & STATUS BAYAR
+    // Reusable untuk addLayanan, deleteDetail, dsb.
+    // =============================
+    private function recalculateTotalAndStatus(Transaksi $transaksi): void
+    {
+        $transaksi->total_harga = DB::table('detail_transaksi as d')
+            ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
+            ->where('d.id_transaksi', $transaksi->id_transaksi)
+            ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
+
+        $this->recalculateStatusBayar($transaksi);
+        $transaksi->save();
     }
 
     // =============================
@@ -86,7 +125,6 @@ class RiwayatController extends Controller
                 'gambar'         => null,
             ];
 
-        // FIX: gunakan queryDetail helper yang sudah pakai COALESCE
         $detail = $this->queryDetail($id);
 
         return compact('transaksi', 'pelanggan', 'detail');
@@ -119,7 +157,6 @@ class RiwayatController extends Controller
 
     // =============================
     // HELPER - HUBUNGKAN TRANSAKSI KE PELANGGAN
-    // Jika id_pelanggan kosong, cari pelanggan berdasarkan no_hp transaksi.
     // =============================
     private function ensurePelangganAttached(Transaksi $transaksi): ?Pelanggan
     {
@@ -146,9 +183,9 @@ class RiwayatController extends Controller
         }
 
         $transaksi->update([
-            'id_pelanggan' => $pelanggan->id_pelanggan,
+            'id_pelanggan'   => $pelanggan->id_pelanggan,
             'nama_pelanggan' => $transaksi->nama_pelanggan ?: $pelanggan->nama_pelanggan,
-            'no_hp' => $transaksi->no_hp ?: $pelanggan->no_hp,
+            'no_hp'          => $transaksi->no_hp ?: $pelanggan->no_hp,
         ]);
 
         return $pelanggan;
@@ -163,7 +200,7 @@ class RiwayatController extends Controller
 
         if (!$pelanggan) {
             return [
-                'sent' => false,
+                'sent'    => false,
                 'message' => 'Transaksi siap diambil, tapi pelanggan tidak ditemukan dari nomor HP transaksi.',
             ];
         }
@@ -172,7 +209,7 @@ class RiwayatController extends Controller
 
         if (empty($pelanggan->telegram_chat_id)) {
             return [
-                'sent' => false,
+                'sent'    => false,
                 'message' => "Transaksi siap diambil, tapi pelanggan {$pelanggan->nama_pelanggan} belum menautkan Telegram ke bot.",
             ];
         }
@@ -180,7 +217,7 @@ class RiwayatController extends Controller
         $sent = TelegramNotificationService::sendReadyForPickupNotification($transaksi);
 
         return [
-            'sent' => $sent,
+            'sent'    => $sent,
             'message' => $sent
                 ? 'Transaksi siap diambil dan notifikasi Telegram berhasil dikirim dengan info pembayaran.'
                 : 'Transaksi siap diambil, tapi Telegram menolak pengiriman atau chat pelanggan belum aktif.',
@@ -213,7 +250,7 @@ class RiwayatController extends Controller
     {
         requirePermission('riwayat', 'edit');
 
-        $trx = Transaksi::findOrFail($id);
+        $trx          = Transaksi::findOrFail($id);
         $notification = $this->sendReadyPickupTelegramNotification($trx);
 
         return redirect()
@@ -226,12 +263,12 @@ class RiwayatController extends Controller
         $sort = $request->get('sort', 'terbaru');
 
         match ($sort) {
-            'terlama' => $query->orderBy('id_transaksi', 'asc'),
-            'nama_asc' => $query->orderBy('nama_pelanggan', 'asc'),
-            'nama_desc' => $query->orderBy('nama_pelanggan', 'desc'),
-            'total_asc' => $query->orderBy('total_harga', 'asc'),
+            'terlama'    => $query->orderBy('id_transaksi', 'asc'),
+            'nama_asc'   => $query->orderBy('nama_pelanggan', 'asc'),
+            'nama_desc'  => $query->orderBy('nama_pelanggan', 'desc'),
+            'total_asc'  => $query->orderBy('total_harga', 'asc'),
             'total_desc' => $query->orderBy('total_harga', 'desc'),
-            default => $query->orderBy('id_transaksi', 'desc'),
+            default      => $query->orderBy('id_transaksi', 'desc'),
         };
 
         return $query;
@@ -331,10 +368,7 @@ class RiwayatController extends Controller
             ? DB::table('pelanggan')->where('id_pelanggan', $transaksi->id_pelanggan)->first()
             : (object)['nama_pelanggan' => $transaksi->nama_pelanggan, 'no_hp' => $transaksi->no_hp, 'gambar' => null];
 
-        // FIX: gunakan queryDetail helper
-        $detail = $this->queryDetail($id);
-
-        // FIX: subtotal dari detail, fallback ke total_harga transaksi jika 0
+        $detail   = $this->queryDetail($id);
         $subtotal = $detail->sum('total_harga');
         if ($subtotal <= 0) {
             $subtotal = $transaksi->total_harga ?? 0;
@@ -388,13 +422,8 @@ class RiwayatController extends Controller
             }
         }
 
-        // Hitung ulang total harga dengan COALESCE
-        $total = DB::table('detail_transaksi as d')
-            ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-            ->where('d.id_transaksi', $id)
-            ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-
-        $riwayat->update(['total_harga' => $total]);
+        // FIX: Hitung ulang total dan status bayar
+        $this->recalculateTotalAndStatus($riwayat);
 
         return redirect()->route('riwayat.detail', ['id' => $id])
             ->with('success', 'Transaksi berhasil diperbarui');
@@ -411,8 +440,8 @@ class RiwayatController extends Controller
             'status_transaksi' => 'required|in:antrian,proses,siap_di_ambil,selesai,batal'
         ]);
 
-        $transaksi                    = Transaksi::findOrFail($id);
-        $transaksi->status_transaksi  = $request->status_transaksi;
+        $transaksi                   = Transaksi::findOrFail($id);
+        $transaksi->status_transaksi = $request->status_transaksi;
         $transaksi->save();
 
         return back()->with('success', 'Status berhasil diperbarui');
@@ -476,17 +505,18 @@ class RiwayatController extends Controller
     {
         requirePermission('riwayat', 'edit');
 
-        $trx                       = Transaksi::findOrFail($id);
+        $trx = Transaksi::findOrFail($id);
         if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'riwayat.index', 'proses')) {
             return $guard;
         }
-        $trx->status_transaksi     = 'siap_di_ambil';
+        $trx->status_transaksi = 'siap_di_ambil';
         $trx->save();
 
         $notification = $this->sendReadyPickupTelegramNotification($trx);
 
-        return redirect()->route('riwayat.index', ['tab' => 'siap_di_ambil'])
-            ->with($notification['sent'] ? 'success' : 'error', $notification['message']);
+        return redirect()->route('kasir.riwayat.index', ['tab' => 'siap_di_ambil'])
+            ->with('success', 'Status berhasil diubah menjadi siap diambil'
+                . ($notification['sent'] ? ' & notifikasi terkirim' : ' (tanpa notifikasi Telegram)'));
     }
 
     public function kirimNotifTelegram($id)
@@ -527,6 +557,7 @@ class RiwayatController extends Controller
 
     // =============================
     // ADMIN - BAYAR SUBMIT
+    // FIX: Konsisten pakai 'belum_lunas' (underscore, bukan spasi)
     // =============================
     public function bayarSubmit(Request $request, $id)
     {
@@ -552,6 +583,7 @@ class RiwayatController extends Controller
 
         $sisaTagihan = $totalTagihan - $totalBayarBaru;
 
+        // FIX: Konsisten pakai 'belum_lunas' bukan 'belum bayar'
         if ($sisaTagihan <= 0) {
             $trs->status_bayar = 'lunas';
             $trs->tgl_lunas    = now();
@@ -559,7 +591,7 @@ class RiwayatController extends Controller
             $trs->status_bayar = 'DP';
             $trs->tgl_lunas    = null;
         } else {
-            $trs->status_bayar = 'belum bayar';
+            $trs->status_bayar = 'belum_lunas';
             $trs->tgl_lunas    = null;
         }
 
@@ -678,8 +710,8 @@ class RiwayatController extends Controller
             ], 422);
         }
 
-        $key  = "riwayat_{$id}/layanan";
-        $data = session()->get($key, []);
+        $key    = "riwayat_{$id}/layanan";
+        $data   = session()->get($key, []);
         $data[] = [
             'id_layanan' => $layanan->id_layanan,
             'qty'        => $request->qty,
@@ -695,6 +727,7 @@ class RiwayatController extends Controller
 
     // =============================
     // ADMIN - ADD LAYANAN (langsung ke database)
+    // FIX: Recalculate status_bayar setelah total_harga berubah
     // =============================
     public function addLayanan(Request $request, $id)
     {
@@ -716,16 +749,12 @@ class RiwayatController extends Controller
                 'id_jenis_layanan' => $jenis->id_jenis_layanan,
                 'qty'              => $request->qty,
                 'id_parfum'        => $request->parfum,
-                'harga'            => $jenis->harga, // Pastikan harga tersimpan dari jenis
+                'harga'            => $jenis->harga,
             ]);
 
-            // Hitung ulang total harga dengan COALESCE
-            $transaksi              = Transaksi::findOrFail($id);
-            $transaksi->total_harga = DB::table('detail_transaksi as d')
-                ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-                ->where('d.id_transaksi', $id)
-                ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-            $transaksi->save();
+            // FIX: Hitung ulang total harga DAN status bayar sekaligus
+            $transaksi = Transaksi::findOrFail($id);
+            $this->recalculateTotalAndStatus($transaksi);
 
             return response()->json([
                 'success' => true,
@@ -785,13 +814,14 @@ class RiwayatController extends Controller
         ]);
 
         return response()->json([
-            'success'       => true,
-            'transaksi_id'  => $detail->id_transaksi
+            'success'      => true,
+            'transaksi_id' => $detail->id_transaksi
         ]);
     }
 
     // =============================
     // ADMIN - DELETE DETAIL TRANSAKSI
+    // FIX: Recalculate status_bayar setelah item dihapus
     // =============================
     public function deleteDetail($id)
     {
@@ -805,7 +835,12 @@ class RiwayatController extends Controller
             ], 404);
         }
 
+        $idTransaksi = $detail->id_transaksi;
         $detail->delete();
+
+        // FIX: Hitung ulang total dan status bayar setelah item dihapus
+        $transaksi = Transaksi::findOrFail($idTransaksi);
+        $this->recalculateTotalAndStatus($transaksi);
 
         return response()->json(['success' => true]);
     }
@@ -862,11 +897,8 @@ class RiwayatController extends Controller
                 'gambar'         => null
             ];
 
-        // FIX: gunakan queryDetail helper
-        $detail = $this->queryDetail($id);
-
-        // FIX: subtotal dengan fallback ke total_harga transaksi
-        $subtotal  = $detail->sum('total_harga');
+        $detail   = $this->queryDetail($id);
+        $subtotal = $detail->sum('total_harga');
         if ($subtotal <= 0) {
             $subtotal = $transaksi->total_harga ?? 0;
         }
@@ -891,6 +923,7 @@ class RiwayatController extends Controller
 
     // =============================
     // KASIR - PROSES PEMBAYARAN
+    // FIX: Konsisten pakai 'belum_lunas' (underscore, bukan spasi)
     // =============================
     public function bayarKasir(Request $request, $id)
     {
@@ -924,6 +957,7 @@ class RiwayatController extends Controller
         $trs->diskon          = $diskon;
         $trs->id_metode_bayar = $request->id_metode_bayar;
 
+        // FIX: Konsisten pakai 'belum_lunas' bukan 'belum bayar'
         if ($trs->total_bayar >= $totalTagihan) {
             $trs->status_bayar = 'lunas';
             $trs->tgl_lunas    = now();
@@ -931,7 +965,7 @@ class RiwayatController extends Controller
             $trs->status_bayar = 'DP';
             $trs->tgl_lunas    = null;
         } else {
-            $trs->status_bayar = 'belum bayar';
+            $trs->status_bayar = 'belum_lunas';
             $trs->tgl_lunas    = null;
         }
         $trs->save();
@@ -973,6 +1007,7 @@ class RiwayatController extends Controller
 
     // =============================
     // KASIR - UPDATE TRANSAKSI
+    // FIX: Recalculate status_bayar setelah total_harga berubah
     // =============================
     public function updateKasir(Request $request, $id)
     {
@@ -1001,13 +1036,8 @@ class RiwayatController extends Controller
             }
         }
 
-        // Hitung ulang total harga dengan COALESCE
-        $total = DB::table('detail_transaksi as d')
-            ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-            ->where('d.id_transaksi', $id)
-            ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-
-        $riwayat->update(['total_harga' => $total]);
+        // FIX: Hitung ulang total dan status bayar
+        $this->recalculateTotalAndStatus($riwayat);
 
         return redirect()->route('kasir.riwayat.detail', ['id' => $id])
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -1054,7 +1084,7 @@ class RiwayatController extends Controller
     {
         requirePermission('riwayat', 'edit');
 
-        $trx                   = Transaksi::findOrFail($id);
+        $trx = Transaksi::findOrFail($id);
         if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'kasir.riwayat.index', 'proses')) {
             return $guard;
         }
@@ -1104,8 +1134,7 @@ class RiwayatController extends Controller
         $pelanggan = $transaksi->pelanggan;
         $detail    = $transaksi->detail;
 
-        // FIX: subtotal dengan COALESCE fallback
-        $subtotal  = $detail->sum(function ($d) {
+        $subtotal = $detail->sum(function ($d) {
             $harga = $d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0);
             return $d->qty * $harga;
         });
@@ -1133,7 +1162,6 @@ class RiwayatController extends Controller
         $pelanggan = $transaksi->pelanggan;
         $detail    = $transaksi->detail;
 
-        // FIX: subtotal dengan COALESCE fallback
         $subtotal = $detail->sum(function ($d) {
             $harga = $d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0);
             return $d->qty * $harga;
@@ -1145,7 +1173,7 @@ class RiwayatController extends Controller
         $diskon      = $transaksi->diskon ?? 0;
         $dp          = $transaksi->total_bayar ?? 0;
         $sisaBayar   = max(0, $subtotal - $diskon - $dp);
-        $statusBayar = strtolower($transaksi->status_bayar ?? 'belum bayar');
+        $statusBayar = strtolower($transaksi->status_bayar ?? 'belum_lunas');
 
         return view('kasir.riwayat.detail', compact(
             'transaksi', 'pelanggan', 'detail', 'subtotal', 'dp', 'sisaBayar', 'diskon', 'statusBayar'
@@ -1154,6 +1182,7 @@ class RiwayatController extends Controller
 
     // =============================
     // KASIR - ADD LAYANAN (langsung ke database)
+    // FIX: Recalculate status_bayar setelah total_harga berubah
     // =============================
     public function addLayananKasir(Request $request, $id)
     {
@@ -1174,17 +1203,13 @@ class RiwayatController extends Controller
                 'id_layanan'       => $validated['id_layanan'],
                 'id_jenis_layanan' => $jenis->id_jenis_layanan,
                 'id_parfum'        => $validated['parfum'] ?? null,
-                'harga'            => $jenis->harga, // Pastikan harga tersimpan
+                'harga'            => $jenis->harga,
                 'qty'              => $validated['qty'],
                 'id_satuan'        => $jenis->satuan->id_satuan ?? null,
             ]);
 
-            // Hitung ulang total harga dengan COALESCE
-            $transaksi->total_harga = DB::table('detail_transaksi as d')
-                ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-                ->where('d.id_transaksi', $id)
-                ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-            $transaksi->save();
+            // FIX: Hitung ulang total harga DAN status bayar sekaligus
+            $this->recalculateTotalAndStatus($transaksi);
 
             return response()->json([
                 'success' => true,
@@ -1285,11 +1310,8 @@ class RiwayatController extends Controller
             ? DB::table('pelanggan')->where('id_pelanggan', $transaksi->id_pelanggan)->first()
             : (object)['nama_pelanggan' => $transaksi->nama_pelanggan, 'no_hp' => $transaksi->no_hp, 'gambar' => null];
 
-        // FIX: gunakan queryDetail helper
-        $detail = $this->queryDetail($id);
-
-        // FIX: subtotal dengan fallback ke total_harga transaksi
-        $subtotal  = $detail->sum('total_harga');
+        $detail   = $this->queryDetail($id);
+        $subtotal = $detail->sum('total_harga');
         if ($subtotal <= 0) {
             $subtotal = $transaksi->total_harga ?? 0;
         }
@@ -1347,6 +1369,7 @@ class RiwayatController extends Controller
 
     // =============================
     // ADMIN2 - UPDATE TRANSAKSI
+    // FIX: Recalculate status_bayar setelah total_harga berubah
     // =============================
     public function updateAdmin2(Request $request, $id)
     {
@@ -1375,13 +1398,8 @@ class RiwayatController extends Controller
             }
         }
 
-        // Hitung ulang total harga dengan COALESCE
-        $total = DB::table('detail_transaksi as d')
-            ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-            ->where('d.id_transaksi', $id)
-            ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-
-        $riwayat->update(['total_harga' => $total]);
+        // FIX: Hitung ulang total dan status bayar
+        $this->recalculateTotalAndStatus($riwayat);
 
         return redirect()->route('admin2.riwayat.detail', ['id' => $id])
             ->with('success', 'Transaksi berhasil diperbarui.');
@@ -1428,7 +1446,7 @@ class RiwayatController extends Controller
     {
         requirePermission('riwayat', 'edit');
 
-        $trx                   = Transaksi::findOrFail($id);
+        $trx = Transaksi::findOrFail($id);
         if ($guard = $this->ensurePickupPaymentOrRedirect($trx, 'admin2.riwayat.index', 'proses')) {
             return $guard;
         }
@@ -1478,8 +1496,7 @@ class RiwayatController extends Controller
         $pelanggan = $transaksi->pelanggan;
         $detail    = $transaksi->detail;
 
-        // FIX: subtotal dengan COALESCE fallback
-        $subtotal  = $detail->sum(function ($d) {
+        $subtotal = $detail->sum(function ($d) {
             $harga = $d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0);
             return $d->qty * $harga;
         });
@@ -1507,7 +1524,6 @@ class RiwayatController extends Controller
         $pelanggan = $transaksi->pelanggan;
         $detail    = $transaksi->detail;
 
-        // FIX: subtotal dengan COALESCE fallback
         $subtotal = $detail->sum(function ($d) {
             $harga = $d->harga > 0 ? $d->harga : ($d->jenis->harga ?? 0);
             return $d->qty * $harga;
@@ -1519,7 +1535,7 @@ class RiwayatController extends Controller
         $diskon      = $transaksi->diskon ?? 0;
         $dp          = $transaksi->total_bayar ?? 0;
         $sisaBayar   = max(0, $subtotal - $diskon - $dp);
-        $statusBayar = strtolower($transaksi->status_bayar ?? 'belum bayar');
+        $statusBayar = strtolower($transaksi->status_bayar ?? 'belum_lunas');
 
         return view('admin2.riwayat.detail', compact(
             'transaksi', 'pelanggan', 'detail', 'subtotal', 'dp', 'sisaBayar', 'diskon', 'statusBayar'
@@ -1528,6 +1544,7 @@ class RiwayatController extends Controller
 
     // =============================
     // ADMIN2 - ADD LAYANAN (langsung ke database)
+    // FIX: Recalculate status_bayar setelah total_harga berubah
     // =============================
     public function addLayananAdmin2(Request $request, $id)
     {
@@ -1549,16 +1566,12 @@ class RiwayatController extends Controller
                 'id_jenis_layanan' => $jenis->id_jenis_layanan,
                 'qty'              => $request->qty,
                 'id_parfum'        => $request->parfum,
-                'harga'            => $jenis->harga, // Pastikan harga tersimpan
+                'harga'            => $jenis->harga,
             ]);
 
-            // Hitung ulang total harga dengan COALESCE
-            $transaksi              = Transaksi::findOrFail($id);
-            $transaksi->total_harga = DB::table('detail_transaksi as d')
-                ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-                ->where('d.id_transaksi', $id)
-                ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-            $transaksi->save();
+            // FIX: Hitung ulang total harga DAN status bayar sekaligus
+            $transaksi = Transaksi::findOrFail($id);
+            $this->recalculateTotalAndStatus($transaksi);
 
             return response()->json(['success' => true, 'message' => 'Layanan berhasil ditambahkan']);
         } catch (\Exception $e) {
@@ -1595,6 +1608,7 @@ class RiwayatController extends Controller
 
     // =============================
     // ADMIN2 - DELETE DETAIL TRANSAKSI
+    // FIX: Recalculate status_bayar setelah item dihapus
     // =============================
     public function deleteDetailAdmin2($id)
     {
@@ -1605,13 +1619,9 @@ class RiwayatController extends Controller
             $idTransaksi = $detail->id_transaksi;
             $detail->delete();
 
-            // Hitung ulang total harga dengan COALESCE
-            $transaksi              = Transaksi::findOrFail($idTransaksi);
-            $transaksi->total_harga = DB::table('detail_transaksi as d')
-                ->leftJoin('jenis_layanan as j', 'j.id_jenis_layanan', '=', 'd.id_jenis_layanan')
-                ->where('d.id_transaksi', $idTransaksi)
-                ->sum(DB::raw('d.qty * COALESCE(NULLIF(d.harga, 0), j.harga, 0)'));
-            $transaksi->save();
+            // FIX: Hitung ulang total dan status bayar setelah item dihapus
+            $transaksi = Transaksi::findOrFail($idTransaksi);
+            $this->recalculateTotalAndStatus($transaksi);
 
             return response()->json(['success' => true, 'message' => 'Layanan berhasil dihapus']);
         } catch (\Exception $e) {

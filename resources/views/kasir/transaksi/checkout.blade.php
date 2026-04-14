@@ -14,7 +14,7 @@
     <span class="text-2xl font-bold">Checkout</span>
 </div>
 
-<div class="p-4 space-y-6 pb-40">
+<div class="p-4 space-y-6 pb-40 lg:pb-52">
 
     {{-- CARD PELANGGAN --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
@@ -102,11 +102,11 @@
             <span class="font-bold">Estimasi Selesai</span>
             <span class="text-red-500 font-bold">*</span>
         </p>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
             <input type="datetime-local" id="tgl_estimasi" 
                 class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all outline-none">
             <button type="button" id="btnSetEstimasi" 
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-md transition-all whitespace-nowrap">
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-md transition-all whitespace-nowrap lg:min-w-[170px]">
                 <i class="bi bi-check-circle-fill"></i>
                 Set Estimasi
             </button>
@@ -147,16 +147,16 @@
     </div>
 </div>
 
-<div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden"></div>
+<div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden lg:bottom-[104px] desktop-docked-bar z-40"></div>
 
 {{-- FOOTER --}}
 {{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
-<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
+<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50 lg:bottom-4 lg:rounded-[28px] desktop-docked-bar">
     <div>
         <p class="text-sm">Total Harga</p>
         <p id="totalHargaFooter" class="text-2xl font-bold">Rp {{ number_format($totalHarga,0,',','.') }}</p>
     </div>
-    <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow font-bold">
+    <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl text-lg shadow font-bold lg:min-w-[150px]">
         Bayar
     </button>
 </div>
@@ -223,6 +223,7 @@
         <p class="font-semibold text-lg">Diskon: <span id="succDiskon"></span></p>
         <input type="hidden" id="shareTransactionId">
         <input type="hidden" id="shareCustomerEmail">
+        <input type="hidden" id="shareCustomerTelegramChatId">
 
         <div class="flex justify-center gap-8 mb-6">
             <div class="flex flex-col items-center cursor-pointer" id="btnSelesai">
@@ -239,7 +240,7 @@
             </div>
         </div>
 
-        <a href="{{ route('kasir.transaksi.pelanggan') }}" 
+        <a href="{{ route('kasir.transaksi.create') }}" 
            class="block w-full py-3 bg-green-600 text-white text-lg font-bold rounded-2xl text-center">
             Buat Transaksi Baru
         </a>
@@ -325,6 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalHargaFooter = document.getElementById('totalHargaFooter');
     const totalAwal = {{ $totalHarga }};
     let estimasiValid = false;
+    let diskonValid = true;
 
     // ===== VALIDASI INPUT DISKON =====
     // Hanya izinkan angka, titik, dan koma
@@ -404,10 +406,25 @@ document.addEventListener("DOMContentLoaded", () => {
    // ===== HITUNG DISKON =====
 const hitungDiskon = () => {
     let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
-    let potongan = value;
-    
-    potongan = Math.min(Math.max(potongan, 0), totalAwal);
-    let totalAkhir = totalAwal - potongan;
+
+    if (value < 0) {
+        value = 0;
+    }
+
+    diskonValid = value <= totalAwal;
+
+    if (!diskonValid) {
+        infoDiskon.style.display = "block";
+        infoDiskon.innerHTML = `
+            <span class="font-semibold text-red-600">Diskon melebihi total harga.</span><br>
+            <span class="text-xs text-gray-600">Maksimal diskon adalah Rp${totalAwal.toLocaleString('id-ID')}.</span>
+        `;
+        totalHargaFooter.textContent = `Rp ${totalAwal.toLocaleString('id-ID')}`;
+        return totalAwal;
+    }
+
+    const potongan = value;
+    const totalAkhir = totalAwal - potongan;
 
     if (value > 0) {
         infoDiskon.style.display = "block";
@@ -498,6 +515,7 @@ const hitungDiskon = () => {
     const succHp = document.getElementById("succHp");
     const shareTransactionId = document.getElementById("shareTransactionId");
     const shareCustomerEmail = document.getElementById("shareCustomerEmail");
+    const shareCustomerTelegramChatId = document.getElementById("shareCustomerTelegramChatId");
     const popupBagikan = document.getElementById("popupBagikan");
     const closeSharePopup = document.getElementById("closeSharePopup");
     const shareRecipientInput = document.getElementById("shareRecipientInput");
@@ -508,22 +526,36 @@ const hitungDiskon = () => {
     let selectedShareChannel = "email";
 
     const updateShareChannelUI = () => {
-        if (selectedShareChannel === "email") {
-            shareEmailOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
-            shareTelegramOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
-            shareRecipientLabel.textContent = "Email Tujuan";
-            shareRecipientInput.placeholder = "Masukkan email tujuan";
-            shareRecipientInput.value = shareCustomerEmail.value || "";
-            shareRecipientHint.textContent = "Email pelanggan akan diisi otomatis jika tersedia.";
+    if (selectedShareChannel === "email") {
+        shareEmailOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+        shareTelegramOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+        shareRecipientLabel.textContent = "Email Tujuan";
+        shareRecipientInput.placeholder = "Masukkan email tujuan";
+        shareRecipientInput.value = shareCustomerEmail.value || "";
+        shareRecipientInput.readOnly = false;
+        shareRecipientInput.classList.remove("bg-green-50", "text-green-700", "border-green-300");
+        shareRecipientHint.textContent = "Email pelanggan akan diisi otomatis jika tersedia.";
+    } else {
+        shareEmailOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+        shareTelegramOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+        shareRecipientLabel.textContent = "Kode Telegram / Chat ID";
+
+        const existingChatId = shareCustomerTelegramChatId.value || "";
+
+        if (existingChatId) {
+            shareRecipientInput.value = existingChatId;
+            shareRecipientInput.readOnly = true;
+            shareRecipientInput.classList.add("bg-green-50", "text-green-700", "border-green-300");
+            shareRecipientHint.textContent = "✓ Akun Telegram pelanggan sudah terhubung, akan dikirim otomatis.";
         } else {
-            shareEmailOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
-            shareTelegramOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
-            shareRecipientLabel.textContent = "Chat ID Telegram";
-            shareRecipientInput.placeholder = "Masukkan chat ID Telegram";
             shareRecipientInput.value = "";
-            shareRecipientHint.textContent = "Gunakan chat ID numerik Telegram, bukan username. Untuk chat pribadi, kirim pesan dulu ke bot lalu ambil chat.id dari getUpdates.";
+            shareRecipientInput.readOnly = false;
+            shareRecipientInput.classList.remove("bg-green-50", "text-green-700", "border-green-300");
+            shareRecipientInput.placeholder = "Masukkan kode dari bot Telegram";
+            shareRecipientHint.textContent = "Minta pelanggan kirim /start ke bot Telegram, lalu masukkan kode yang muncul.";
         }
-    };
+    }
+};
 
     // ===== SIMPAN PEMBAYARAN =====
     document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
@@ -547,6 +579,12 @@ const hitungDiskon = () => {
             });
 
             // ✅ VALIDASI
+            if (!diskonValid) {
+                showAlert("Diskon tidak boleh lebih besar dari total harga.");
+                inputDiskon.focus();
+                return;
+            }
+
             if (langsung === 1) {
                 if (bayar === 0) {
                     showAlert("Silakan masukkan jumlah pembayaran!");
@@ -609,6 +647,7 @@ const hitungDiskon = () => {
             // UPDATE POPUP SUCCESS
             shareTransactionId.value = data.id_transaksi ?? "";
             shareCustomerEmail.value = data.email ?? "";
+            shareCustomerTelegramChatId.value = data.telegram_chat_id ?? "";
             succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
             succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
             succNama.textContent = data.nama;

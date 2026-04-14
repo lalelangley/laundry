@@ -14,7 +14,7 @@
     <span class="text-2xl font-bold">Checkout</span>
 </div>
 
-<div class="p-4 space-y-6 pb-40">
+<div class="p-4 space-y-6 pb-40 lg:pb-52">
 
     {{-- CARD PELANGGAN --}}
     <div class="bg-white rounded-3xl p-5 shadow-xl flex items-center gap-4">
@@ -102,11 +102,11 @@
             <span class="font-bold">Estimasi Selesai</span>
             <span class="text-red-500 font-bold">*</span>
         </p>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
             <input type="datetime-local" id="tgl_estimasi" 
                 class="flex-1 p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all outline-none">
             <button type="button" id="btnSetEstimasi" 
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-md transition-all whitespace-nowrap">
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl font-bold shadow-md transition-all whitespace-nowrap lg:min-w-[170px]">
                 <i class="bi bi-check-circle-fill"></i>
                 Set Estimasi
             </button>
@@ -147,16 +147,16 @@
     </div>
 </div>
 
-<div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden"></div>
+<div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden lg:bottom-[104px] desktop-docked-bar z-40"></div>
 
 {{-- FOOTER --}}
 {{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
-<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50">
+<div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50 lg:bottom-4 lg:rounded-[28px] desktop-docked-bar">
     <div>
         <p class="text-sm">Total Harga</p>
         <p id="totalHargaFooter" class="text-2xl font-bold">Rp {{ number_format($totalHarga,0,',','.') }}</p>
     </div>
-    <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-7 py-3 rounded-2xl text-lg shadow font-bold">
+    <button id="btnBayar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-2xl text-lg shadow font-bold lg:min-w-[150px]">
         Bayar
     </button>
 </div>
@@ -275,6 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const totalHargaFooter = document.getElementById('totalHargaFooter');
     const totalAwal = {{ $totalHarga }};
     let estimasiValid = false;
+    let diskonValid = true;
 
     // ===== VALIDASI INPUT DISKON =====
     // Hanya izinkan angka, titik, dan koma
@@ -354,10 +355,25 @@ document.addEventListener("DOMContentLoaded", () => {
    // ===== HITUNG DISKON =====
 const hitungDiskon = () => {
     let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
-    let potongan = value;
-    
-    potongan = Math.min(Math.max(potongan, 0), totalAwal);
-    let totalAkhir = totalAwal - potongan;
+
+    if (value < 0) {
+        value = 0;
+    }
+
+    diskonValid = value <= totalAwal;
+
+    if (!diskonValid) {
+        infoDiskon.style.display = "block";
+        infoDiskon.innerHTML = `
+            <span class="font-semibold text-red-600">Diskon melebihi total harga.</span><br>
+            <span class="text-xs text-gray-600">Maksimal diskon adalah Rp${totalAwal.toLocaleString('id-ID')}.</span>
+        `;
+        totalHargaFooter.textContent = `Rp ${totalAwal.toLocaleString('id-ID')}`;
+        return totalAwal;
+    }
+
+    const potongan = value;
+    const totalAkhir = totalAwal - potongan;
 
     if (value > 0) {
         infoDiskon.style.display = "block";
@@ -469,6 +485,12 @@ const hitungDiskon = () => {
             });
 
             // ✅ VALIDASI
+            if (!diskonValid) {
+                showAlert("Diskon tidak boleh lebih besar dari total harga.");
+                inputDiskon.focus();
+                return;
+            }
+
             if (langsung === 1) {
                 if (bayar === 0) {
                     showAlert("Silakan masukkan jumlah pembayaran!");

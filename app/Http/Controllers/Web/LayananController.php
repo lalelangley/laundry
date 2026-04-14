@@ -323,9 +323,11 @@ class LayananController extends Controller
             'proses'       => 'array|required',
         ]);
 
-        // Buat layanan baru tanpa proses (kasir tidak input proses)
+        $prosesToStore = array_values(array_filter(array_map('trim', $request->input('proses', []))));
+
         $layanan = Layanan::create([
             'nama_layanan' => $request->nama_layanan,
+            'proses'       => json_encode($prosesToStore),
         ]);
 
         // Perulangan: salin jenis lama yang dipilih ke layanan baru
@@ -502,11 +504,12 @@ class LayananController extends Controller
         requirePermission('layanan', 'edit');
         
         $layanan = Layanan::findOrFail($id);
+        $prosesToStore = array_values(array_filter(array_map('trim', $request->input('proses', []))));
 
         // Update nama layanan dan proses (array diubah ke string CSV)
         $layanan->update([
             'nama_layanan' => $request->nama_layanan,
-            'proses'       => implode(',', $request->proses ?? []),
+            'proses'       => json_encode($prosesToStore),
         ]);
 
         // Perulangan: update setiap jenis layanan lama yang diedit
@@ -587,10 +590,11 @@ class LayananController extends Controller
         requirePermission('layanan', 'edit');
         
         $layanan = Layanan::findOrFail($id);
+        $prosesToStore = array_values(array_filter(array_map('trim', $request->input('proses', []))));
 
         $layanan->update([
             'nama_layanan' => $request->nama_layanan,
-            'proses'       => implode(',', $request->proses ?? []),
+            'proses'       => json_encode($prosesToStore),
         ]);
 
         // Perulangan: update jenis layanan lama berdasarkan ID sebagai key array
@@ -967,7 +971,8 @@ class LayananController extends Controller
 
         session()->put("jenis_baru_{$id_layanan}", $jenis_baru);
 
-        return redirect()->route('kasir.layanan.layanan_create', ['from' => $request->from ?? 'transaksi'])
+        // ✅ FIX: kasir.layanan.layanan_create → kasir.layanan.create
+        return redirect()->route('kasir.layanan.create', ['from' => $request->from ?? 'transaksi'])
             ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
     }
 
@@ -1276,7 +1281,7 @@ class LayananController extends Controller
     // Menambahkan jenis ke session saat proses EDIT layanan yang sudah ada
     public function addJenisEdit(Request $request, $from)
     {
-        requirePermission('layanan', 'add');
+        requirePermission('layanan', 'edit');
         
         $request->validate([
             'nama_jenis'  => 'required|string|max:255',
@@ -1310,6 +1315,11 @@ class LayananController extends Controller
 
         session()->put("jenis_baru_{$from}", $jenis);
 
+        if (Auth::guard('kasir')->check()) {
+            return redirect()->route('kasir.layanan.edit', $from)
+                ->with('success', 'Jenis layanan berhasil ditambahkan!');
+        }
+
         return redirect()->route('layanan.edit', $from)
             ->with('success', 'Jenis layanan berhasil ditambahkan!');
     }
@@ -1317,7 +1327,7 @@ class LayananController extends Controller
     // Menambahkan jenis ke session saat edit layanan di panel Admin2
     public function addJenisEditAdmin2(Request $request, $from)
     {
-        requirePermission('layanan', 'add');
+        requirePermission('layanan', 'edit');
         
         $request->validate([
             'nama_jenis'  => 'required|string|max:255',
@@ -1362,6 +1372,13 @@ class LayananController extends Controller
         
         $satuanList = \App\Models\Satuan::all();
 
+        if (Auth::guard('kasir')->check()) {
+            return view('kasir.layanan.tambah_jenis_layanan_edit', [
+                'from'   => $from,
+                'satuan' => $satuanList,
+            ]);
+        }
+
         return view('admin.tambah_jenis_layanan_edit', [
             'from'       => $from,
             'satuanList' => $satuanList
@@ -1395,9 +1412,10 @@ class LayananController extends Controller
             ]);
         }
 
-        // Jika mode create, langsung redirect kembali ke halaman edit
-        return redirect()->route('kasir.layanan.edit', $from)
-            ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
+        return view('kasir.layanan.tambah_jenis_layanan_create', [
+            'from'   => $from,
+            'satuan' => $satuan,
+        ]);
     }
 
     // Menyimpan jenis baru ke session saat edit layanan di panel Kasir
@@ -1427,7 +1445,8 @@ class LayananController extends Controller
 
         session()->put("jenis_baru_{$from}", $jenis_baru);
 
-        return redirect()->route('kasir.layanan.layanan_create', ['from' => 'dashboard'])
+        // ✅ FIX: kasir.layanan.layanan_create → kasir.layanan.create
+        return redirect()->route('kasir.layanan.create', ['from' => 'dashboard'])
             ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
     }
 
@@ -1469,7 +1488,8 @@ class LayananController extends Controller
 
         session()->put("jenis_baru_{$from}", $jenis_baru);
 
-        return redirect()->route('kasir.layanan.layanan_create')
+        // ✅ FIX: kasir.layanan.layanan_create → kasir.layanan.create
+        return redirect()->route('kasir.layanan.create')
             ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
     }
 
@@ -1530,7 +1550,7 @@ class LayananController extends Controller
 
         session()->put("jenis_baru_{$from}", $jenis_baru);
 
-        return redirect()->route('admin2.layanan.layanan_create', ['from' => 'dashboard'])
+        return redirect()->route('admin2.layanan.create', ['from' => 'dashboard'])
             ->with('success', 'Jenis layanan berhasil ditambahkan sementara.');
     }
 

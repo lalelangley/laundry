@@ -741,7 +741,7 @@ class AuthWebController extends Controller
         requirePermission('pelanggan', 'add');
 
         // Jalankan validasi form (TC-09 s/d TC-12)
-        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
+        $this->validatePelanggan($request);
 
         // Proses upload gambar jika ada
         $gambarPath = $this->uploadGambar($request);

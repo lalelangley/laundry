@@ -207,7 +207,7 @@
          BOTTOM BAR FIXED
          Menampilkan total harga terkini dan tombol Simpan
     ======================================== --}}
-    <div class="fixed bottom-0 left-0 right-0 bg-yellow-400 px-6 py-5 flex justify-between items-center shadow-2xl z-50">
+    <div class="fixed bottom-0 left-0 right-0 bg-yellow-400 px-6 py-5 flex justify-between items-center shadow-2xl z-50 desktop-docked-bar lg:bottom-4 lg:rounded-[28px]">
         <div>
             <p class="text-sm text-gray-700">Total Harga</p>
             {{-- Total dihitung ulang via JavaScript saat qty berubah --}}

@@ -25,7 +25,7 @@
 
 <div class="bg-[#ffcc00] p-4 rounded-b-3xl shadow-lg">
     <div class="flex items-center justify-between">
-        <div onclick="toggleSidebar()" class="text-3xl font-bold cursor-pointer">≡</div>
+        <div onclick="toggleSidebar()" class="text-3xl font-bold cursor-pointer lg:hidden">≡</div>
         <img src="{{ asset('images/dashboard_logo.png') }}" class="w-40" alt="logo">
         <div class="relative">
             <button onclick="toggleNotifications()"

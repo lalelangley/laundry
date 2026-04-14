@@ -1,6 +1,8 @@
 <?php
 // File: app/Helpers/PermissionHelper.php
 
+use Illuminate\Support\Str;
+
 // ============================================================
 // HELPER PERMISSION APLIKASI
 // Fungsi:
@@ -153,6 +155,9 @@ if (!function_exists('checkPermission')) {
             $menuRoute = $perm->menu_route ?? '';
             $menuName  = strtolower($perm->nama_menu ?? '');
             $identifier = strtolower($menuIdentifier);
+            $menuBaseRoute = $menuRoute && Str::endsWith($menuRoute, '.index')
+                ? Str::beforeLast($menuRoute, '.index')
+                : $menuRoute;
 
             // [PERCABANGAN] 1. Prioritas tertinggi: exact match route.
             if ($menuRoute === $currentRoute) {
@@ -160,18 +165,27 @@ if (!function_exists('checkPermission')) {
                 break;
             }
 
-            // [PERCABANGAN] 2. Cek route prefix match.
+            // [PERCABANGAN] 2. Cek keluarga route dari menu utama, mis. layanan.index -> layanan.jenis.create
+            if ($menuBaseRoute && (
+                $currentRoute === $menuBaseRoute
+                || str_starts_with($currentRoute, $menuBaseRoute . '.')
+            )) {
+                $permission = $perm;
+                break;
+            }
+
+            // [PERCABANGAN] 3. Cek route prefix match.
             if ($menuRoute && str_starts_with($currentRoute, $menuRoute)) {
                 $permission = $perm;
                 break;
             }
 
-            // [PERCABANGAN] 3. Cek identifier ada di route saat ini.
+            // [PERCABANGAN] 4. Cek identifier ada di route saat ini.
             if (str_contains(strtolower($currentRoute), $identifier)) {
                 $permission = $perm;
             }
 
-            // [PERCABANGAN] 4. Cek nama menu mengandung identifier.
+            // [PERCABANGAN] 5. Cek nama menu mengandung identifier.
             if ($menuName && str_contains($menuName, $identifier)) {
                 $permission = $perm;
             }

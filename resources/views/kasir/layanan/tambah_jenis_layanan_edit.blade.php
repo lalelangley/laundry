@@ -26,7 +26,7 @@
     @endif
 
     {{-- FORM TAMBAH --}}
-    <form action="{{ route('layanan.jenis.add.edit', $from) }}" method="POST" enctype="multipart/form-data"
+    <form action="{{ route('kasir.layanan.jenis.add.edit', $from) }}" method="POST" enctype="multipart/form-data"
         class="bg-white p-5 rounded-2xl shadow space-y-6">
         @csrf
 
@@ -65,14 +65,16 @@
         <div>
             <label class="font-semibold block mb-1">Satuan</label>
             <div class="flex items-center gap-3">
-                  <select name="id_satuan" class="form-select">
+                  <select name="id_satuan" class="flex-1 bg-gray-100 p-4 rounded-2xl text-lg" required>
                 @foreach ($satuan as $s)
                     <option 
-                value="{{ $s->id_satuan }}"
-                @if(request('new_satuan') == $s->id_satuan) selected 
-                @elseif(isset($jenis) && $jenis->id_satuan == $s->id_satuan) selected 
-                @endif
-            >
+                        value="{{ $s->id_satuan }}"
+                        @if(request('new_satuan') == $s->id_satuan) selected 
+                        @elseif(isset($jenis) && $jenis->id_satuan == $s->id_satuan) selected 
+                        @endif
+                    >
+                        {{ $s->nama_satuan }}
+                    </option>
                 @endforeach
             </select>
 

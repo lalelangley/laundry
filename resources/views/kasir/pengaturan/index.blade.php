@@ -167,14 +167,14 @@
 
 {{-- BUTTON SIMPAN FIXED --}}
 @if($permissions['can_edit'] ?? true)
-<div class="fixed bottom-0 left-0 w-full bg-white px-5 py-4 shadow-2xl z-50 border-t-2 border-gray-100">
+<div class="fixed bottom-0 left-0 w-full bg-white px-5 py-4 shadow-2xl z-50 border-t-2 border-gray-100 desktop-docked-bar lg:bottom-4 lg:rounded-[28px]">
     <button id="btnSimpanPengaturan" class="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold rounded-2xl text-lg shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
         <i class="bi bi-check-circle-fill text-xl"></i>
         Simpan Pengaturan
     </button>
 </div>
 @else
-<div class="fixed bottom-0 left-0 w-full bg-white px-5 py-4 shadow-2xl z-50 border-t-2 border-gray-100">
+<div class="fixed bottom-0 left-0 w-full bg-white px-5 py-4 shadow-2xl z-50 border-t-2 border-gray-100 desktop-docked-bar lg:bottom-4 lg:rounded-[28px]">
     <div class="w-full py-4 bg-gray-300 text-gray-500 font-bold rounded-2xl text-lg flex items-center justify-center gap-2 cursor-not-allowed">
         <i class="bi bi-lock-fill text-xl"></i>
         Tidak Ada Izin Edit

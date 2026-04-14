@@ -33,7 +33,7 @@
     {{-- FILTER --}}
 {{-- FE-DOC: Area filter merangkum input tanggal, pencarian, sorting, dan reset agar user bisa mempersempit data. --}}
     <form method="GET" action="{{ route('admin2.laporan.kasir.index') }}" id="filterForm">
-        <div class="px-5 mt-5 flex flex-col gap-3 xl:flex-row xl:items-center">
+        <div class="mx-auto mt-5 flex max-w-7xl flex-col gap-3 px-5 xl:flex-row xl:items-center">
             <div class="flex-1 bg-yellow-400 rounded-3xl xl:rounded-full px-4 py-3 min-w-0">
                 <p class="text-xs font-semibold">Tanggal Awal</p>
                 <input type="date" 
@@ -72,7 +72,7 @@
     </form>
 
     {{-- SUMMARY STATS --}}
-    <div class="px-5 mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="mx-auto mt-6 grid max-w-7xl grid-cols-1 gap-3 px-5 sm:grid-cols-3">
         <div class="bg-white rounded-xl p-4 shadow border-2 border-yellow-400 text-center">
             <div class="text-xs text-gray-500 font-semibold">Total Kasir</div>
             <div class="text-2xl font-bold text-gray-800">{{ $summary['total_kasir'] }}</div>
@@ -94,7 +94,8 @@
     {{-- TOP KASIR --}}
     @php $top = $topKasir ?? $data->first(); @endphp
     @if($top)
-    <div class="mx-5 mt-5 bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-yellow-400 rounded-xl p-5 shadow-md">
+    <div class="mx-auto mt-5 max-w-7xl px-5">
+        <div class="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-yellow-400 rounded-xl p-5 shadow-md">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div class="flex items-center gap-4 min-w-0">
                 <div class="w-16 h-16 rounded-full overflow-hidden bg-yellow-400 flex items-center justify-center border-4 border-white shadow">
@@ -123,10 +124,79 @@
             </div>
         </div>
     </div>
+    </div>
     @endif
 
     {{-- LIST KASIR --}}
-    <div class="mt-6 px-5 space-y-3 pb-6">
+    <div class="mx-auto mt-6 hidden max-w-7xl px-5 lg:block">
+        <div class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5">
+            <div class="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Ringkasan Performa Kasir</h2>
+                    <p class="text-sm text-gray-500">Versi desktop dibuat rata dengan pola tabel yang lebih mudah dibaca.</p>
+                </div>
+                <p class="text-sm font-semibold text-gray-500">{{ $data->total() ?? $data->count() }} kasir</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Kasir</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Antrian</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Proses</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Siap Ambil</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Selesai</th>
+                            <th class="px-4 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Batal</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Transaksi</th>
+                            <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.2em] text-gray-500">Pendapatan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse($data as $index => $item)
+                        <tr class="transition hover:bg-yellow-50/60">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold
+                                        {{ $index == 0 ? 'bg-yellow-400 text-white' : '' }}
+                                        {{ $index == 1 ? 'bg-gray-300 text-white' : '' }}
+                                        {{ $index == 2 ? 'bg-orange-300 text-white' : '' }}
+                                        {{ $index > 2 ? 'bg-gray-100 text-gray-600' : '' }}">
+                                        {{ ($data->firstItem() ?? 1) + $index }}
+                                    </div>
+                                    <div class="h-11 w-11 overflow-hidden rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+                                        @if($item->gambar ?? false)
+                                            <img src="{{ asset('storage/'.$item->gambar) }}" class="h-full w-full object-cover" alt="{{ $item->nama_kasir }}">
+                                        @else
+                                            <i class="bi bi-person text-white"></i>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate font-bold text-gray-900">{{ $item->nama_kasir }}</p>
+                                        <p class="truncate text-sm text-gray-500">{{ $item->no_hp }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-center font-bold text-gray-700">{{ $item->antrian ?? 0 }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-yellow-700">{{ $item->proses ?? 0 }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-orange-700">{{ $item->siap_ambil ?? 0 }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-green-700">{{ $item->selesai ?? 0 }}</td>
+                            <td class="px-4 py-4 text-center font-bold text-red-700">{{ $item->batal ?? 0 }}</td>
+                            <td class="px-6 py-4 text-center text-lg font-bold text-orange-600">{{ $item->total_transaksi ?? 0 }}</td>
+                            <td class="px-6 py-4 text-right text-base font-bold text-gray-900">Rp {{ number_format($item->total_pendapatan ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-gray-500">Tidak ada data pada periode ini</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 px-5 space-y-3 pb-6 lg:hidden">
         @forelse($data as $index => $item)
         <div class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all border border-gray-200">
             
@@ -217,7 +287,7 @@
     </div>
 
     @if(method_exists($data, 'links'))
-    <div class="px-5 pb-6">
+    <div class="mx-auto max-w-7xl px-5 pb-6">
         {{ $data->appends(request()->query())->links() }}
     </div>
     @endif
