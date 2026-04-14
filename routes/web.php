@@ -56,6 +56,10 @@ Route::get('/', [AuthWebController::class, 'landingPage'])->name('landing');
 
 Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthWebController::class, 'processLogin'])->name('login.process');
+Route::get('/forgot-password', [AuthWebController::class, 'showForgotPassword'])->name('forgot.password');
+Route::post('/forgot-password', [AuthWebController::class, 'processForgotPassword'])->name('forgot.password.process');
+Route::get('/reset-password/{token}', [AuthWebController::class, 'showResetPassword'])->name('password.reset.form');
+Route::post('/reset-password', [AuthWebController::class, 'processResetPassword'])->name('password.reset.process');
 
 // ✅ ADMIN LOGOUT
 Route::post('/logout', function (): RedirectResponse {

@@ -168,6 +168,13 @@
                             <span>LOGIN</span>
                         </button>
                     </div>
+
+                    <div class="mt-4 text-center">
+                        <a href="{{ route('forgot.password') }}"
+                           class="text-sm font-semibold text-yellow-700 hover:text-yellow-800 hover:underline">
+                            Lupa password?
+                        </a>
+                    </div>
                 </form>
 
                 <!-- Footer -->
@@ -183,7 +190,7 @@
         <div class="mt-4 text-center">
             <p class="text-white text-sm bg-black bg-opacity-20 backdrop-blur-sm rounded-full px-4 py-2 inline-block">
                 <i class="fas fa-info-circle mr-1"></i>
-                Hubungi admin jika lupa password
+                Gunakan menu lupa password jika tidak bisa login
             </p>
         </div>
     </div>

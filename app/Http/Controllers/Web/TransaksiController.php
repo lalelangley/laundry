@@ -20,6 +20,18 @@ class TransaksiController extends Controller
     /**
      * Controller ini menangani alur transaksi laundry.
      *
+     * Penjelasan konsep coding yang bisa dipresentasikan:
+     * - OOP        : file ini adalah CLASS controller yang mewarisi fitur dari parent class Controller.
+     * - Method     : setiap function di dalam class ini adalah METHOD yang menjalankan tugas tertentu.
+     * - Object     : saat route memanggil controller, Laravel membuat object dari class ini.
+     * - Struktur data:
+     *   - Request  : object berisi input dari form/browser.
+     *   - Session  : menyimpan data transaksi sementara sebelum masuk database.
+     *   - Array    : detail transaksi disusun sebagai array item layanan.
+     *   - Model    : Transaksi, Pelanggan, Layanan, dll dipakai sebagai representasi tabel database.
+     * - Percabangan: if/elseif dipakai untuk menentukan alur bayar, diskon, dan validasi.
+     * - Perulangan : foreach dipakai saat menyimpan semua detail item transaksi.
+     *
      * Dipakai oleh:
      * - admin
      * - kasir
@@ -61,7 +73,13 @@ class TransaksiController extends Controller
      */
     private function buildPelangganPickerQuery(Request $request)
     {
-        // Query builder dipakai agar filter bisa disusun bertahap sesuai input user.
+        /*
+         * SECTION: OOP dan Struktur Data
+         * - $request adalah OBJECT Request dari Laravel.
+         * - $query adalah object Query Builder dari model Pelanggan.
+         * - Method ini menunjukkan bahwa filter data bisa dibangun bertahap
+         *   menggunakan input request dan percabangan.
+         */
         $query = Pelanggan::query();
         $search = trim((string) $request->get('search', ''));
 
@@ -137,6 +155,13 @@ class TransaksiController extends Controller
         // Aksi perubahan data tetap dijaga oleh endpoint yang memakai permission:add.
         requirePermission('transaksi', 'view');
         
+        /*
+         * SECTION: Struktur Data Session dan Array
+         * - Session dipakai sebagai penyimpanan sementara seperti keranjang transaksi.
+         * - detail_transaksi berbentuk ARRAY yang berisi item layanan.
+         * - Perhitungan total memakai array_map() untuk membuat subtotal,
+         *   lalu array_sum() untuk menjumlahkan semua subtotal.
+         */
         return view('transaksi.create', [
             'pelanggan'  => session('pelanggan'),
             'detail'     => session('detail_transaksi', []),
@@ -189,7 +214,12 @@ class TransaksiController extends Controller
         // ✅ CHECK PERMISSION ADD
         requirePermission('transaksi', 'add');
         
-        // Data pelanggan disalin ke session agar transaksi bisa dirakit dulu sebelum disimpan permanen.
+        /*
+         * SECTION: OOP Model dan Session
+         * - Pelanggan::find() adalah METHOD dari model Eloquent untuk mencari data berdasarkan id.
+         * - Hasil data pelanggan disimpan ke session dalam bentuk ARRAY asosiatif
+         *   agar bisa dipakai ulang pada proses transaksi berikutnya.
+         */
         $p = Pelanggan::find($id);
         if (!$p) return back()->with('error', 'Pelanggan tidak ditemukan');
 
@@ -532,6 +562,12 @@ class TransaksiController extends Controller
         \Log::info('🟢 BAYAR METHOD CALLED');
         \Log::info('Request data:', $request->all());
         
+        /*
+         * SECTION: Struktur Data Transaksi
+         * - Session menyimpan pelanggan dan detail_transaksi sementara.
+         * - $detail adalah ARRAY item layanan yang nantinya dihitung lalu disimpan ke database.
+         * - $request membawa input pembayaran seperti diskon, DP, metode bayar, dan estimasi.
+         */
         $pelanggan = session('pelanggan');
         $detail    = session('detail_transaksi', []);
         
@@ -550,6 +586,13 @@ class TransaksiController extends Controller
         $idMetodeBayar= $request->input('id_metode_bayar', 1);
         $tglEstimasi  = $request->input('tgl_estimasi', now());
 
+        /*
+         * SECTION: Logika Hitungan
+         * - subtotal item = harga x qty
+         * - totalAwal = jumlah semua subtotal
+         * - jika tipe diskon percent, nilai diskon diubah dulu ke nominal
+         * - totalAkhir = totalAwal - diskon
+         */
         $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
         $tipeDiskon = $request->input('tipe_diskon', 'nominal');
@@ -565,6 +608,13 @@ class TransaksiController extends Controller
 
         $totalAkhir = max($totalAwal - $diskon, 0);
 
+        /*
+         * SECTION: Percabangan Status Bayar
+         * - if pertama: transaksi dianggap lunas
+         * - elseif kedua: transaksi dianggap DP
+         * - else: transaksi belum lunas
+         * Bagian ini adalah contoh percabangan bisnis pada sistem.
+         */
         $totalBayar = $dp;
         if ($langsungBayar === 1 || $dp >= $totalAkhir) {
             $totalBayar = $totalAkhir;
@@ -586,6 +636,12 @@ class TransaksiController extends Controller
             'statusBayar' => $statusBayar
         ]);
 
+        /*
+         * SECTION: OOP dan Penyimpanan Data
+         * - Transaksi::create() adalah METHOD model Eloquent untuk menyimpan header transaksi.
+         * - Header transaksi berisi ringkasan transaksi utama.
+         * - Detail item akan disimpan terpisah ke tabel detail_transaksi.
+         */
         $trans = Transaksi::create([
             'id_pelanggan'     => $pelanggan['id_pelanggan'],
             'nama_pelanggan'   => $pelanggan['nama_pelanggan'],
@@ -608,6 +664,12 @@ class TransaksiController extends Controller
         
         \Log::info('✅ Transaction created:', ['id' => $trans->id_transaksi]);
 
+        /*
+         * SECTION: Perulangan dan Relasi Data
+         * - foreach dipakai untuk memproses setiap item detail layanan.
+         * - Setiap item disimpan ke tabel detail transaksi.
+         * - Pemisahan header dan detail menunjukkan struktur data relasional pada database.
+         */
         foreach ($detail as $d) {
             \Log::info('Detail item:', $d);
             $jenis = \App\Models\JenisLayanan::with('satuan')
@@ -669,12 +731,18 @@ class TransaksiController extends Controller
      * - menampilkan form transaksi kasir
      * - membaca data transaksi sementara milik kasir dari session
      */
-    public function createKasir()
+public function createKasir()
 {
     // Halaman awal transaksi cukup butuh akses view.
     // Aksi perubahan data tetap dijaga oleh endpoint yang memakai permission:add.
     requirePermission('transaksi', 'view');
     
+    /*
+     * SECTION: Session Role Kasir
+     * - Kasir memakai key session pelanggan_kasir agar data transaksi role kasir
+     *   tidak bercampur dengan data transaksi admin.
+     * - Total tetap dihitung dari array detail_transaksi yang ada di session.
+     */
     return view('kasir.transaksi.create', [
         'pelanggan'  => session('pelanggan_kasir'),  // ✅ FIX
         'detail'     => session('detail_transaksi', []),
@@ -755,7 +823,11 @@ class TransaksiController extends Controller
             $idMetodeBayar= $request->input('id_metode_bayar', 1);
             $tglEstimasi  = $request->input('tgl_estimasi', now());
 
-            // Hitung total awal berdasarkan detail layanan yang ada di session.
+            /*
+             * SECTION: Logika Hitungan Kasir
+             * - Rumus dasarnya sama: harga x qty, lalu dijumlahkan.
+             * - Ini menunjukkan reuse logic yang sama pada role berbeda.
+             */
             $totalAwal = array_sum(array_map(fn($d) => $d['harga'] * $d['qty'], $detail));
 
             // Dukung diskon nominal atau persentase.
@@ -794,7 +866,12 @@ class TransaksiController extends Controller
                 'statusBayar' => $statusBayar
             ]);
 
-            // Simpan transaksi utama sebagai header transaksi.
+            /*
+             * SECTION: OOP dan Struktur Data Kasir
+             * - Model Transaksi dipakai lagi untuk menyimpan header transaksi.
+             * - Struktur penyimpanan tetap dipisah antara header dan detail.
+             * - Ini memperlihatkan desain kode yang konsisten antar role.
+             */
             $trans = Transaksi::create([
                 'id_pelanggan'     => $pelanggan['id_pelanggan'],
                 'nama_pelanggan'   => $pelanggan['nama_pelanggan'],

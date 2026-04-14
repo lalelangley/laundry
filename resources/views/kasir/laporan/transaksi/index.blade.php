@@ -10,21 +10,26 @@
 {{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
     <div class="bg-yellow-400 px-5 py-5 md:px-8 md:py-6 rounded-b-3xl shadow">
         <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3 md:gap-4 min-w-0">
-            <a href="{{ route('kasir.laporan.index') }}" class="text-2xl md:text-3xl font-bold hover:scale-110 transition-transform">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <h1 class="text-xl md:text-2xl font-bold">Laporan Transaksi</h1>
-        </div>
+            <div class="flex items-center gap-3 md:gap-4 min-w-0">
+                <a href="{{ route('kasir.laporan.index') }}" class="text-2xl md:text-3xl font-bold hover:scale-110 transition-transform">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h1 class="text-xl md:text-2xl font-bold">Laporan Transaksi</h1>
+            </div>
 
-        <div class="flex gap-5 text-xl">
-            <button type="button" id="toggleFilter" class="hover:scale-110 transition-transform">
-                <i class="bi bi-funnel"></i>
-            </button>
-            <button type="button" id="toggleSort" class="hover:scale-110 transition-transform">
-                <i class="bi bi-sort-down"></i>
-            </button>
-        </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:inline-flex rounded-full bg-white/40 px-4 py-2 text-sm font-semibold text-gray-800">
+                    View only
+                </div>
+                <div class="flex gap-5 text-xl">
+                    <button type="button" id="toggleFilter" class="hover:scale-110 transition-transform">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    <button type="button" id="toggleSort" class="hover:scale-110 transition-transform">
+                        <i class="bi bi-sort-down"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

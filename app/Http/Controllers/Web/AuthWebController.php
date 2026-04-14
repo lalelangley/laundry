@@ -10,6 +10,8 @@ use App\Models\Kasir;
 use App\Models\Pelanggan;
 use App\Models\Transaksi;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 use App\Models\Role;
 use App\Models\Menu;
 use App\Models\MenuRole;
@@ -179,6 +181,120 @@ class AuthWebController extends Controller
 
         return back()->with('error', 'Email atau password salah.')
             ->withInput(['email' => $email]);
+    }
+
+    // ============================================================
+    // METHOD: showForgotPassword
+    // Menampilkan form lupa password untuk admin dan kasir.
+    // ============================================================
+    public function showForgotPassword()
+    {
+        return view('auth.forgot-password');
+    }
+
+    // ============================================================
+    // METHOD: processForgotPassword
+    // Mengirim link reset password ke email yang terdaftar.
+    // ============================================================
+    public function processForgotPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+        ]);
+
+        $email = $validated['email'];
+        $admin = Admin::where('email', $email)->first();
+        $kasir = $admin ? null : Kasir::where('email', $email)->first();
+        $account = $admin ?? $kasir;
+        $broker = $admin ? 'admins' : ($kasir ? 'kasirs' : null);
+        $role = $admin ? 'admin' : ($kasir ? 'kasir' : null);
+
+        if (!$account || !$broker || !$role) {
+            return back()
+                ->withErrors(['email' => 'Akun dengan email tersebut tidak ditemukan.'])
+                ->withInput();
+        }
+
+        if (($account->status ?? 'aktif') !== 'aktif') {
+            return back()
+                ->withErrors(['email' => 'Akun tidak aktif. Hubungi administrator.'])
+                ->withInput();
+        }
+
+        $token = Password::broker($broker)->createToken($account);
+        $resetUrl = route('password.reset.form', [
+            'token' => $token,
+            'email' => $account->email,
+            'role' => $role,
+        ]);
+
+        Mail::send('emails.reset-password-link', [
+            'account' => $account,
+            'resetUrl' => $resetUrl,
+            'role' => $role,
+        ], function ($mail) use ($account) {
+            $mail->to($account->email)
+                ->subject('Reset Password Akun KasminiLaundry');
+        });
+
+        return redirect()
+            ->route('login')
+            ->with('success', 'Link reset password sudah dikirim ke email Anda.');
+    }
+
+    public function showResetPassword(Request $request, string $token)
+    {
+        return view('auth.reset-password', [
+            'token' => $token,
+            'email' => (string) $request->query('email', ''),
+            'role' => (string) $request->query('role', ''),
+        ]);
+    }
+
+    public function processResetPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'role' => 'required|in:admin,kasir',
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'role.required' => 'Role akun tidak valid.',
+            'role.in' => 'Role akun tidak valid.',
+            'password.required' => 'Password baru wajib diisi.',
+            'password.min' => 'Password minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak sama.',
+        ]);
+
+        $broker = $validated['role'] === 'admin' ? 'admins' : 'kasirs';
+
+        $status = Password::broker($broker)->reset(
+            [
+                'email' => $validated['email'],
+                'password' => $validated['password'],
+                'password_confirmation' => (string) $request->input('password_confirmation'),
+                'token' => $validated['token'],
+            ],
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                $user->save();
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return back()
+                ->withErrors(['email' => 'Link reset password tidak valid atau sudah kedaluwarsa.'])
+                ->withInput($request->except('password', 'password_confirmation'));
+        }
+
+        return redirect()
+            ->route('login')
+            ->with('success', 'Password berhasil direset. Silakan login dengan password baru.');
     }
 
     // ============================================================
@@ -740,8 +856,10 @@ class AuthWebController extends Controller
         // Cek permission add pelanggan
         requirePermission('pelanggan', 'add');
 
-        // Jalankan validasi form (TC-09 s/d TC-12)
-        $this->validatePelanggan($request, $pelanggan->id_pelanggan);
+        // Jalankan validasi form untuk data pelanggan baru.
+        // Pada proses create belum ada object pelanggan lama,
+        // jadi parameter id pelanggan tidak perlu dikirim.
+        $this->validatePelanggan($request);
 
         // Proses upload gambar jika ada
         $gambarPath = $this->uploadGambar($request);
