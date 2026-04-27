@@ -5,11 +5,16 @@
 <div class="min-h-screen bg-gray-100 pb-28">
 
 <div class="bg-yellow-400 px-5 py-4 rounded-b-3xl sticky top-0 z-20 shadow">
-    <div class="flex items-center gap-3">
-        <a href="{{ route('kasir.laporan.index') }}" class="text-2xl font-bold hover:scale-110 transition-transform">
-            <i class="bi bi-arrow-left"></i>
-        </a>
-        <h1 class="text-lg font-bold">Laporan Pelanggan</h1>
+    <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <a href="{{ route('kasir.laporan.index') }}" class="text-2xl font-bold hover:scale-110 transition-transform">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <h1 class="text-lg font-bold">Laporan Pelanggan</h1>
+        </div>
+        <div class="hidden sm:inline-flex rounded-full bg-white/40 px-4 py-2 text-sm font-semibold text-gray-800">
+            View only
+        </div>
     </div>
 </div>
 

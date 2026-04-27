@@ -1,4 +1,4 @@
-{{-- FE-DOC: Template frontend untuk resources/views/kasir/transaksi/checkout.blade.php. Tambahan komentar di file ini dipakai sebagai penjelas struktur Blade, Tailwind, CSS, dan JavaScript tanpa mengubah behavior. --}}
+{{-- FE-DOC: Template frontend untuk resources/views/kasir/transaksi/checkout.blade.php. --}}
 @extends('layouts.master')
 
 @section('title', 'Checkout')
@@ -6,7 +6,6 @@
 @section('content')
 
 {{-- HEADER --}}
-{{-- FE-DOC: Header halaman dipakai untuk judul modul, navigasi balik, dan kadang tombol export cepat. --}}
 <div class="bg-yellow-400 px-5 py-5 rounded-b-[32px] flex items-center gap-3 shadow-lg">
     <a href="{{ route('kasir.transaksi.create') }}" class="text-black text-3xl font-bold">
         <i class="bi bi-arrow-left"></i>
@@ -51,13 +50,11 @@
                         ? 'storage/' . $d['gambar'] 
                         : 'images/default.png';
                 @endphp
-                
                 <img src="{{ asset($imagePath) }}" 
                      alt="{{ $d['nama_layanan'] ?? 'Layanan' }}"
                      class="w-full h-full object-cover"
                      onerror="this.onerror=null; this.src='{{ asset('images/default.png') }}';">
             </div>
-            
             <div class="flex-1">
                 <p class="font-bold text-lg leading-tight">
                     {{ $d['nama_layanan'] }}{{ isset($d['jenis']) ? ' ('.$d['jenis'].')' : '' }}
@@ -76,7 +73,7 @@
         @endforeach
     </div>
 
-        {{-- KETERANGAN --}}
+    {{-- KETERANGAN --}}
     <div class="bg-white rounded-2xl p-5 shadow-xl">
         <p class="font-semibold text-base mb-3 flex items-center gap-2">
             <i class="bi bi-chat-left-text-fill text-yellow-500 text-xl"></i>
@@ -135,14 +132,17 @@
             @endforeach
         </select>
 
+        {{-- INPUT DISKON PERSEN --}}
         <div class="flex gap-2 mt-3">
-            <input id="inputDiskon" type="text" inputmode="decimal"
-                   class="flex-1 p-3 rounded-2xl border bg-gray-100" 
-                   placeholder="Diskon nominal">
+            <input id="inputDiskon" type="number" inputmode="decimal"
+                   min="0" max="100" step="0.01"
+                   class="flex-1 p-3 rounded-2xl border bg-gray-100"
+                   placeholder="Diskon (%)">
+            <span class="flex items-center px-4 bg-yellow-400 rounded-2xl font-bold text-lg text-yellow-800">%</span>
         </div>
         <p class="text-xs text-gray-500">
             <i class="bi bi-info-circle-fill text-blue-500"></i>
-            Diskon diinput dalam nominal rupiah saja.
+            Masukkan diskon dalam persen (0–100).
         </p>
     </div>
 </div>
@@ -150,7 +150,6 @@
 <div id="infoDiskon" class="px-5 py-3 text-sm text-red-600 bg-white rounded-xl shadow fixed bottom-[88px] left-0 w-full hidden lg:bottom-[104px] desktop-docked-bar z-40"></div>
 
 {{-- FOOTER --}}
-{{-- FE-DOC: Footer dokumen dipakai untuk identitas laporan dan informasi cetak. --}}
 <div class="fixed bottom-0 left-0 w-full bg-yellow-400 px-5 py-5 flex justify-between items-center shadow-xl z-50 lg:bottom-4 lg:rounded-[28px] desktop-docked-bar">
     <div>
         <p class="text-sm">Total Harga</p>
@@ -286,72 +285,51 @@
 @endsection
 
 @section('scripts')
-{{-- FE-DOC: Blok JavaScript untuk interaksi halaman ini. --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ===== CUSTOM ALERT FUNCTION =====
-    const customAlert = document.getElementById('customAlert');
+    // ===== CUSTOM ALERT =====
+    const customAlert    = document.getElementById('customAlert');
     const customAlertBox = document.getElementById('customAlertBox');
-    const alertMessage = document.getElementById('alertMessage');
-    const alertTitle = document.getElementById('alertTitle');
-    const alertIconWrap = document.getElementById('alertIconWrap');
-    const alertIcon = document.getElementById('alertIcon');
-    const btnCloseAlert = document.getElementById('btnCloseAlert');
+    const alertMessage   = document.getElementById('alertMessage');
+    const alertTitle     = document.getElementById('alertTitle');
+    const alertIconWrap  = document.getElementById('alertIconWrap');
+    const alertIcon      = document.getElementById('alertIcon');
+    const btnCloseAlert  = document.getElementById('btnCloseAlert');
 
     const showAlert = (message, type = 'error') => {
         const isSuccess = type === 'success';
-
         customAlertBox.className = `bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate__animated ${isSuccess ? 'animate__fadeInUp' : 'animate__shakeX'}`;
-        alertIconWrap.className = `w-20 h-20 rounded-full flex items-center justify-center mb-4 transition ${isSuccess ? 'bg-green-100' : 'bg-red-100'}`;
-        alertIcon.className = `bi text-4xl ${isSuccess ? 'bi-check-circle-fill text-green-500' : 'bi-exclamation-triangle-fill text-red-500'}`;
-        alertTitle.textContent = isSuccess ? 'Berhasil!' : 'Perhatian!';
-        btnCloseAlert.className = `w-full py-3 text-white font-bold rounded-2xl transition ${isSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`;
-
+        alertIconWrap.className  = `w-20 h-20 rounded-full flex items-center justify-center mb-4 transition ${isSuccess ? 'bg-green-100' : 'bg-red-100'}`;
+        alertIcon.className      = `bi text-4xl ${isSuccess ? 'bi-check-circle-fill text-green-500' : 'bi-exclamation-triangle-fill text-red-500'}`;
+        alertTitle.textContent   = isSuccess ? 'Berhasil!' : 'Perhatian!';
+        btnCloseAlert.className  = `w-full py-3 text-white font-bold rounded-2xl transition ${isSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`;
         alertMessage.textContent = message;
         customAlert.classList.remove('hidden');
-        
-        btnCloseAlert.onclick = () => customAlert.classList.add('hidden');
-        
-        customAlert.onclick = (e) => {
-            if (e.target === customAlert) {
-                customAlert.classList.add('hidden');
-            }
-        };
+        btnCloseAlert.onclick    = () => customAlert.classList.add('hidden');
+        customAlert.onclick = (e) => { if (e.target === customAlert) customAlert.classList.add('hidden'); };
     };
 
     // ===== GLOBAL VARIABLES =====
-    const inputDiskon = document.getElementById('inputDiskon');
-    const infoDiskon = document.getElementById('infoDiskon');
+    const inputDiskon      = document.getElementById('inputDiskon');
+    const infoDiskon       = document.getElementById('infoDiskon');
     const totalHargaFooter = document.getElementById('totalHargaFooter');
-    const totalAwal = {{ $totalHarga }};
-    let estimasiValid = false;
-    let diskonValid = true;
+    const totalAwal        = {{ $totalHarga }};
+    let estimasiValid      = false;
+    let diskonValid        = true;
 
-    // ===== VALIDASI INPUT DISKON =====
-    // Hanya izinkan angka, titik, dan koma
+    // ===== VALIDASI INPUT DISKON PERSEN (0-100) =====
     inputDiskon.addEventListener('input', function(e) {
-        let value = e.target.value;
-        
-        // Izinkan angka, titik, dan koma
-        value = value.replace(/[^0-9.,]/g, '');
-        
-        // Ganti koma dengan titik untuk konsistensi
-        value = value.replace(',', '.');
-        
-        // Hanya izinkan satu titik desimal
-        const parts = value.split('.');
-        if (parts.length > 2) {
-            value = parts[0] + '.' + parts.slice(1).join('');
-        }
-        
-        e.target.value = value;
+        let value = parseFloat(e.target.value);
+        if (isNaN(value)) value = 0;
+        if (value < 0)   e.target.value = 0;
+        if (value > 100) e.target.value = 100;
         hitungDiskon();
     });
 
     // ===== ESTIMASI SELESAI =====
-    const tglEstimasi = document.getElementById('tgl_estimasi');
-    const btnSetEstimasi = document.getElementById('btnSetEstimasi');
+    const tglEstimasi      = document.getElementById('tgl_estimasi');
+    const btnSetEstimasi   = document.getElementById('btnSetEstimasi');
     const containerEstimasi = document.getElementById('containerEstimasi');
 
     const defaultDate = new Date();
@@ -364,16 +342,13 @@ document.addEventListener("DOMContentLoaded", () => {
             tglEstimasi.focus();
             return;
         }
-
         const selectedDate = new Date(tglEstimasi.value);
-        const now = new Date();
-
+        const now          = new Date();
         if (selectedDate <= now) {
             showAlert('Tanggal estimasi harus lebih dari waktu sekarang!');
             tglEstimasi.focus();
             return;
         }
-
         if (estimasiValid) {
             estimasiValid = false;
             containerEstimasi.classList.remove('border-2', 'border-green-500', 'bg-green-50');
@@ -382,72 +357,58 @@ document.addEventListener("DOMContentLoaded", () => {
             btnSetEstimasi.classList.add('bg-green-600', 'hover:bg-green-700');
             tglEstimasi.disabled = false;
             tglEstimasi.focus();
-            
             const successMsg = document.getElementById('successMsgEstimasi');
             if (successMsg) successMsg.remove();
-            
         } else {
             estimasiValid = true;
-            
             containerEstimasi.classList.add('border-2', 'border-green-500', 'bg-green-50');
             btnSetEstimasi.innerHTML = '<i class="bi bi-pencil-fill"></i> Edit Estimasi';
             btnSetEstimasi.classList.remove('bg-green-600', 'hover:bg-green-700');
             btnSetEstimasi.classList.add('bg-blue-600', 'hover:bg-blue-700');
             tglEstimasi.disabled = true;
-
             const successMsg = document.createElement('div');
-            successMsg.id = 'successMsgEstimasi';
+            successMsg.id        = 'successMsgEstimasi';
             successMsg.className = 'mt-2 text-sm text-green-600 font-semibold flex items-center gap-2';
             successMsg.innerHTML = '<i class="bi bi-check-circle-fill"></i> Estimasi selesai berhasil disimpan!';
             containerEstimasi.appendChild(successMsg);
         }
     });
 
-   // ===== HITUNG DISKON =====
-const hitungDiskon = () => {
-    let value = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
+    // ===== HITUNG DISKON (PERSEN) =====
+    const hitungDiskon = () => {
+        let persen = parseFloat(inputDiskon.value) || 0;
+        if (persen < 0)   persen = 0;
+        if (persen > 100) persen = 100;
 
-    if (value < 0) {
-        value = 0;
-    }
+        // Potongan nominal dihitung dari persen × totalAwal
+        const potongan  = Math.round(totalAwal * (persen / 100));
+        diskonValid     = true; // Persen 0-100 selalu valid karena sudah dibatasi
 
-    diskonValid = value <= totalAwal;
+        if (persen > 0) {
+            infoDiskon.style.display = "block";
+            infoDiskon.innerHTML = `
+                <span class="font-semibold">Diskon (${persen}%):</span> 
+                Rp${potongan.toLocaleString('id-ID')}<br>
+                <span class="text-xs text-gray-600">
+                    (Rp${totalAwal.toLocaleString('id-ID')} × ${persen}% 
+                    = Rp${potongan.toLocaleString('id-ID')})
+                </span>
+            `;
+        } else {
+            infoDiskon.style.display = "none";
+        }
 
-    if (!diskonValid) {
-        infoDiskon.style.display = "block";
-        infoDiskon.innerHTML = `
-            <span class="font-semibold text-red-600">Diskon melebihi total harga.</span><br>
-            <span class="text-xs text-gray-600">Maksimal diskon adalah Rp${totalAwal.toLocaleString('id-ID')}.</span>
-        `;
-        totalHargaFooter.textContent = `Rp ${totalAwal.toLocaleString('id-ID')}`;
-        return totalAwal;
-    }
-
-    const potongan = value;
-    const totalAkhir = totalAwal - potongan;
-
-    if (value > 0) {
-        infoDiskon.style.display = "block";
-        const displayValue = `Rp${value.toLocaleString('id-ID')}`;
-        
-        infoDiskon.innerHTML = `
-            <span class="font-semibold">Diskon (${displayValue}):</span> Rp${potongan.toLocaleString('id-ID')}<br>
-            <span class="text-xs text-gray-600">(Rp${totalAwal.toLocaleString('id-ID')} - Rp${potongan.toLocaleString('id-ID')})</span>
-        `;
-    } else {
-        infoDiskon.style.display = "none";
-    }
-
-    totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
-    return totalAkhir;
-};
+        const totalAkhir = totalAwal - potongan;
+        totalHargaFooter.textContent = `Rp ${totalAkhir.toLocaleString('id-ID')}`;
+        return totalAkhir;
+    };
 
     inputDiskon.addEventListener('input', hitungDiskon);
 
     // ===== TOGGLE LANGSUNG BAYAR =====
-    const toggleBayar = document.getElementById('toggleBayar');
-    const statusBayar = document.getElementById('statusBayar');
-    const hiddenBayar = document.getElementById('hiddenLangsungBayar');
+    const toggleBayar  = document.getElementById('toggleBayar');
+    const statusBayar  = document.getElementById('statusBayar');
+    const hiddenBayar  = document.getElementById('hiddenLangsungBayar');
 
     toggleBayar.addEventListener('click', () => {
         if (hiddenBayar.value === "1") {
@@ -465,23 +426,22 @@ const hitungDiskon = () => {
     });
 
     // ===== POPUP BAYAR =====
-    const popupBayar = document.getElementById("popupBayar");
-    const closePopup = document.getElementById("closePopup");
-    const tombolBayar = document.getElementById("btnBayar");
-    const popupNama = document.getElementById("popupNama");
-    const popupTotal = document.getElementById("popupTotal");
-    const inputBayar = document.getElementById("popupInputBayar");
+    const popupBayar    = document.getElementById("popupBayar");
+    const closePopup    = document.getElementById("closePopup");
+    const tombolBayar   = document.getElementById("btnBayar");
+    const popupNama     = document.getElementById("popupNama");
+    const popupTotal    = document.getElementById("popupTotal");
+    const inputBayar    = document.getElementById("popupInputBayar");
 
     const updatePopupBayar = () => {
         const totalAkhir = hitungDiskon();
         popupTotal.textContent = "Rp " + totalAkhir.toLocaleString('id-ID');
-
         if (hiddenBayar.value === "1") {
-            inputBayar.value = totalAkhir;
+            inputBayar.value    = totalAkhir;
             inputBayar.readOnly = true;
         } else {
-            inputBayar.value = "";
-            inputBayar.readOnly = false;
+            inputBayar.value       = "";
+            inputBayar.readOnly    = false;
             inputBayar.placeholder = "Kosongkan jika belum bayar";
         }
     };
@@ -492,12 +452,9 @@ const hitungDiskon = () => {
             tglEstimasi.focus();
             containerEstimasi.scrollIntoView({ behavior: 'smooth', block: 'center' });
             containerEstimasi.classList.add('animate__animated', 'animate__shakeX');
-            setTimeout(() => {
-                containerEstimasi.classList.remove('animate__animated', 'animate__shakeX');
-            }, 1000);
+            setTimeout(() => containerEstimasi.classList.remove('animate__animated', 'animate__shakeX'), 1000);
             return;
         }
-
         popupNama.textContent = "{{ $pelanggan['nama_pelanggan'] }}";
         updatePopupBayar();
         popupBayar.classList.remove("hidden");
@@ -507,80 +464,80 @@ const hitungDiskon = () => {
     inputDiskon.addEventListener('input', updatePopupBayar);
 
     // ===== SUCCESS POPUP ELEMENTS =====
-    const popupSuccess = document.getElementById("popupSuccess");
-    const succTotal = document.getElementById("succTotal");
-    const succBayar = document.getElementById("succBayar");
-    const succDiskon = document.getElementById("succDiskon");
-    const succNama = document.getElementById("succNama");
-    const succHp = document.getElementById("succHp");
-    const shareTransactionId = document.getElementById("shareTransactionId");
-    const shareCustomerEmail = document.getElementById("shareCustomerEmail");
+    const popupSuccess              = document.getElementById("popupSuccess");
+    const succTotal                 = document.getElementById("succTotal");
+    const succBayar                 = document.getElementById("succBayar");
+    const succDiskon                = document.getElementById("succDiskon");
+    const succNama                  = document.getElementById("succNama");
+    const succHp                    = document.getElementById("succHp");
+    const shareTransactionId        = document.getElementById("shareTransactionId");
+    const shareCustomerEmail        = document.getElementById("shareCustomerEmail");
     const shareCustomerTelegramChatId = document.getElementById("shareCustomerTelegramChatId");
-    const popupBagikan = document.getElementById("popupBagikan");
-    const closeSharePopup = document.getElementById("closeSharePopup");
-    const shareRecipientInput = document.getElementById("shareRecipientInput");
-    const shareRecipientLabel = document.getElementById("shareRecipientLabel");
-    const shareRecipientHint = document.getElementById("shareRecipientHint");
-    const shareEmailOption = document.getElementById("shareEmailOption");
-    const shareTelegramOption = document.getElementById("shareTelegramOption");
-    let selectedShareChannel = "email";
+    const popupBagikan              = document.getElementById("popupBagikan");
+    const closeSharePopup           = document.getElementById("closeSharePopup");
+    const shareRecipientInput       = document.getElementById("shareRecipientInput");
+    const shareRecipientLabel       = document.getElementById("shareRecipientLabel");
+    const shareRecipientHint        = document.getElementById("shareRecipientHint");
+    const shareEmailOption          = document.getElementById("shareEmailOption");
+    const shareTelegramOption       = document.getElementById("shareTelegramOption");
+    let selectedShareChannel        = "email";
 
     const updateShareChannelUI = () => {
-    if (selectedShareChannel === "email") {
-        shareEmailOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
-        shareTelegramOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
-        shareRecipientLabel.textContent = "Email Tujuan";
-        shareRecipientInput.placeholder = "Masukkan email tujuan";
-        shareRecipientInput.value = shareCustomerEmail.value || "";
-        shareRecipientInput.readOnly = false;
-        shareRecipientInput.classList.remove("bg-green-50", "text-green-700", "border-green-300");
-        shareRecipientHint.textContent = "Email pelanggan akan diisi otomatis jika tersedia.";
-    } else {
-        shareEmailOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
-        shareTelegramOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
-        shareRecipientLabel.textContent = "Kode Telegram / Chat ID";
-
-        const existingChatId = shareCustomerTelegramChatId.value || "";
-
-        if (existingChatId) {
-            shareRecipientInput.value = existingChatId;
-            shareRecipientInput.readOnly = true;
-            shareRecipientInput.classList.add("bg-green-50", "text-green-700", "border-green-300");
-            shareRecipientHint.textContent = "✓ Akun Telegram pelanggan sudah terhubung, akan dikirim otomatis.";
-        } else {
-            shareRecipientInput.value = "";
-            shareRecipientInput.readOnly = false;
+        if (selectedShareChannel === "email") {
+            shareEmailOption.className    = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+            shareTelegramOption.className = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+            shareRecipientLabel.textContent = "Email Tujuan";
+            shareRecipientInput.placeholder = "Masukkan email tujuan";
+            shareRecipientInput.value       = shareCustomerEmail.value || "";
+            shareRecipientInput.readOnly    = false;
             shareRecipientInput.classList.remove("bg-green-50", "text-green-700", "border-green-300");
-            shareRecipientInput.placeholder = "Masukkan kode dari bot Telegram";
-            shareRecipientHint.textContent = "Minta pelanggan kirim /start ke bot Telegram, lalu masukkan kode yang muncul.";
+            shareRecipientHint.textContent  = "Email pelanggan akan diisi otomatis jika tersedia.";
+        } else {
+            shareEmailOption.className    = "share-channel-btn bg-white text-gray-700 py-3 rounded-2xl font-bold border-2 border-gray-200";
+            shareTelegramOption.className = "share-channel-btn bg-yellow-400 text-black py-3 rounded-2xl font-bold border-2 border-yellow-400";
+            shareRecipientLabel.textContent = "Kode Telegram / Chat ID";
+            const existingChatId = shareCustomerTelegramChatId.value || "";
+            if (existingChatId) {
+                shareRecipientInput.value    = existingChatId;
+                shareRecipientInput.readOnly = true;
+                shareRecipientInput.classList.add("bg-green-50", "text-green-700", "border-green-300");
+                shareRecipientHint.textContent = "✓ Akun Telegram pelanggan sudah terhubung, akan dikirim otomatis.";
+            } else {
+                shareRecipientInput.value       = "";
+                shareRecipientInput.readOnly    = false;
+                shareRecipientInput.classList.remove("bg-green-50", "text-green-700", "border-green-300");
+                shareRecipientInput.placeholder = "Masukkan kode dari bot Telegram";
+                shareRecipientHint.textContent  = "Minta pelanggan kirim /start ke bot Telegram, lalu masukkan kode yang muncul.";
+            }
         }
-    }
-};
+    };
 
     // ===== SIMPAN PEMBAYARAN =====
     document.getElementById("btnSimpanPembayaran").addEventListener("click", async () => {
         try {
-            const totalAkhir = hitungDiskon();
-            const bayar = parseFloat(inputBayar.value) || 0;
-            const diskonValue = parseFloat(inputDiskon.value.replace(',', '.')) || 0;
-            const keterangan = document.getElementById("keteranganTransaksi").value || null;
-            const id_metode_bayar = document.getElementById("selectMetodeBayar").value || null;
-            const tgl_estimasi_value = document.getElementById("tgl_estimasi").value || null;
-            const langsung = parseInt(hiddenBayar.value);
+            const totalAkhir       = hitungDiskon();
+            const bayar            = parseFloat(inputBayar.value) || 0;
+            // Kirim nilai PERSEN ke server — server yang konversi ke nominal
+            const diskonPersen     = parseFloat(inputDiskon.value) || 0;
+            const keterangan       = document.getElementById("keteranganTransaksi").value || null;
+            const id_metode_bayar  = document.getElementById("selectMetodeBayar").value || null;
+            const tgl_estimasi_val = document.getElementById("tgl_estimasi").value || null;
+            const langsung         = parseInt(hiddenBayar.value);
 
             console.log("📤 SENDING DATA:", {
                 dp: bayar,
                 langsung_bayar: langsung,
-                diskon: diskonValue,
-                keterangan: keterangan,
-                id_metode_bayar: id_metode_bayar,
-                tgl_estimasi: tgl_estimasi_value,
-                totalAkhir: totalAkhir
+                diskon: diskonPersen,
+                tipe_diskon: "percent",
+                keterangan,
+                id_metode_bayar,
+                tgl_estimasi: tgl_estimasi_val,
+                totalAkhir
             });
 
             // ✅ VALIDASI
             if (!diskonValid) {
-                showAlert("Diskon tidak boleh lebih besar dari total harga.");
+                showAlert("Diskon tidak valid.");
                 inputDiskon.focus();
                 return;
             }
@@ -603,9 +560,7 @@ const hitungDiskon = () => {
                 }
             }
 
-            // ✅ KIRIM DATA KE SERVER
-            console.log("🌐 Fetching to:", "{{ route('kasir.transaksi.bayar') }}");
-            
+            // ✅ KIRIM DATA KE SERVER — tipe_diskon: "percent" agar controller konversi persen → nominal
             const res = await fetch("{{ route('kasir.transaksi.bayar') }}", {
                 method: "POST",
                 headers: {
@@ -614,22 +569,21 @@ const hitungDiskon = () => {
                     "X-CSRF-TOKEN": "{{ csrf_token() }}"
                 },
                 body: JSON.stringify({
-                    dp: bayar,
+                    dp:            bayar,
                     langsung_bayar: langsung,
-                    diskon: diskonValue,
-                    keterangan: keterangan,
-                    id_metode_bayar: id_metode_bayar,
-                    tgl_estimasi: tgl_estimasi_value
+                    diskon:        diskonPersen,
+                    tipe_diskon:   "percent",
+                    keterangan,
+                    id_metode_bayar,
+                    tgl_estimasi:  tgl_estimasi_val
                 })
             });
 
             console.log("📡 RESPONSE STATUS:", res.status, res.statusText);
-            console.log("📡 RESPONSE HEADERS:", res.headers);
 
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error("❌ ERROR RESPONSE TEXT:", errorText);
-                
                 try {
                     const errorData = JSON.parse(errorText);
                     showAlert(errorData.message || "Gagal menyimpan transaksi!");
@@ -641,25 +595,24 @@ const hitungDiskon = () => {
 
             const data = await res.json();
             console.log("✅ SUCCESS RESPONSE:", data);
-            
+
             popupBayar.classList.add("hidden");
 
             // UPDATE POPUP SUCCESS
-            shareTransactionId.value = data.id_transaksi ?? "";
-            shareCustomerEmail.value = data.email ?? "";
+            shareTransactionId.value        = data.id_transaksi ?? "";
+            shareCustomerEmail.value        = data.email ?? "";
             shareCustomerTelegramChatId.value = data.telegram_chat_id ?? "";
-            succTotal.textContent = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+            succTotal.textContent  = "Rp " + parseInt(data.total).toLocaleString("id-ID");
+            // Tampilkan diskon dalam format nominal (sudah dikonversi oleh server)
             succDiskon.textContent = "Rp " + parseInt(data.diskon ?? 0).toLocaleString("id-ID");
-            succNama.textContent = data.nama;
-            succHp.textContent = data.hp;
-            succBayar.textContent = "Rp " + parseInt(data.total_bayar ?? 0).toLocaleString("id-ID");
+            succNama.textContent   = data.nama;
+            succHp.textContent     = data.hp;
+            succBayar.textContent  = "Rp " + parseInt(data.total_bayar ?? 0).toLocaleString("id-ID");
 
             document.getElementById("labelStatusBayar")?.remove();
-
             const label = document.createElement("p");
-            label.id = "labelStatusBayar";
+            label.id    = "labelStatusBayar";
             label.classList.add("font-bold", "mt-2");
-            
             if (data.status_bayar === "lunas") {
                 label.classList.add("text-green-500");
                 label.textContent = "Status: LUNAS";
@@ -670,17 +623,12 @@ const hitungDiskon = () => {
                 label.classList.add("text-red-500");
                 label.textContent = "Status: BELUM LUNAS";
             }
-            
             popupSuccess.querySelector(".bg-white")?.appendChild(label);
             popupSuccess.classList.remove("hidden");
 
         } catch (err) {
             console.error('❌ FULL ERROR:', err);
-            console.error('❌ ERROR NAME:', err.name);
-            console.error('❌ ERROR MESSAGE:', err.message);
-            console.error('❌ ERROR STACK:', err.stack);
-            
-            showAlert(`Terjadi kesalahan: ${err.message}\n\n${err.name}`);
+            showAlert(`Terjadi kesalahan: ${err.message}`);
         }
     });
 
@@ -699,16 +647,13 @@ const hitungDiskon = () => {
         updateShareChannelUI();
     });
 
-    closeSharePopup.addEventListener("click", () => {
-        popupBagikan.classList.add("hidden");
-    });
+    closeSharePopup.addEventListener("click", () => popupBagikan.classList.add("hidden"));
 
     document.getElementById("btnBagikan").addEventListener("click", () => {
         if (!shareTransactionId.value) {
             showAlert("ID transaksi belum tersedia untuk dibagikan.");
             return;
         }
-
         selectedShareChannel = "email";
         updateShareChannelUI();
         popupBagikan.classList.remove("hidden");
@@ -717,7 +662,6 @@ const hitungDiskon = () => {
     document.getElementById("btnKirimBagikan").addEventListener("click", async () => {
         try {
             const recipient = shareRecipientInput.value.trim();
-
             if (selectedShareChannel === "email" && recipient === "") {
                 showAlert("Silakan isi email tujuan terlebih dahulu.");
                 return;
@@ -732,14 +676,13 @@ const hitungDiskon = () => {
                 },
                 body: JSON.stringify({
                     id_transaksi: shareTransactionId.value,
-                    channel: selectedShareChannel,
-                    recipient: recipient
+                    channel:      selectedShareChannel,
+                    recipient
                 })
             });
 
             const rawResult = await response.text();
             let result = {};
-
             try {
                 result = rawResult ? JSON.parse(rawResult) : {};
             } catch (error) {
@@ -764,7 +707,6 @@ const hitungDiskon = () => {
 });
 </script>
 
-{{-- ✅ Tambahkan Animate.css untuk animasi shake --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
 @endsection

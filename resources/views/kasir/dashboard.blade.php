@@ -26,7 +26,7 @@
                     if(isset($butuhAntar)) $totalNotif += $butuhAntar;
                     if(isset($terlambatOnline)) $totalNotif += $terlambatOnline;
                     if(isset($harusSelesaiHariIni)) $totalNotif += $harusSelesaiHariIni;
-                    if(isset($siapDiambil)) $totalNotif += $siapDiambil;  // ✅ TAMBAHKAN INI!
+                    if(isset($siapDiambil)) $totalNotif += $siapDiambil;
                 @endphp
                 @if($totalNotif > 0)
                 <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
@@ -44,7 +44,8 @@
                 <i class="bi bi-cart-fill text-lg"></i>
                 Laporan Hari ini
             </div>
-            <div>Total Omzet : Rp.{{ number_format($totalOmzet,0,',','.') }}</div>
+            {{-- PERBAIKAN: Label diubah menjadi "Total Omzet Saya" karena hanya menampilkan omzet kasir yang login --}}
+            <div>Total Omzet Saya : Rp.{{ number_format($totalOmzet,0,',','.') }}</div>
         </div>
     </div>
 </div>
@@ -451,31 +452,31 @@
                         <td class="py-4 px-4 text-gray-600 font-medium">{{ $i+1 }}</td>
 
                         <td class="py-4 px-4">
-    <span class="font-bold text-gray-900">{{ $o->id_transaksi }}</span>
-    
-    @if($o->jenis_transaksi == 'online' && !in_array($o->status_transaksi, ['selesai', 'batal']))
-        @php
-            $deliveries = DB::table('delivery')->where('id_transaksi', $o->id_transaksi)->get();
-            $hasPickupPending = $deliveries->where('jenis', 'pickup')->where('id_driver', null)->first();
-            $hasAntarPending = $deliveries->where('jenis', 'antar')->where('id_driver', null)->first();
-        @endphp
-        
-        @if($hasPickupPending || $hasAntarPending)
-            <div class="mt-1 flex flex-wrap gap-1">
-                @if($hasPickupPending)
-                    <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                        <i class="bi bi-exclamation-circle-fill mr-1"></i> Pickup
-                    </span>
-                @endif
-                @if($hasAntarPending)
-                    <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                        <i class="bi bi-exclamation-circle-fill mr-1"></i> Antar
-                    </span>
-                @endif
-            </div>
-        @endif
-    @endif
-</td>
+                            <span class="font-bold text-gray-900">{{ $o->id_transaksi }}</span>
+
+                            @if($o->jenis_transaksi == 'online' && !in_array($o->status_transaksi, ['selesai', 'batal']))
+                                @php
+                                    $deliveries = DB::table('delivery')->where('id_transaksi', $o->id_transaksi)->get();
+                                    $hasPickupPending = $deliveries->where('jenis', 'pickup')->where('id_driver', null)->first();
+                                    $hasAntarPending = $deliveries->where('jenis', 'antar')->where('id_driver', null)->first();
+                                @endphp
+
+                                @if($hasPickupPending || $hasAntarPending)
+                                    <div class="mt-1 flex flex-wrap gap-1">
+                                        @if($hasPickupPending)
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                                <i class="bi bi-exclamation-circle-fill mr-1"></i> Pickup
+                                            </span>
+                                        @endif
+                                        @if($hasAntarPending)
+                                            <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                                <i class="bi bi-exclamation-circle-fill mr-1"></i> Antar
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
+                            @endif
+                        </td>
 
                         <td class="py-4 px-4">
                             <div class="min-w-[120px]">
@@ -491,17 +492,17 @@
                             @if($o->id_kasir)
                                 @php
                                     try {
-                                        $kasir = DB::table('akun_kasir')->where('id_kasir', $o->id_kasir)->first();
-                                        if (!$kasir) {
-                                            $kasir = DB::table('kasir')->where('id_kasir', $o->id_kasir)->first();
+                                        $kasirRow = DB::table('akun_kasir')->where('id_kasir', $o->id_kasir)->first();
+                                        if (!$kasirRow) {
+                                            $kasirRow = DB::table('kasir')->where('id_kasir', $o->id_kasir)->first();
                                         }
                                     } catch (\Exception $e) {
-                                        $kasir = null;
+                                        $kasirRow = null;
                                     }
                                 @endphp
                                 <div class="text-xs">
-                                    @if($kasir)
-                                        <div class="font-semibold text-gray-900">{{ $kasir->nama_kasir ?? $kasir->username ?? $kasir->name ?? 'Kasir' }}</div>
+                                    @if($kasirRow)
+                                        <div class="font-semibold text-gray-900">{{ $kasirRow->nama_kasir ?? $kasirRow->username ?? $kasirRow->name ?? 'Kasir' }}</div>
                                     @else
                                         <div class="font-semibold text-gray-900">Kasir</div>
                                     @endif
@@ -552,19 +553,20 @@
                         <td class="py-4 px-4">
                             @php
                                 $statusConfig = [
-                                    'antrian' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Antrian'],
-                                    'proses' => ['bg' => 'bg-orange-100', 'text' => 'text-orange-800', 'label' => 'Proses'],
-                                    'selesai_dicuci' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Selesai Dicuci'],
-                                    'siap_di_ambil' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Siap Ambil'],
-                                    'siap_di_antar' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Siap Antar'],
-                                    'pick_up' => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Pick Up'],
-                                    'selesai' => ['bg' => 'bg-green-100', 'text' => 'text-green-800', 'label' => 'Selesai'],
-                                    'batal' => ['bg' => 'bg-red-100', 'text' => 'text-red-800', 'label' => 'Batal'],
+                                    'antrian'       => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Antrian'],
+                                    'proses'        => ['bg' => 'bg-orange-100', 'text' => 'text-orange-800', 'label' => 'Proses'],
+                                    'selesai_dicuci'=> ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Selesai Dicuci'],
+                                    'siap_di_ambil' => ['bg' => 'bg-green-100',  'text' => 'text-green-800',  'label' => 'Siap Ambil'],
+                                    'siap_di_antar' => ['bg' => 'bg-green-100',  'text' => 'text-green-800',  'label' => 'Siap Antar'],
+                                    'pick_up'       => ['bg' => 'bg-yellow-100', 'text' => 'text-yellow-800', 'label' => 'Pick Up'],
+                                    'selesai'       => ['bg' => 'bg-green-100',  'text' => 'text-green-800',  'label' => 'Selesai'],
+                                    'batal'         => ['bg' => 'bg-red-100',    'text' => 'text-red-800',    'label' => 'Batal'],
                                 ];
-                                
-                                $status = $statusConfig[$o->status_transaksi] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-800', 'label' => ucfirst(str_replace('_', ' ', $o->status_transaksi))];
+                                $status = $statusConfig[$o->status_transaksi] ?? [
+                                    'bg' => 'bg-gray-100', 'text' => 'text-gray-800',
+                                    'label' => ucfirst(str_replace('_', ' ', $o->status_transaksi))
+                                ];
                             @endphp
-                            
                             <span class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full {{ $status['bg'] }} {{ $status['text'] }} whitespace-nowrap">
                                 {{ $status['label'] }}
                             </span>
@@ -626,7 +628,7 @@
 
                         <td class="py-4 px-4 text-center">
                             @if($o->foto_bukti)
-                                <button onclick="showBuktiImage('{{ asset('storage/'.$o->foto_bukti) }}')" 
+                                <button onclick="showBuktiImage('{{ asset('storage/'.$o->foto_bukti) }}')"
                                         class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-800 hover:bg-green-200 transition">
                                     <i class="bi bi-image"></i>
                                     <span>Lihat</span>
@@ -637,24 +639,24 @@
                         </td>
 
                         <td class="py-4 px-4">
-    <div class="flex items-center justify-center gap-2 flex-nowrap min-w-[180px]">
-        @if($o->jenis_transaksi == 'online')
-            {{-- TRANSAKSI ONLINE - Route ke riwayat.detail --}}
-            <a href="{{ route('kasir.pesanan.online.detail', ['id' => $o->id_transaksi, 'from' => 'dashboard']) }}"
-               class="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-2 rounded-xl text-gray-900 text-xs font-bold hover:from-yellow-500 hover:to-amber-600 transition-all hover:shadow-lg hover:scale-105 whitespace-nowrap">
-                <i class="bi bi-eye-fill"></i>
-                <span>Detail</span>
-            </a>
-        @else
-            {{-- TRANSAKSI OFFLINE - Route ke transaksi.detail --}}
-            <a href="{{ route('kasir.riwayat.detail', ['id' => $o->id_transaksi]) }}"
-               class="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-2 rounded-xl text-gray-900 text-xs font-bold hover:from-yellow-500 hover:to-amber-600 transition-all hover:shadow-lg hover:scale-105 whitespace-nowrap">
-                <i class="bi bi-eye-fill"></i>
-                <span>Detail</span>
-            </a>
-        @endif
-    </div>
-</td>
+                            <div class="flex items-center justify-center gap-2 flex-nowrap min-w-[180px]">
+                                @if($o->jenis_transaksi == 'online')
+                                    {{-- TRANSAKSI ONLINE - Route ke riwayat.detail --}}
+                                    <a href="{{ route('kasir.pesanan.online.detail', ['id' => $o->id_transaksi, 'from' => 'dashboard']) }}"
+                                       class="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-2 rounded-xl text-gray-900 text-xs font-bold hover:from-yellow-500 hover:to-amber-600 transition-all hover:shadow-lg hover:scale-105 whitespace-nowrap">
+                                        <i class="bi bi-eye-fill"></i>
+                                        <span>Detail</span>
+                                    </a>
+                                @else
+                                    {{-- TRANSAKSI OFFLINE - Route ke transaksi.detail --}}
+                                    <a href="{{ route('kasir.riwayat.detail', ['id' => $o->id_transaksi]) }}"
+                                       class="inline-flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-500 px-3 py-2 rounded-xl text-gray-900 text-xs font-bold hover:from-yellow-500 hover:to-amber-600 transition-all hover:shadow-lg hover:scale-105 whitespace-nowrap">
+                                        <i class="bi bi-eye-fill"></i>
+                                        <span>Detail</span>
+                                    </a>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
                     @empty
                     <tr>
@@ -809,9 +811,6 @@ const notificationConfig = {
 // ========================================
 // JQUERY DOCUMENT READY - SEMUA INISIALISASI
 // ========================================
-// ========================================
-// JQUERY DOCUMENT READY - SEMUA INISIALISASI
-// ========================================
 $(document).ready(function() {
     // ======== INISIALISASI DATATABLE ========
     let table = $('#orderTable').DataTable({
@@ -838,14 +837,14 @@ $(document).ready(function() {
         initComplete: function () {
             $('div.dataTables_filter input').addClass("border-2 border-gray-300 rounded-xl px-4 py-3 ml-2 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition");
             $('div.dataTables_length select').addClass("border-2 border-gray-300 rounded-xl px-4 py-2.5 mr-2 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition");
-            
+
             $('.dataTables_filter').append(`
-                <button onclick="resetTableFilter()" 
+                <button onclick="resetTableFilter()"
                         class="ml-3 px-4 py-2.5 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white rounded-xl font-semibold transition-all hover:shadow-lg">
                     <i class="bi bi-arrow-clockwise mr-1"></i> Reset Filter
                 </button>
             `);
-            
+
             setTimeout(() => {
                 $('.dataTables_paginate a').addClass("px-4 py-2.5 rounded-xl border-2 border-gray-200 bg-white hover:bg-yellow-50 hover:border-yellow-400 transition text-sm font-semibold mx-1");
                 $('.dataTables_paginate .current').addClass("bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 border-yellow-500 font-bold shadow-md");
@@ -856,16 +855,14 @@ $(document).ready(function() {
             $('.dataTables_paginate .current').addClass("bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 border-yellow-500 font-bold shadow-md");
         }
     });
-    
+
     console.log('✅ DataTable initialized - Total:', table.data().length);
-    
+
     // ========================================
     // 🔔 AUTO SHOW POPUP - MUNCUL SETIAP LOGIN
     // ========================================
-    
-    // CEK NOTIFIKASI TERLEBIH DAHULU
     console.log('🔍 Checking notifications...', notifications);
-    
+
     const activeNotifications = [];
     for (const [type, count] of Object.entries(notifications)) {
         console.log(`📊 ${type}: ${count}`);
@@ -877,39 +874,29 @@ $(document).ready(function() {
             });
         }
     }
-    
+
     activeNotifications.sort((a, b) => a.config.priority - b.config.priority);
     console.log('📋 Active notifications:', activeNotifications.length);
-    
-    // HANYA LANJUTKAN JIKA ADA NOTIFIKASI
-    // HANYA LANJUTKAN JIKA ADA NOTIFIKASI
-if (activeNotifications.length > 0) {
-    const today = new Date().toDateString();
-    
-    // ✅ DAPATKAN USER ID DARI BLADE
-    const userId = '{{ auth()->id() }}'; // Ambil ID user yang login
-    
-    // ✅ CEK APAKAH SUDAH DITUTUP DI SESSION INI (untuk session saat ini saja)
-    const dismissedInSession = sessionStorage.getItem(`reminderDismissedInSession_${userId}`);
-    
-    // ✅ CEK APAKAH USER MEMILIH "JANGAN TAMPILKAN LAGI HARI INI" (untuk hari yang sama)
-    const dismissedForToday = localStorage.getItem(`reminderDismissedDate_${userId}`);
-    const dontShowAgainToday = (dismissedForToday === today);
 
-    console.log('📅 Today:', today);
-    console.log('📅 Dismissed for today:', dismissedForToday);
-    console.log('⛔ Don\'t show again today:', dontShowAgainToday);
+    if (activeNotifications.length > 0) {
+        const today = new Date().toDateString();
+        const userId = '{{ auth()->id() }}';
+        const dismissedForToday = localStorage.getItem(`reminderDismissedDate_${userId}`);
+        const dontShowAgainToday = (dismissedForToday === today);
 
-    // ✅ TAMPILKAN POPUP JIKA BELUM DITUTUP HARI INI
-    if (!dontShowAgainToday) {
-        console.log('🔔 SHOWING POPUP...');
-        setTimeout(() => {
-            showGeneralReminderPopup(activeNotifications);
-        }, 1000);
-    } else {
-        console.log('✅ Popup dismissed for today - SKIPPING');
+        console.log('📅 Today:', today);
+        console.log('📅 Dismissed for today:', dismissedForToday);
+        console.log('⛔ Don\'t show again today:', dontShowAgainToday);
+
+        if (!dontShowAgainToday) {
+            console.log('🔔 SHOWING POPUP...');
+            setTimeout(() => {
+                showGeneralReminderPopup(activeNotifications);
+            }, 1000);
+        } else {
+            console.log('✅ Popup dismissed for today - SKIPPING');
+        }
     }
-}
 });
 
 // ========================================
@@ -917,7 +904,6 @@ if (activeNotifications.length > 0) {
 // ========================================
 function showGeneralReminderPopup(notifications) {
     console.log('🎯 showGeneralReminderPopup called');
-    
     const popup = document.getElementById('reminderPopup');
     if (popup) {
         popup.classList.remove('hidden');
@@ -931,24 +917,20 @@ function showGeneralReminderPopup(notifications) {
 function closeReminderPopup() {
     const popup = document.getElementById('reminderPopup');
     if (!popup) return;
-    
+
     const dontShowAgain = document.getElementById('dontShowAgain');
     const today = new Date().toDateString();
-    const userId = '{{ auth()->id() }}'; // ✅ Ambil user ID
-    
-    // ✅ CEK CHECKBOX
+    const userId = '{{ auth()->id() }}';
+
     if (dontShowAgain && dontShowAgain.checked) {
-        // User centang "Jangan tampilkan lagi hari ini"
         localStorage.setItem(`reminderDismissedDate_${userId}`, today);
         sessionStorage.setItem(`reminderDismissedInSession_${userId}`, 'with_checkbox');
         console.log('✅ Popup dismissed for today with checkbox:', today, 'User:', userId);
     } else {
-        // User TIDAK centang, hanya tutup untuk session ini saja
         sessionStorage.setItem(`reminderDismissedInSession_${userId}`, 'without_checkbox');
         console.log('✅ Popup dismissed for this session only (no checkbox)', 'User:', userId);
     }
-    
-    // Tutup popup dengan animasi
+
     popup.style.opacity = '0';
     setTimeout(() => {
         popup.classList.add('hidden');
@@ -959,9 +941,8 @@ function closeReminderPopup() {
 function handleReminderAction() {
     const dontShowAgain = document.getElementById('dontShowAgain');
     const today = new Date().toDateString();
-    const userId = '{{ auth()->id() }}'; // ✅ Ambil user ID
-    
-    // ✅ CEK CHECKBOX saat tombol diklik
+    const userId = '{{ auth()->id() }}';
+
     if (dontShowAgain && dontShowAgain.checked) {
         localStorage.setItem(`reminderDismissedDate_${userId}`, today);
         sessionStorage.setItem(`reminderDismissedInSession_${userId}`, 'with_checkbox');
@@ -970,12 +951,12 @@ function handleReminderAction() {
         sessionStorage.setItem(`reminderDismissedInSession_${userId}`, 'without_checkbox');
         console.log('✅ Popup dismissed for this session via button (no checkbox)', 'User:', userId);
     }
-    
+
     closeReminderPopup();
 }
 
 function playNotificationSound() {
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuAyvLTgjMGHm7A7+OZSA8PVqzn77BdGAg+ltzy0H8pBSh+zPDckT0KE2S36+mlThAPTKXh8L1pIAUrgM3z1YU1Bx1tv+/nm0sOD1Om4/C4ZRsGN5DY8tCBKwUle8rx34pGCRNjuuzrpE4RDkuq4/K+byEELYPO89WGNgcfcMPx6qBJDg5TqeXyt2McBTmQ1/PMfS0GJ37M8+CQPwsRZL3u66VTEw1Jqt/yvnAkBSyBzvTWhzYHH3HE8eqhSQ4OUqnl8rZlHQU5kdfy0oExBSiAyvLdkD0LElyz7OumUxMMSbDh8rxuIAQugM/01YY2Bx5xxPHqoUkODlSp5fK3YxwGOJLX8tKBMwQnf8rx3ZA9CxJctOzrplQTDEmy4fK8cCAFLoHO89WGNgceXb/w6qFJDg9Tp+Pyt2QcBjiS1/LSgTMEJ4DK8t2QPAsTW7Xs66ZUFA1JtuLyu2wgBSuB0PPUhzYGHl/A8OmhSQ4PUqfl8rJiHAU4k9byy4AzBSZ9y/LdjkALE12z7OumUxQMSrfh8rpuIQUsgc/z04c2Bx5ov/Dqn0kOD1Op5fK1YxwGN5PX8sl/MwUmfsrx3Y8+CxNdu+zrpVMUDUm14fK6biEFLIHP89OHNgcdX8Hw6Z9KDQ9Tp+Xys2McBjeR1/LJfzMFJn7K8d2OPwsUW7vs66ZUEw1KteLyumwgBSyB0PPUhjYHHmC/8OmgSQ0PUqnm8rJhHAU4ktjyzH8zBSd+yvLckD4LFVuy7OumVRQNSrLi8rlsIAUsgs/z1IY2Bx5gwPDon0kOEFGp5vKxYRwFOJLY8syAMwUnfsrx3I88DBVas+zrplQUDUqy4vK5biEFLYLO89SHNgceX8Hx559JDhBRqObysmAbBTiR2PLMgDMEJ37K8d2PPQsVW7Lr66ZVEg1JsuHyt2whBS2Cz/PUhjYHHl/B8OefSQ4QUanm8rFgHAU4kdfy0n8zBCd+y/HdjkAMFFuy7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQU=');
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuAyvLTgjMGHm7A7+OZSA8PVqzn77BdGAg+ltzy0H8pBSh+zPDckT0KE2S36+mlThAPTKXh8L1pIAUrgM3z1YU1Bx1tv+/nm0sOD1Om4/C4ZRsGN5DY8tCBKwUle8rx34pGCRNjuuzrpE4RDkuq4/K+byEELYPO89WGNgcfcMPx6qBJDg5TqeXyt2McBTmQ1/PMfS0GJ37M8+CQPwsRZL3u66VTEw1Jqt/yvnAkBSyBzvTWhzYHH3HE8eqhSQ4OUqnl8rZlHQU5kdfy0oExBSiAyvLdkD0LElyz7OumUxMMSbDh8rxuIAQugM/01YY2Bx5xxPHqoUkODlSp5fK3YxwGOJLX8tKBMwQnf8rx3ZA9CxJctOzrplQTDEmy4fK8cCAFLoHO89WGNgceXb/w6qFJDg9Tp+Pyt2QcBjiS1/LSgTMEJ4DK8t2QPAsTW7Xs66ZUFA1JtuLyu2wgBSuB0PPUhzYGHl/A8OmhSQ4PUqfl8rJiHAU4k9byy4AzBSZ9y/LdjkALE12z7OumUxQMSrfh8rpuIQUsgc/z04c2Bx5ov/Dqn0kOD1Op5fK1YxwGN5PX8sl/MwUmfsrx3Y8+CxNdu+zrpVMUDUm14fK6biEFLIHP89OHNgcdX8Hw6Z9KDQ9Tp+Xys2McBjeR1/LJfzMFJn7K8d2OPwsUW7vs66ZUEw1KteLyumwgBSyB0PPUhjYHHmC/8OmgSQ0PUqnm8rJhHAU4ktjyzH8zBSd+yvLckD4LFVuy7OumVRQNSrLi8rlsIAUsgs/z1IY2Bx5gwPDon0kOEFGp5vKxYRwFOJLY8syAMwUnfsrx3I88DBVas+zrplQUDUqy4vK5biEFLYLO89SHNgceX8Hx559JDhBRqObysmAbBTiR2PLMgDMEJ37K8d2PPQsVW7Lr66ZVEg1JsuHyt2whBS2Cz/PUhjYHHl/B8OefSQ4QUanm8rFgHAU4kdfy0n8zBCd+y/HdjkAMFFuy7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQUtg87z04c2Bx1fwfDnn0sOD1Go5vKwYRwEOJHX8sZ/MwQnf8rx3I9ADBNZ7OulUxQOSrLh8rdsIQU=');
     audio.volume = 0.3;
     audio.play().catch(e => console.log('Audio autoplay prevented'));
 }
@@ -991,25 +972,25 @@ function toggleNotifications() {
 function handleNotification(type) {
     toggleNotifications();
     let table = $('#orderTable').DataTable();
-    
+
     $.fn.dataTable.ext.search = [];
     table.columns().search('');
-    
+
     switch(type) {
         case 'terlambat':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusTransaksi = data[7];
                 let tglEstimasi = data[13];
-                
+
                 if (!jenis.includes('Online')) return false;
-                
-                let inProgress = statusTransaksi.includes('Antrian') || 
-                                statusTransaksi.includes('Proses') || 
-                                statusTransaksi.includes('Selesai Dicuci');
-                
+
+                let inProgress = statusTransaksi.includes('Antrian') ||
+                                 statusTransaksi.includes('Proses') ||
+                                 statusTransaksi.includes('Selesai Dicuci');
+
                 if (!inProgress) return false;
-                
+
                 if (tglEstimasi && tglEstimasi !== '-') {
                     let parts = tglEstimasi.split('/');
                     if (parts.length === 3) {
@@ -1023,72 +1004,64 @@ function handleNotification(type) {
             });
             showToast('{{ $terlambat }} pesanan online terlambat', 'red');
             break;
-            
+
         case 'butuhPickup':
         case 'pickup':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let row = table.row(dataIndex).node();
                 let idTransaksiCell = $(row).find('td:eq(1)').html();
-                
-                return jenis.includes('Online') && 
-                       idTransaksiCell && 
-                       idTransaksiCell.includes('Pickup');
+                return jenis.includes('Online') && idTransaksiCell && idTransaksiCell.includes('Pickup');
             });
             showToast('{{ $butuhPickup }} transaksi online butuh pickup', 'orange');
             break;
-            
+
         case 'butuhAntar':
         case 'antar':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let row = table.row(dataIndex).node();
                 let idTransaksiCell = $(row).find('td:eq(1)').html();
-                
-                return jenis.includes('Online') && 
-                       idTransaksiCell && 
-                       idTransaksiCell.includes('Antar');
+                return jenis.includes('Online') && idTransaksiCell && idTransaksiCell.includes('Antar');
             });
             showToast('{{ $butuhAntar }} transaksi online butuh pengantaran', 'orange');
             break;
-            
+
         case 'transaksiMasuk':
         case 'masuk':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusTransaksi = data[7];
-                
                 return jenis.includes('Online') && statusTransaksi.includes('Antrian');
             });
             showToast('{{ $transaksiMasukHariIni }} transaksi online masuk hari ini', 'yellow');
             break;
-            
+
         case 'belumLunas':
         case 'belum_lunas':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusBayar = data[6];
-                
                 return jenis.includes('Online') && statusBayar.includes('Belum Lunas');
             });
             showToast('{{ $belumLunas }} transaksi online belum lunas', 'yellow');
             break;
-            
+
         case 'harusSelesaiHariIni':
         case 'deadline':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusTransaksi = data[7];
                 let tglEstimasi = data[13];
-                
+
                 if (!jenis.includes('Online')) return false;
-                
-                let inProgress = statusTransaksi.includes('Antrian') || 
-                                statusTransaksi.includes('Proses') || 
-                                statusTransaksi.includes('Selesai Dicuci');
-                
+
+                let inProgress = statusTransaksi.includes('Antrian') ||
+                                 statusTransaksi.includes('Proses') ||
+                                 statusTransaksi.includes('Selesai Dicuci');
+
                 if (!inProgress) return false;
-                
+
                 if (tglEstimasi && tglEstimasi !== '-') {
                     let parts = tglEstimasi.split('/');
                     if (parts.length === 3) {
@@ -1096,7 +1069,6 @@ function handleNotification(type) {
                         let today = new Date();
                         today.setHours(0, 0, 0, 0);
                         estimasiDate.setHours(0, 0, 0, 0);
-                        
                         return estimasiDate.getTime() === today.getTime();
                     }
                 }
@@ -1104,30 +1076,28 @@ function handleNotification(type) {
             });
             showToast('{{ $harusSelesaiHariIni }} pesanan online deadline hari ini', 'yellow');
             break;
-            
+
         case 'lunas':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusBayar = data[6];
-                
                 return jenis.includes('Online') && statusBayar.includes('Lunas');
             });
             showToast('{{ $pembayaranLunasHariIni }} pembayaran online lunas', 'green');
             break;
-            
+
         case 'siap_ambil':
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 let jenis = data[4];
                 let statusTransaksi = data[7];
-                
                 return jenis.includes('Online') && statusTransaksi.includes('Siap Ambil');
             });
             showToast('{{ $siapDiambil }} pesanan online siap diambil', 'green');
             break;
     }
-    
+
     table.draw();
-    
+
     $('html, body').animate({
         scrollTop: $("#orderTable").offset().top - 100
     }, 500);
@@ -1135,31 +1105,31 @@ function handleNotification(type) {
 
 function resetTableFilter() {
     let table = $('#orderTable').DataTable();
-    
+
     $.fn.dataTable.ext.search = [];
     table.columns().search('');
     table.search('');
     table.draw();
-    
+
     let totalRows = table.rows().count();
     showToast('Filter direset - menampilkan ' + totalRows + ' transaksi', 'green');
 }
 
 function showToast(message, color) {
     const colors = {
-        'red': 'bg-red-500',
+        'red':    'bg-red-500',
         'orange': 'bg-orange-500',
         'yellow': 'bg-yellow-500',
-        'green': 'bg-green-500'
+        'green':  'bg-green-500'
     };
-    
+
     const icons = {
-        'red': 'bi-exclamation-triangle-fill',
+        'red':    'bi-exclamation-triangle-fill',
         'orange': 'bi-truck',
         'yellow': 'bi-info-circle-fill',
-        'green': 'bi-check-circle-fill'
+        'green':  'bi-check-circle-fill'
     };
-    
+
     const toast = $(`
         <div class="fixed bottom-4 right-4 ${colors[color]} text-white px-6 py-4 rounded-2xl shadow-2xl z-50 flex items-center gap-3 animate-slide-in max-w-md">
             <i class="bi ${icons[color]} text-2xl flex-shrink-0"></i>
@@ -1172,7 +1142,7 @@ function showToast(message, color) {
             </button>
         </div>
     `);
-    
+
     $('body').append(toast);
     setTimeout(() => { toast.fadeOut(300, function() { $(this).remove(); }); }, 5000);
 }
@@ -1183,43 +1153,46 @@ function showToast(message, color) {
 function showDeliveryInfo(transaksiId) {
     document.getElementById('modalTransaksiId').textContent = transaksiId;
     document.getElementById('deliveryModal').classList.remove('hidden');
-    
+
     fetch(`/api/delivery-info/${transaksiId}`)
         .then(response => response.json())
         .then(data => {
             let content = '';
             if (data.deliveries && data.deliveries.length > 0) {
                 data.deliveries.forEach(delivery => {
-                    const jenisIcon = delivery.jenis === 'pickup' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up';
+                    const jenisIcon  = delivery.jenis === 'pickup' ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up';
                     const jenisColor = 'from-orange-400 to-orange-500';
-                    const jenisText = delivery.jenis === 'pickup' ? 'PICKUP' : 'ANTAR';
-                    
+                    const jenisText  = delivery.jenis === 'pickup' ? 'PICKUP' : 'ANTAR';
+
                     const statusConfig = {
-                        'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending', icon: 'bi-clock' },
-                        'accepted': { bg: 'bg-green-100', text: 'text-green-800', label: 'Diterima', icon: 'bi-check-circle' },
-                        'on_the_way_to_pickup': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Pickup', icon: 'bi-truck' },
-                        'picked_up': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Sudah Pickup', icon: 'bi-check' },
-                        'on_the_way_to_deliver': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Antar', icon: 'bi-truck' },
-                        'on_the_way_to_customer': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Pelanggan', icon: 'bi-truck' },
-                        'arrived_at_customer': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Sampai di Pelanggan', icon: 'bi-geo-alt' },
-                        'on_the_way_to_laundry': { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Laundry', icon: 'bi-arrow-left-right' },
-                        'arrived_at_laundry': { bg: 'bg-green-100', text: 'text-green-800', label: 'Sampai di Laundry', icon: 'bi-house-check' },
-                        'delivered': { bg: 'bg-green-100', text: 'text-green-800', label: 'Terkirim', icon: 'bi-check-circle-fill' },
-                        'failed': { bg: 'bg-red-100', text: 'text-red-800', label: 'Gagal', icon: 'bi-x-circle' },
+                        'pending':                  { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending',              icon: 'bi-clock' },
+                        'accepted':                 { bg: 'bg-green-100',  text: 'text-green-800',  label: 'Diterima',             icon: 'bi-check-circle' },
+                        'on_the_way_to_pickup':     { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Pickup',        icon: 'bi-truck' },
+                        'picked_up':                { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Sudah Pickup',         icon: 'bi-check' },
+                        'on_the_way_to_deliver':    { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Antar',         icon: 'bi-truck' },
+                        'on_the_way_to_customer':   { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Pelanggan',     icon: 'bi-truck' },
+                        'arrived_at_customer':      { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Sampai di Pelanggan',  icon: 'bi-geo-alt' },
+                        'on_the_way_to_laundry':    { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Menuju Laundry',       icon: 'bi-arrow-left-right' },
+                        'arrived_at_laundry':       { bg: 'bg-green-100',  text: 'text-green-800',  label: 'Sampai di Laundry',   icon: 'bi-house-check' },
+                        'delivered':                { bg: 'bg-green-100',  text: 'text-green-800',  label: 'Terkirim',            icon: 'bi-check-circle-fill' },
+                        'failed':                   { bg: 'bg-red-100',    text: 'text-red-800',    label: 'Gagal',               icon: 'bi-x-circle' },
                     };
-                    
-                    const status = statusConfig[delivery.status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: delivery.status || 'Unknown', icon: 'bi-question-circle' };
-                    
-                    const driverInfo = delivery.id_driver 
+
+                    const status = statusConfig[delivery.status] || {
+                        bg: 'bg-gray-100', text: 'text-gray-800',
+                        label: delivery.status || 'Unknown', icon: 'bi-question-circle'
+                    };
+
+                    const driverInfo = delivery.id_driver
                         ? `<div class="flex items-center gap-2 text-sm text-gray-700">
-                            <i class="bi bi-person-badge"></i>
-                            <span>Driver ID: ${delivery.id_driver}</span>
+                               <i class="bi bi-person-badge"></i>
+                               <span>Driver ID: ${delivery.id_driver}</span>
                            </div>`
                         : `<div class="flex items-center gap-2 text-sm text-red-600">
-                            <i class="bi bi-exclamation-triangle-fill"></i>
-                            <span class="font-semibold">Belum Ada Driver</span>
+                               <i class="bi bi-exclamation-triangle-fill"></i>
+                               <span class="font-semibold">Belum Ada Driver</span>
                            </div>`;
-                    
+
                     content += `
                         <div class="bg-gradient-to-r ${jenisColor} rounded-2xl p-1 shadow-lg">
                             <div class="bg-white rounded-xl p-5">
@@ -1310,7 +1283,7 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('click', function(e) {
     const panel = document.getElementById('notificationPanel');
     const bellButton = e.target.closest('button[onclick="toggleNotifications()"]');
-    
+
     if (!panel.contains(e.target) && !bellButton && !panel.classList.contains('-translate-y-full')) {
         toggleNotifications();
     }
@@ -1322,24 +1295,18 @@ document.addEventListener('click', function(e) {
 <style>
 @keyframes slide-in {
     from { transform: translateX(400px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    to   { transform: translateX(0);     opacity: 1; }
 }
 @keyframes fade-in {
     from { opacity: 0; }
-    to { opacity: 1; }
+    to   { opacity: 1; }
 }
 @keyframes scale-in {
-    from { 
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px); 
-    }
-    to { 
-        opacity: 1;
-        transform: scale(1) translateY(0); 
-    }
+    from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+    to   { opacity: 1; transform: scale(1)   translateY(0);     }
 }
 .animate-slide-in { animation: slide-in 0.3s ease-out; }
-.animate-fade-in { animation: fade-in 0.3s ease-out; }
+.animate-fade-in  { animation: fade-in  0.3s ease-out; }
 .animate-scale-in { animation: scale-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 </style>
 @endpush

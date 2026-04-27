@@ -56,6 +56,10 @@ Route::get('/', [AuthWebController::class, 'landingPage'])->name('landing');
 
 Route::get('/login', [AuthWebController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthWebController::class, 'processLogin'])->name('login.process');
+Route::get('/forgot-password', [AuthWebController::class, 'showForgotPassword'])->name('forgot.password');
+Route::post('/forgot-password', [AuthWebController::class, 'processForgotPassword'])->name('forgot.password.process');
+Route::get('/reset-password/{token}', [AuthWebController::class, 'showResetPassword'])->name('password.reset.form');
+Route::post('/reset-password', [AuthWebController::class, 'processResetPassword'])->name('password.reset.process');
 
 // ✅ ADMIN LOGOUT
 Route::post('/logout', function (): RedirectResponse {
@@ -378,6 +382,12 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
         Route::post('/{id}/kirim-notif-telegram', [RiwayatController::class, 'kirimNotifTelegramKasir'])
             ->middleware('permission:edit')
             ->name('kirim_notif_telegram');
+
+        Route::get('/{id}/cetak-nota', [RiwayatController::class, 'cetakNotaKasir'])
+            ->middleware('permission:view')
+            ->whereNumber('id')
+            ->name('cetak_nota');
+
         
         // ✅ ROUTE BAYAR
         Route::post('/{id}/bayar', [RiwayatController::class, 'bayarSubmitKasir'])
@@ -584,7 +594,7 @@ Route::prefix('layanan')->name('kasir.layanan.')->group(function () {
             ->middleware('block.kasir.laporan.export')
             ->name('pengeluaran.export'); // ← TAMBAH INI
         });
-
+        
     // ================= CHANGE PASSWORD (No Permission) =================
     Route::get('/change-password', [ChangePasswordController::class, 'indexKasir'])
         ->name('kasir.change.password');

@@ -293,6 +293,13 @@
                     </form>
                     @endif
 
+                    {{-- Tombol Cetak Nota --}}
+<a href="{{ route('kasir.riwayat.cetak_nota', $transaksi->id_transaksi) }}" 
+   target="_blank"
+   class="bg-blue-500 hover:bg-blue-600 w-full text-white text-center py-4 px-5 font-bold shadow-sm rounded-xl flex items-center justify-center gap-2 hover:shadow-md transition-all hover:scale-105">
+    <i class="bi bi-printer-fill text-xl"></i> Cetak Nota
+</a>
+
                     {{-- Hapus --}}
                     <form id="formHapus" action="{{ route('kasir.riwayat.destroy', $transaksi->id_transaksi) }}" method="POST">
                         @csrf
